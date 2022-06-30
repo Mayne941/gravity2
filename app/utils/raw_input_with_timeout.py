@@ -8,10 +8,10 @@ def raw_input_with_timeout(prompt, timelimit = 5, default_input = "Y"):
 	signal.alarm(timelimit)
 	input = default_input
 	try:
-		input = raw_input(prompt)
+		input = input(prompt)
 		signal.alarm(0)
-	except Exception, exc: 
-		print exc
+	except Exception as exc: 
+		print(exc)
 	
 	return input
 

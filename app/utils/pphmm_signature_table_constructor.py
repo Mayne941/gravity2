@@ -3,7 +3,7 @@ from Bio.SeqRecord import SeqRecord
 import subprocess, sys, os
 import numpy as np
 
-from line_count import LineCount
+from .line_count import LineCount
 
 def PPHMMSignatureTable_Constructor (
 	SeqIDLists,
@@ -24,7 +24,7 @@ def PPHMMSignatureTable_Constructor (
 	elif file_extension in [".gb"]:
 		Records_dict = SeqIO.index(GenBankFile, "genbank")
 	
-	Records_dict = {k.split(".")[0]:v for k,v in Records_dict.iteritems()}
+	Records_dict = {k.split(".")[0]:v for k,v in Records_dict.items()}
 	N_Seq = len(SeqIDLists)
 	
 	#Specify PPHMMQueryFile and PPHMMScanOutFile
@@ -50,7 +50,7 @@ def PPHMMSignatureTable_Constructor (
 		
 		#sort lists by sequence/segment lengthes
 		#---------------------------------------------------------------------
-		(GenBankSeqLenList, GenBankSeqList,GenBankIDList, GenBankDescList) = zip(*sorted(zip(map(len, map(str, GenBankSeqList)), GenBankSeqList, GenBankIDList, GenBankDescList), reverse = True))
+		(GenBankSeqLenList, GenBankSeqList,GenBankIDList, GenBankDescList) = list(zip(*sorted(zip(list(map(len, list(map(str, GenBankSeqList)))), GenBankSeqList, GenBankIDList, GenBankDescList), reverse = True)))
 		GenBankSeq = ""
 		for seq in GenBankSeqList:
 			GenBankSeq = GenBankSeq+seq
@@ -123,7 +123,7 @@ def PPHMMSignatureTable_Constructor (
 									LocTo = int(OriAASeqlen)
 								else:
 									print("Something is wrong with the his location determination")
-									raw_input("Press any key to continue")
+									input("Press any key to continue")
 							if ID not in PPHMMIDList:
 								Best_C_EValue = C_EValue
 								PPHMMIDList.append(ID)

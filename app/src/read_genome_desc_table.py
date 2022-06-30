@@ -11,9 +11,9 @@ def ReadGenomeDescTable (
 	TaxoGroupingFile	= None,
 	):
 	
-	print "################################################################################"
-	print "#Read the GenomeDesc table                                                     #"
-	print "################################################################################"
+	print("################################################################################")
+	print("#Read the GenomeDesc table                                                     #")
+	print("################################################################################")
 	'''
 	Read genome description table (Virus Metadata Resource -- VMR)
 	---------------------------------------------
@@ -50,16 +50,16 @@ def ReadGenomeDescTable (
 	28		= Taxonomic grouping
 	'''
 	################################################################################
-	print "- Define dir/file paths"
+	print("- Define dir/file paths")
 	################################################################################
-	print "\tto program output shelve"
+	print("\tto program output shelve")
 	#-------------------------------------------------------------------------------
 	VariableShelveDir = ShelveDir+"/Shelves"
 	if not os.path.exists(VariableShelveDir):
 		os.makedirs(VariableShelveDir)
 	
 	################################################################################
-	print "- Read the GenomeDesc table"
+	print("- Read the GenomeDesc table")
 	################################################################################
 	BaltimoreList	= []
 	OrderList	= []
@@ -134,7 +134,7 @@ def ReadGenomeDescTable (
 				try:
 					TranslTableList.append(int(Line[TranslTable_i]))
 				except ValueError:
-					print ("Genetic code is not specified. GRAViTy will use the standard code for %s"%VirusNameList[-1])
+					print(("Genetic code is not specified. GRAViTy will use the standard code for %s"%VirusNameList[-1]))
 					TranslTableList.append(1)
 				#if Database != None: DatabaseList.append(Line[Database_i])
 				if Database_Header != None: DatabaseList.append(Line[Database_i])
@@ -157,7 +157,7 @@ def ReadGenomeDescTable (
 				try:
 					TranslTableList.append(int(Line[TranslTable_i]))
 				except ValueError:
-					print ("Genetic code is not specified. GRAViTy will use the standard code for %s"%VirusNameList[-1])
+					print(("Genetic code is not specified. GRAViTy will use the standard code for %s"%VirusNameList[-1]))
 					TranslTableList.append(1)
 				#if Database != None: DatabaseList.append(Line[Database_i])
 				if Database_Header != None: DatabaseList.append(Line[Database_i])
@@ -190,8 +190,8 @@ def ReadGenomeDescTable (
 	SeqIDFlatList 	= [SeqID for SeqIDList in SeqIDLists for SeqID in SeqIDList]
 	if len(SeqIDFlatList) != len(set(SeqIDFlatList)):
 		from collections import Counter
-		print "The following accession numbers appear more than once: "
-		print "\n".join([SeqID for SeqID, count in Counter(SeqIDFlatList).iteritems() if count > 1])
+		print("The following accession numbers appear more than once: ")
+		print("\n".join([SeqID for SeqID, count in Counter(SeqIDFlatList).items() if count > 1]))
 		raise SystemExit("GRAViTy terminated.")
 	
 	SeqStatusList	= np.array(SeqStatusList)
@@ -241,7 +241,7 @@ def ReadGenomeDescTable (
 	HostList=np.array(Cleaned_HostList)
 	'''
 	################################################################################
-	print "- Save variables to ReadGenomeDescTable.AllGenomes.shelve"
+	print("- Save variables to ReadGenomeDescTable.AllGenomes.shelve")
 	################################################################################
 	if Database != None:
 		IncludedGenomes_IndexList = np.where(DatabaseList==Database)[0]
@@ -282,14 +282,14 @@ def ReadGenomeDescTable (
 			]:
 		try:
 			Parameters[key] = locals()[key]
-			print "\t" + key
+			print("\t" + key)
 		except TypeError:
 			pass
 	
 	Parameters.close()
 	
 	################################################################################
-	print "- Save variables to ReadGenomeDescTable.CompleteGenomes.shelve"
+	print("- Save variables to ReadGenomeDescTable.CompleteGenomes.shelve")
 	################################################################################
 	IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(SeqStatusList) if "Complete" in SeqStatus]
 	
@@ -329,7 +329,7 @@ def ReadGenomeDescTable (
 			]:
 		try:
 			Parameters[key] = locals()[key]
-			print "\t" + key
+			print("\t" + key)
 		except TypeError:
 			pass
 	

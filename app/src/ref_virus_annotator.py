@@ -1,5 +1,5 @@
 from Bio import Phylo, AlignIO
-from cStringIO import StringIO
+from io import StringIO
 from collections import Counter
 from copy import copy
 import numpy as np
@@ -36,11 +36,11 @@ def RefVirusAnnotator(
 	HHsuite_SubjectCoverage_Cutoff	= 75,
 	PPHMMClustering_MCLInflation	= 2,
 	):
-	print "################################################################################"
-	print "#Generate PPHMM signature table, PPHMM location table, GOM database, and       #"
-	print "#GOM signature table for reference viruses, using PPHMM database of reference  #"
-	print "#viruses                                                                       #"
-	print "################################################################################"
+	print("################################################################################")
+	print("#Generate PPHMM signature table, PPHMM location table, GOM database, and       #")
+	print("#GOM signature table for reference viruses, using PPHMM database of reference  #")
+	print("#viruses                                                                       #")
+	print("################################################################################")
 	'''
 	Generate PPHMM signature table, PPHMM location table, GOM database, and GOM signature table for reference viruses, using their own PPHMM database
 	---------------------------------------------
@@ -48,33 +48,33 @@ def RefVirusAnnotator(
 	i.e. groups with less than 'N_VirusesOfTheClassToIgnore' members will be ignored
 	'''
 	################################################################################
-	print "- Define dir/file paths"
+	print("- Define dir/file paths")
 	################################################################################
-	print "\tto HMMER shelve directory"
+	print("\tto HMMER shelve directory")
 	#-------------------------------------------------------------------------------
 	HMMERDir		= ShelveDir+"/HMMER"
 	
-	print "\t\tto HMMER PPHMM directory"
+	print("\t\tto HMMER PPHMM directory")
 	#-------------------------------------------------------------------------------
 	HMMER_PPHMMDir		= HMMERDir+"/HMMER_PPHMMs"
-	print "\t\tto HMMER PPHMM database directory"
+	print("\t\tto HMMER PPHMM database directory")
 	#-------------------------------------------------------------------------------
 	HMMER_PPHMMDBDir	= HMMERDir+"/HMMER_PPHMMDB"
-	print "\t\t\tto HMMER PPHMM database"
+	print("\t\t\tto HMMER PPHMM database")
 	#-------------------------------------------------------------------------------
 	HMMER_PPHMMDB		= HMMER_PPHMMDBDir+"/HMMER_PPHMMDB"
 	
 	if RemoveSingletonPPHMMs == True:
-		print "\tto protein cluster directory"
+		print("\tto protein cluster directory")
 		#-------------------------------------------------------------------------------
 		ClustersDir	= ShelveDir+"/BLAST/Clusters"
 	
 	if PPHMMSorting == True:
-		print "\tto protein cluster directory"
+		print("\tto protein cluster directory")
 		#-------------------------------------------------------------------------------
 		ClustersDir	= ShelveDir+"/BLAST/Clusters"
 		
-		print "\tto HHsuite shelve direction"
+		print("\tto HHsuite shelve direction")
 		#-------------------------------------------------------------------------------
 		HHsuiteDir	= ShelveDir+"/HHsuite"
 		if os.path.exists(HHsuiteDir):
@@ -82,29 +82,29 @@ def RefVirusAnnotator(
 		
 		os.makedirs(HHsuiteDir)
 		
-		print "\t\tto HHsuite PPHMM directory"
+		print("\t\tto HHsuite PPHMM directory")
 		#-------------------------------------------------------------------------------
 		HHsuite_PPHMMDir = HHsuiteDir + "/HHsuite_PPHMMs";os.makedirs(HHsuite_PPHMMDir)
-		print "\t\tto HHsuite PPHMM database directory"
+		print("\t\tto HHsuite PPHMM database directory")
 		#-------------------------------------------------------------------------------
 		HHsuite_PPHMMDBDir= HHsuiteDir +"/HHsuite_PPHMMDB";os.makedirs(HHsuite_PPHMMDBDir)
-		print "\t\t\tto HHsuite PPHMM database"
+		print("\t\t\tto HHsuite PPHMM database")
 		#-------------------------------------------------------------------------------
 		HHsuite_PPHMMDB	= HHsuite_PPHMMDBDir+"/HHsuite_PPHMMDB"
 	
-	print "\tto program output shelve"
+	print("\tto program output shelve")
 	#-------------------------------------------------------------------------------
 	VariableShelveDir 	= ShelveDir+"/Shelves"
 	
 	################################################################################
-	print "- Retrieve variables"
+	print("- Retrieve variables")
 	################################################################################
 	if IncludeIncompleteGenomes == True:
-		print "\tfrom ReadGenomeDescTable.AllGenomes.shelve"
+		print("\tfrom ReadGenomeDescTable.AllGenomes.shelve")
 		#-------------------------------------------------------------------------------
 		VariableShelveFile = VariableShelveDir+"/ReadGenomeDescTable.AllGenomes.shelve"
 	elif IncludeIncompleteGenomes == False:
-		print "\tfrom ReadGenomeDescTable.CompleteGenomes.shelve"
+		print("\tfrom ReadGenomeDescTable.CompleteGenomes.shelve")
 		#-------------------------------------------------------------------------------
 		VariableShelveFile = VariableShelveDir+"/ReadGenomeDescTable.CompleteGenomes.shelve"
 	
@@ -122,21 +122,21 @@ def RefVirusAnnotator(
 			"TranslTableList",
 			]:
 		globals()[key] = Parameters[key]
-		print "\t\t"+key
+		print("\t\t"+key)
 	
 	Parameters.close()
 	
 	if not os.path.isfile(GenomeSeqFile):
 		################################################################################
-		print "- Download GenBank file"
+		print("- Download GenBank file")
 		################################################################################
-		print "GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s)"
-		print "Here are the accession numbers to be downloaded: "
-		print "\n".join(map(lambda x:"\n".join(x), SeqIDLists))
+		print("GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s)")
+		print("Here are the accession numbers to be downloaded: ")
+		print("\n".join(["\n".join(x) for x in SeqIDLists]))
 		DownloadGenBankFile (GenomeSeqFile = GenomeSeqFile, SeqIDLists = SeqIDLists)
 	
 	################################################################################
-	print "- Generate PPHMM signature table and PPHMM location table"
+	print("- Generate PPHMM signature table and PPHMM location table")
 	################################################################################
 	#Make HMMER_hmmscanDir
 	#-------------------------------------------------------------------------------
@@ -161,9 +161,9 @@ def RefVirusAnnotator(
 	
 	if RemoveSingletonPPHMMs:
 		################################################################################
-		print "- Remove singleton PPHMMs from the PPHMM databases"
+		print("- Remove singleton PPHMMs from the PPHMM databases")
 		################################################################################
-		print "\tDetermine singleton PPHMMs "
+		print("\tDetermine singleton PPHMMs ")
 		#-------------------------------------------------------------------------------
 		N_VirusesPerClass		= Counter(TaxoGroupingList)
 		CandSingletonPPHMM_IndexList	= np.where(np.sum(PPHMMSignatureTable > 0, axis = 0) <= 1)[0]
@@ -178,12 +178,12 @@ def RefVirusAnnotator(
 				if N_VirusesPerClass[TaxoGroupingList[VirusWithTheSingletonPPHMM_i[0]]] > N_VirusesOfTheClassToIgnore:
 					SingletonPPHMM_IndexList.append(PPHMM_i)
 		
-		SelectedPPHMM_IndexList = np.array(range(PPHMMSignatureTable.shape[1]))
+		SelectedPPHMM_IndexList = np.array(list(range(PPHMMSignatureTable.shape[1])))
 		SelectedPPHMM_IndexList = np.delete(arr = SelectedPPHMM_IndexList, obj = SingletonPPHMM_IndexList)
-		print "\t\t# of non-informative singleton PPHMMs = %d" %len(SingletonPPHMM_IndexList)
-		print "\t\t# of remaining PPHMMs = %d" %len(SelectedPPHMM_IndexList)
+		print("\t\t# of non-informative singleton PPHMMs = %d" %len(SingletonPPHMM_IndexList))
+		print("\t\t# of remaining PPHMMs = %d" %len(SelectedPPHMM_IndexList))
 		
-		print "\tRemove non informative singleton PPHMMs from the database, and remake its summary file"
+		print("\tRemove non informative singleton PPHMMs from the database, and remake its summary file")
 		#-------------------------------------------------------------------------------
 		#Add ".ToBeDeleted" tag to each alignment and PPHMM file
 		#-------------------------------------------------------------------------------
@@ -249,12 +249,12 @@ def RefVirusAnnotator(
 		with open(HMMER_PPHMMDBSummaryFile, "w") as HMMER_PPHMMDBSummary_txt:
 			HMMER_PPHMMDBSummary_txt.write(Contents)
 		
-		print "\tRemove singleton PPHMMs from PPHMMSignatureTable and PPHMMLocationTable"
+		print("\tRemove singleton PPHMMs from PPHMMSignatureTable and PPHMMLocationTable")
 		#-------------------------------------------------------------------------------
 		PPHMMSignatureTable	= np.delete(arr = PPHMMSignatureTable, obj = SingletonPPHMM_IndexList, axis = 1)
 		PPHMMLocationTable	= np.delete(arr = PPHMMLocationTable, obj = SingletonPPHMM_IndexList, axis = 1)
 		
-		print "\tReorganise the cluster meta data from PPHMMDBConstruction.shelve"
+		print("\tReorganise the cluster meta data from PPHMMDBConstruction.shelve")
 		#-------------------------------------------------------------------------------
 		#Load cluster meta data from PPHMMDBConstruction.shelve
 		#-------------------------------------------------------------------------------
@@ -309,15 +309,15 @@ def RefVirusAnnotator(
 	
 	if PPHMMSorting == True:
 		################################################################################
-		print "- Sort PPHMMs"
+		print("- Sort PPHMMs")
 		################################################################################
-		print "\tDetermine the PPHMM order by 'virus profile' similarity"
+		print("\tDetermine the PPHMM order by 'virus profile' similarity")
 		#-------------------------------------------------------------------------------
-		print "\t\tALL-VERSUS-ALL virus profile comparisons"
+		print("\t\tALL-VERSUS-ALL virus profile comparisons")
 		#-------------------------------------------------------------------------------
 		TraitValueTable				= copy(PPHMMSignatureTable.transpose())
 		N_PPHMMs				= len(TraitValueTable)
-		TaxoLabelList				= range(N_PPHMMs)
+		TaxoLabelList				= list(range(N_PPHMMs))
 		
 		TraitValueTable[TraitValueTable!=0]	= 1
 		SimMat_traits 				= []
@@ -334,7 +334,7 @@ def RefVirusAnnotator(
 		sys.stdout.write("\033[K")
 		sys.stdout.flush()
 		
-		print "\t\tConstructe a PPHMM dendrogram, and extract the PPHMM order"
+		print("\t\tConstructe a PPHMM dendrogram, and extract the PPHMM order")
 		#-------------------------------------------------------------------------------
 		SimMat_traits = np.array(SimMat_traits)
 		TreeNewick_traits = DistMat2Tree (	DistMat = 1 - SimMat_traits,
@@ -345,9 +345,9 @@ def RefVirusAnnotator(
 		TreeNewick_traits.ladderize(reverse = True)
 		PPHMMOrder_ByTree = np.array([int(Clade.name) for Clade in TreeNewick_traits.get_terminals()])
 		
-		print "\tCluster PPHMMs by PPHMM similiarty"
+		print("\tCluster PPHMMs by PPHMM similiarty")
 		#-------------------------------------------------------------------------------
-		print "\t\tMake a HHsuite PPHMM database"
+		print("\t\tMake a HHsuite PPHMM database")
 		#-------------------------------------------------------------------------------
 		N_PPHMMs = PPHMMSignatureTable.shape[1]
 		for PPHMM_i in range(N_PPHMMs):
@@ -362,9 +362,10 @@ def RefVirusAnnotator(
 														PPHMM_i),
 														stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
-			if err != "":
-				print "There is a problem with coverting cluster %s into a hmm." %PPHMM_i
-				print err
+
+			# if err != "":
+			# 	print("There is a problem with coverting cluster %s into a hmm." %PPHMM_i)
+			# 	print(err)
 			
 			#Progress bar
 			sys.stdout.write("\033[K" + "Make HHsuite PPHMM: [%-20s] %d/%d PPHMMs" % ('='*int(float(PPHMM_i+1)/N_PPHMMs*20), PPHMM_i+1, N_PPHMMs) + "\r")
@@ -376,13 +377,13 @@ def RefVirusAnnotator(
 		_ = subprocess.Popen("rm %s_hhm.ffdata %s_hhm.ffindex" %(HHsuite_PPHMMDB, HHsuite_PPHMMDB), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
-		if list(set(map(lambda f: f.split(".")[-1], os.listdir(HHsuite_PPHMMDir))))!=["hhm"]:
-			print "There are some other files/folders other than HHsuite PPHMMs in the folder %s. Remove them first." %HHsuite_PPHMMDir
+		if list(set([f.split(".")[-1] for f in os.listdir(HHsuite_PPHMMDir)]))!=["hhm"]:
+			print("There are some other files/folders other than HHsuite PPHMMs in the folder %s. Remove them first." %HHsuite_PPHMMDir)
 		
 		_ = subprocess.Popen("ffindex_build -s %s_hhm.ffdata %s_hhm.ffindex %s" %(HHsuite_PPHMMDB, HHsuite_PPHMMDB, HHsuite_PPHMMDir), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
-		print "\t\tDetermine PPHMM-PPHMM similarity (ALL-VERSUS-ALL hhsearch)"
+		print("\t\tDetermine PPHMM-PPHMM similarity (ALL-VERSUS-ALL hhsearch)")
 		#-------------------------------------------------------------------------------
 		hhsearchDir		= HHsuiteDir+"/hhsearch_"+"".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)); os.makedirs(hhsearchDir)
 		hhsearchOutFile		= hhsearchDir+"/hhsearch.stdout.hhr"
@@ -401,9 +402,10 @@ def RefVirusAnnotator(
 																HHsuite_N_CPUs),
 																stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
-			if err != "":
-				print "There is a problem with hhsearching PPHMM %s againt the PPHMM database" %PPHMM_i
-				print err
+
+			# if err != "":
+			# 	print("There is a problem with hhsearching PPHMM %s againt the PPHMM database" %PPHMM_i)
+			# 	print(err)
 			
 			with open(hhsearchOutFile, 'r') as hhsearchOut_txt:
 				Content		= hhsearchOut_txt.readlines()
@@ -450,7 +452,7 @@ def RefVirusAnnotator(
 				delimiter= "\t",
 				header	= "PPHMM_i\tPPHMM_j\tPPHMMSimScore")
 		
-		print "\t\tCluster PPHMMs based on hhsearch scores, using the MCL algorithm"
+		print("\t\tCluster PPHMMs based on hhsearch scores, using the MCL algorithm")
 		#-------------------------------------------------------------------------------
 		PPHMM_ClusterFile	= hhsearchDir+"/PPHMM_Clusters.txt"
 		_ = subprocess.Popen("mcl %s --abc -o %s -I %s" %(PPHMMSimScoreCondensedMatFile, PPHMM_ClusterFile, PPHMMClustering_MCLInflation), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
@@ -462,19 +464,19 @@ def RefVirusAnnotator(
 				SeenPPHMMIDList.extend(Cluster.split("\n")[0].split("\t"))
 		
 		with open(PPHMM_ClusterFile, 'a') as PPHMM_Cluster_txt:
-			PPHMM_Cluster_txt.write("\n".join(list(set(map(lambda x: str(float(x)),range(N_PPHMMs)))-set(SeenPPHMMIDList))))
+			PPHMM_Cluster_txt.write("\n".join(list(set([str(float(x)) for x in range(N_PPHMMs)])-set(SeenPPHMMIDList))))
 		
 		with open(PPHMM_ClusterFile, 'r') as PPHMM_Cluster_txt:
 			PPHMMOrder_ByMCL = PPHMM_Cluster_txt.readlines()
 		
-		PPHMMOrder_ByMCL = [map(int,map(float,Cluster.split("\n")[0].split("\t"))) for Cluster in PPHMMOrder_ByMCL]
+		PPHMMOrder_ByMCL = [list(map(int,list(map(float,Cluster.split("\n")[0].split("\t"))))) for Cluster in PPHMMOrder_ByMCL]
 		
 		#Delete the hhsuite shelve directory and database
 		#-------------------------------------------------------------------------------
 		_ = subprocess.Popen("rm -rf %s" %HHsuiteDir, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
-		print "\tDetermine the final PPHMM order"
+		print("\tDetermine the final PPHMM order")
 		#-------------------------------------------------------------------------------
 		PPHMMOrder = []
 		PPHMMClusterSeparation_IndexList = []
@@ -482,14 +484,14 @@ def RefVirusAnnotator(
 		PPHMMOrder_ByMCL_tmp = copy(PPHMMOrder_ByMCL)
 		while len(PPHMMOrder_ByTree_tmp) != 0:
 			PPHMM_i = PPHMMOrder_ByTree_tmp[0]
-			Cluster_i = np.where(map(lambda cluster: PPHMM_i in cluster, PPHMMOrder_ByMCL_tmp))[0][0]
+			Cluster_i = np.where([PPHMM_i in cluster for cluster in PPHMMOrder_ByMCL_tmp])[0][0]
 			Cluster = PPHMMOrder_ByMCL_tmp.pop(Cluster_i)
-			i, PPHMM_i = zip(*[(i,PPHMM_i) for i, PPHMM_i in enumerate(PPHMMOrder_ByTree_tmp) if PPHMM_i in Cluster])
+			i, PPHMM_i = list(zip(*[(i,PPHMM_i) for i, PPHMM_i in enumerate(PPHMMOrder_ByTree_tmp) if PPHMM_i in Cluster]))
 			PPHMMOrder.extend(PPHMM_i)
 			PPHMMClusterSeparation_IndexList.append(len(PPHMMOrder))
 			PPHMMOrder_ByTree_tmp = np.delete(PPHMMOrder_ByTree_tmp, i)
 		
-		print "\tReorganise the PPHMM database"
+		print("\tReorganise the PPHMM database")
 		#-------------------------------------------------------------------------------
 		#Add ".tmp" tag to each alignment and PPHMM file
 		#-------------------------------------------------------------------------------
@@ -548,12 +550,12 @@ def RefVirusAnnotator(
 		with open(HMMER_PPHMMDBSummaryFile, "w") as HMMER_PPHMMDBSummary_txt:
 			HMMER_PPHMMDBSummary_txt.write(Contents)
 		
-		print "\tSort PPHMMSignatureTable and PPHMMLocationTable"
+		print("\tSort PPHMMSignatureTable and PPHMMLocationTable")
 		#-------------------------------------------------------------------------------
 		PPHMMSignatureTable	= PPHMMSignatureTable[:,PPHMMOrder]
 		PPHMMLocationTable 	= PPHMMLocationTable[:,PPHMMOrder]
 		
-		print "\tReorganise the cluster meta data from PPHMMDBConstruction.shelve"
+		print("\tReorganise the cluster meta data from PPHMMDBConstruction.shelve")
 		#-------------------------------------------------------------------------------
 		#Load cluster meta data from PPHMMDBConstruction.shelve
 		#-------------------------------------------------------------------------------
@@ -607,7 +609,7 @@ def RefVirusAnnotator(
 		Parameters.close()
 	
 	################################################################################
-	print "- Generate genomic organisation model (GOM) database"
+	print("- Generate genomic organisation model (GOM) database")
 	################################################################################
 	GOMIDList = OrderedSet([TaxoGrouping for TaxoGrouping in TaxoGroupingList if not TaxoGrouping.startswith(("_","*"))])
 	GOMDB = GOMDB_Constructor (	TaxoGroupingList = TaxoGroupingList,
@@ -615,14 +617,14 @@ def RefVirusAnnotator(
 					GOMIDList = GOMIDList)
 	
 	################################################################################
-	print "- Generate GOM signature table"
+	print("- Generate GOM signature table")
 	################################################################################
 	GOMSignatureTable = GOMSignatureTable_Constructor (	PPHMMLocationTable = PPHMMLocationTable,
 								GOMDB = GOMDB,
 								GOMIDList = GOMIDList)
 	
 	################################################################################
-	print "- Print PPHMMSignatureTable and GOMSignatureTable to file"
+	print("- Print PPHMMSignatureTable and GOMSignatureTable to file")
 	################################################################################
 	VariableShelveFile = VariableShelveDir+"/PPHMMDBConstruction.shelve"
 	Parameters = shelve.open(VariableShelveFile)
@@ -633,11 +635,11 @@ def RefVirusAnnotator(
 	
 	Parameters.close()
 	
-	PPHMMDesc		= map(lambda ClusterDesc: "PPHMM|"+ClusterDesc, ClusterDescList)
+	PPHMMDesc		= ["PPHMM|"+ClusterDesc for ClusterDesc in ClusterDescList]
 	GOMDesc			= ["GOM|"+TaxoGrouping for TaxoGrouping in GOMIDList]
 	np.savetxt(	fname	= VariableShelveDir+"/PPHMMandGOMsignatures.txt",
 			X	= np.column_stack((	VirusNameList,
-							map(", ".join, SeqIDLists),
+							list(map(", ".join, SeqIDLists)),
 							OrderList,
 							FamilyList,
 							SubFamList,
@@ -653,12 +655,12 @@ def RefVirusAnnotator(
 	
 	if IncludeIncompleteGenomes == True:
 		################################################################################
-		print "- Save variables to RefVirusAnnotator.AllGenomes.shelve"
+		print("- Save variables to RefVirusAnnotator.AllGenomes.shelve")
 		################################################################################
 		VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.AllGenomes.shelve"
 	elif IncludeIncompleteGenomes == False:
 		################################################################################
-		print "- Save variables to RefVirusAnnotator.CompleteGenomes.shelve"
+		print("- Save variables to RefVirusAnnotator.CompleteGenomes.shelve")
 		################################################################################
 		VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.CompleteGenomes.shelve"
 	
@@ -666,7 +668,7 @@ def RefVirusAnnotator(
 	from scipy.sparse import coo_matrix
 	PPHMMSignatureTable_coo = coo_matrix(PPHMMSignatureTable)
 	PPHMMLocationTable_coo = coo_matrix(PPHMMLocationTable)
-	GOMDB_coo = {GOMID:coo_matrix(GOM) for GOMID,GOM in GOMDB.iteritems()}
+	GOMDB_coo = {GOMID:coo_matrix(GOM) for GOMID,GOM in GOMDB.items()}
 	
 	Parameters = shelve.open(VariableShelveFile,"n")
 	for key in [	#"PPHMMSignatureTable",
@@ -680,7 +682,7 @@ def RefVirusAnnotator(
 			]:
 		try:
 			Parameters[key] = locals()[key]
-			print "\t"+key
+			print("\t"+key)
 		except TypeError:
 			pass
 	

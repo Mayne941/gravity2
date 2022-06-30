@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.cluster.hierarchy import linkage, to_tree
-from get_newick import GetNewick
+from .get_newick import GetNewick
 
 def DistMat2Tree (DistMat, LeafList, Dendrogram_LinkageMethod):
 	DistMat[DistMat<0]	= 0

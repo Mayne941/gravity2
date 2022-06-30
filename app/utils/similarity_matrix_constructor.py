@@ -1,5 +1,5 @@
 #from dcor import distance_correlation as dcor
-from dcor import dcor
+from .dcor import dcor
 import numpy as np
 import sys
 

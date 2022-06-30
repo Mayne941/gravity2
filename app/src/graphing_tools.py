@@ -39,45 +39,45 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 	
 	VirusGrouping			= True,
 	):
-	print "################################################################################"
-	print "#Generate GRAViTy dendrogram and heat map                                      #"
-	print "################################################################################"
+	print("################################################################################")
+	print("#Generate GRAViTy dendrogram and heat map                                      #")
+	print("################################################################################")
 	'''
 	Generate GRAViTy dendrogram and heat map
 	---------------------------------------------
 	'''
 	################################################################################
-	print "- Define dir/file paths"
+	print("- Define dir/file paths")
 	################################################################################
-	print "\tto program output shelve"
+	print("\tto program output shelve")
 	#-------------------------------------------------------------------------------
 	VariableShelveDir = ShelveDir+"/Shelves"
 	
 	if Dendrogram == True:
-		print "\t\tto virus dendrogram file"
+		print("\t\tto virus dendrogram file")
 		#-------------------------------------------------------------------------------
 		VirusDendrogramFile = VariableShelveDir+"/Dendrogram.IncompleteGenomes=%s.Scheme=%s.Method=%s.p=%s.nwk"%(str(int(IncludeIncompleteGenomes)), SimilarityMeasurementScheme, Dendrogram_LinkageMethod, p)
 		
 		if Bootstrap == True:
-			print "\t\tto dendrogram distribution file"
+			print("\t\tto dendrogram distribution file")
 			#-------------------------------------------------------------------------------
 			VirusDendrogramDistFile	= VariableShelveDir+"/DendrogramDist.IncompleteGenomes=%s.Scheme=%s.Method=%s.p=%s.nwk"%(str(int(IncludeIncompleteGenomes)), SimilarityMeasurementScheme, Dendrogram_LinkageMethod, p)
 			if os.path.isfile(VirusDendrogramDistFile):
 				os.remove(VirusDendrogramDistFile)
 			
-			print "\t\tto bootstrapped dendrogram file"
+			print("\t\tto bootstrapped dendrogram file")
 			#-------------------------------------------------------------------------------
 			BootstrappedVirusDendrogramFile	= VariableShelveDir+"/BootstrappedDendrogram.IncompleteGenomes=%s.Scheme=%s.Method=%s.p=%s.nwk"%(str(int(IncludeIncompleteGenomes)), SimilarityMeasurementScheme, Dendrogram_LinkageMethod, p)
 			if os.path.isfile(BootstrappedVirusDendrogramFile):
 				os.remove(BootstrappedVirusDendrogramFile)
 	
 	if Heatmap == True:
-		print "\t\tto heat map file"
+		print("\t\tto heat map file")
 		#-------------------------------------------------------------------------------
 		HeatmapFile = VariableShelveDir+"/Heatmap.IncompleteGenomes=%s.Scheme=%s.p=%s.pdf"%(str(int(IncludeIncompleteGenomes)), SimilarityMeasurementScheme, p)
 	
 	if Heatmap_WithDendrogram == True:
-		print "\t\tto heat map with dendrogram file"
+		print("\t\tto heat map with dendrogram file")
 		#-------------------------------------------------------------------------------
 		HeatmapWithDendrogramFile = VariableShelveDir+"/HeatmapWithDendrogram.IncompleteGenomes=%s.Scheme=%s.Method=%s.p=%s.support_cutoff=%s.pdf"%(str(int(IncludeIncompleteGenomes)), SimilarityMeasurementScheme, Dendrogram_LinkageMethod, p, Heatmap_DendrogramSupport_Cutoff)
 		if Heatmap_DendrogramFile == None:
@@ -95,14 +95,14 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		VirusGroupingFile = VariableShelveDir+"/VirusGrouping.IncompleteGenomes=%s.Scheme=%s.p=%s.txt"%(str(int(IncludeIncompleteGenomes)), SimilarityMeasurementScheme, p)
 	
 	################################################################################
-	print "- Retrieve variables"
+	print("- Retrieve variables")
 	################################################################################
 	if IncludeIncompleteGenomes == True:
-		print "\tfrom ReadGenomeDescTable.AllGenomes.shelve"
+		print("\tfrom ReadGenomeDescTable.AllGenomes.shelve")
 		#-------------------------------------------------------------------------------
 		VariableShelveFile = VariableShelveDir+"/ReadGenomeDescTable.AllGenomes.shelve"
 	elif IncludeIncompleteGenomes == False:
-		print "\tfrom ReadGenomeDescTable.CompleteGenomes.shelve"
+		print("\tfrom ReadGenomeDescTable.CompleteGenomes.shelve")
 		#-------------------------------------------------------------------------------
 		VariableShelveFile = VariableShelveDir+"/ReadGenomeDescTable.CompleteGenomes.shelve"
 	
@@ -117,16 +117,16 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 			"TaxoGroupingList",
 			]:
 		globals()[key] = Parameters[key]
-		print "\t\t" + key
+		print("\t\t" + key)
 	
 	Parameters.close()
 	
 	if IncludeIncompleteGenomes == True:
-		print "\tfrom RefVirusAnnotator.AllGenomes.shelve"
+		print("\tfrom RefVirusAnnotator.AllGenomes.shelve")
 		#-------------------------------------------------------------------------------
 		VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.AllGenomes.shelve"
 	elif IncludeIncompleteGenomes == False:
-		print "\tfrom RefVirusAnnotator.CompleteGenomes.shelve"
+		print("\tfrom RefVirusAnnotator.CompleteGenomes.shelve")
 		#-------------------------------------------------------------------------------
 		VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.CompleteGenomes.shelve"
 	
@@ -141,17 +141,17 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 			]:
 		try:
 			globals()[key] = Parameters[key]
-			print "\t\t"+key
+			print("\t\t"+key)
 		except KeyError:
 			pass
 	
 	Parameters.close()
 	
-	if "PPHMMSignatureTable_coo" in globals().keys():	globals()["PPHMMSignatureTable"] = PPHMMSignatureTable_coo.toarray()
-	if "PPHMMLocationTable_coo" in globals().keys():	globals()["PPHMMLocationTable"] = PPHMMLocationTable_coo.toarray()
+	if "PPHMMSignatureTable_coo" in list(globals().keys()):	globals()["PPHMMSignatureTable"] = PPHMMSignatureTable_coo.toarray()
+	if "PPHMMLocationTable_coo" in list(globals().keys()):	globals()["PPHMMLocationTable"] = PPHMMLocationTable_coo.toarray()
 	
 	################################################################################
-	print "- Estimate virus pairwise distances"
+	print("- Estimate virus pairwise distances")
 	################################################################################
 	SimMat = SimilarityMat_Constructor(	PPHMMSignatureTable = PPHMMSignatureTable,
 						GOMSignatureTable = GOMSignatureTable,
@@ -163,7 +163,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 	
 	if Dendrogram == True:
 		################################################################################
-		print "- Estimate the GRAViTy dendrogram"
+		print("- Estimate the GRAViTy dendrogram")
 		################################################################################
 		#Make TaxoLabelList
 		#---------------------------------------------------------------------	
@@ -182,20 +182,20 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		
 		if Bootstrap == True:
 			################################################################################
-			print "- Compute bootstrap support"
+			print("- Compute bootstrap support")
 			################################################################################
 			N_PPHMMs = PPHMMSignatureTable.shape[1]
 			for Bootstrap_i in range(0, N_Bootstrap):
-				print "\tRound %d"%(Bootstrap_i+1)
+				print("\tRound %d"%(Bootstrap_i+1))
 				#-------------------------------------------------------------------------------
-				print "\t\tConstruct bootstrapped PPHMMSignatureTable and PPHMMLocationTable"
+				print("\t\tConstruct bootstrapped PPHMMSignatureTable and PPHMMLocationTable")
 				#-------------------------------------------------------------------------------
-				PPHMM_IndexList = np.random.choice(range(N_PPHMMs), N_PPHMMs, replace = True)
+				PPHMM_IndexList = np.random.choice(list(range(N_PPHMMs)), N_PPHMMs, replace = True)
 				BootstrappedPPHMMSignatureTable = PPHMMSignatureTable[:,PPHMM_IndexList]
 				BootstrappedPPHMMLocationTable = PPHMMLocationTable[:,PPHMM_IndexList]
 				BootstrappedGOMSignatureTable = None
 				if "G" in SimilarityMeasurementScheme:
-					print "\t\tConstruct bootstrapped GOMSignatureTable"
+					print("\t\tConstruct bootstrapped GOMSignatureTable")
 					#-------------------------------------------------------------------------------
 					BootstrappedGOMDB = GOMDB_Constructor (	TaxoGroupingList 	= TaxoGroupingList,
 										PPHMMLocationTable	= BootstrappedPPHMMLocationTable,
@@ -204,7 +204,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 													GOMDB			= BootstrappedGOMDB,
 													GOMIDList		= GOMIDList)
 				
-				print "\t\tConstruct a dendrogram from the bootstrapped data"
+				print("\t\tConstruct a dendrogram from the bootstrapped data")
 				#-------------------------------------------------------------------------------
 				BootstrappedSimMat = SimilarityMat_Constructor(	PPHMMSignatureTable	= BootstrappedPPHMMSignatureTable,
 										GOMSignatureTable	= BootstrappedGOMSignatureTable,
@@ -219,7 +219,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 				with open(VirusDendrogramDistFile, "a") as VirusDendrogramDist_txt:
 					VirusDendrogramDist_txt.write(BootstrappedVirusDendrogram+"\n")
 			
-			print "\tCreat a bootstrapped dendrogram"
+			print("\tCreat a bootstrapped dendrogram")
 			#-------------------------------------------------------------------------------
 			if Bootstrap_method == "booster":
 				_ = subprocess.Popen("booster -i %s -b %s -o %s -@ %d "%(VirusDendrogramFile,
@@ -235,22 +235,22 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 																										stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 				out, err = _.communicate()
 			else:
-				print "'Bootstrap_method' can either be 'booster' or 'sumtrees'."
+				print("'Bootstrap_method' can either be 'booster' or 'sumtrees'.")
 	
 	if Heatmap == True:
 		################################################################################
-		print "- Construct GRAViTy heatmap"
+		print("- Construct GRAViTy heatmap")
 		################################################################################
 		#Determine virus order
 		#-------------------------------------------------------------------------------
 		N_Viruses = len(DistMat)
 		if Heatmap_VirusOrderScheme == None:
-			VirusOrder = range(N_Viruses)
+			VirusOrder = list(range(N_Viruses))
 		elif os.path.isfile(Heatmap_VirusOrderScheme):
 			with open(Heatmap_VirusOrderScheme, "r") as Heatmap_VirusOrderScheme_txt:
 				VirusOrder = [int(Virus_i.split("\r\n")[0].split("\n")[0]) for Virus_i in Heatmap_VirusOrderScheme_txt]
 		else:
-			VirusOrder = range(N_Viruses)
+			VirusOrder = list(range(N_Viruses))
 		
 		#Re-order the distance matrix
 		#-------------------------------------------------------------------------------
@@ -263,7 +263,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		LineList	= np.where(ClassLabelList[0:-1] != ClassLabelList[1:])[0]
 		ClassLabelList	= np.hstack((ClassLabelList[LineList],ClassLabelList[-1]))
 		LineList	= LineList + 0.5
-		TickLocList	= np.array(map(np.mean, (zip(np.hstack(([-0.5], LineList)), np.hstack((LineList, [len(TaxoGroupingList)-0.5]))))))
+		TickLocList	= np.array(list(map(np.mean, (list(zip(np.hstack(([-0.5], LineList)), np.hstack((LineList, [len(TaxoGroupingList)-0.5]))))))))
 		
 		#Plot configuration
 		#-------------------------------------------------------------------------------
@@ -336,7 +336,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 	
 	if Heatmap_WithDendrogram == True:
 		################################################################################
-		print "- Construct GRAViTy heat map with dendrogram"
+		print("- Construct GRAViTy heat map with dendrogram")
 		################################################################################
 		N_Viruses = len(DistMat)
 		
@@ -382,7 +382,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 			FarLeftNode = TerminalNodeList[0]
 			for Clade in ([ClassDendrogram]+ClassDendrogram.get_path(FarLeftNode)):
 				DescendantNodeList = Clade.get_terminals()
-				DescendantClassLabelList = list(set(map(lambda c: c.name, DescendantNodeList)))
+				DescendantClassLabelList = list(set([c.name for c in DescendantNodeList]))
 				if len(DescendantClassLabelList)==1:
 					ClassLabelList.append(DescendantClassLabelList[0])
 					LineList.append(LineList[-1]+len(DescendantNodeList))
@@ -391,7 +391,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		
 		ClassLabelList	= np.array(ClassLabelList)
 		LineList	= np.array(LineList) + 0.5
-		TickLocList	= np.array(map(np.mean, zip(LineList[0:-1],LineList[1:])))
+		TickLocList	= np.array(list(map(np.mean, list(zip(LineList[0:-1],LineList[1:])))))
 		
 		#Plot configuration
 		#-------------------------------------------------------------------------------
@@ -445,7 +445,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		
 		ax_Dendrogram		= fig.add_axes([ax_Dendrogram_L, ax_Dendrogram_B, ax_Dendrogram_W, ax_Dendrogram_H], frame_on = False, facecolor = "white")
 		#Phylo			.draw(VirusDendrogram, label_func = lambda x: "", do_show = False,  axes = ax_Dendrogram) # RM < deps buggered
-		VirusDendrogramDepth	= max([v for k,v in VirusDendrogram.depths().iteritems()])
+		VirusDendrogramDepth	= max([v for k,v in VirusDendrogram.depths().items()])
 		ax_Dendrogram		.set_xlim([(VirusDendrogramDepth - 1), VirusDendrogramDepth])
 		ax_Dendrogram		.set_ylim([N_Viruses+0.5, 0.5])
 		ax_Dendrogram		.set_axis_off()
@@ -458,7 +458,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		
 		ax_ScaleBar		.set_xlim([1, 0])
 		ax_ScaleBar		.set_xticks(ScaleBarTicks)
-		ax_ScaleBar		.set_xticklabels(map(str, ScaleBarTicks), rotation = 0, size = FontSize)
+		ax_ScaleBar		.set_xticklabels(list(map(str, ScaleBarTicks)), rotation = 0, size = FontSize)
 		ax_ScaleBar		.set_xlabel('Distance', rotation = 0, size = FontSize+2)
 		ax_ScaleBar		.xaxis.set_label_position('bottom')
 		ax_ScaleBar		.tick_params(	top = 'off',
@@ -511,7 +511,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 	
 	if VirusGrouping == True:
 		################################################################################
-		print "- Virus grouping"
+		print("- Virus grouping")
 		################################################################################
 		from GRAViTy.Utilities.OrderedSet import OrderedSet
 		from GRAViTy.Utilities.VirusGrouping_Estimator import VirusGrouping_Estimator
@@ -522,7 +522,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		Theils_u_TaxoGroupingListGivenPred,
 		Theils_u_PredGivenTaxoGroupingList) = VirusGrouping_Estimator(DistMat, Dendrogram_LinkageMethod, TaxoGroupingList)
 		np.savetxt(	fname = VirusGroupingFile,
-				X = np.column_stack((	map(", ".join, SeqIDLists),
+				X = np.column_stack((	list(map(", ".join, SeqIDLists)),
 							FamilyList,
 							GenusList,
 							VirusNameList,
