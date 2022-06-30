@@ -1,0 +1,5 @@
+*.pyc
+/data/
+/output/
+/*.egg-info
+/*.egg
