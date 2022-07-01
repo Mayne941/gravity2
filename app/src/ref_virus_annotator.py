@@ -4,7 +4,7 @@ from collections import Counter
 from copy import copy
 import numpy as np
 import subprocess, os, shelve, sys, string, random, glob
-
+import pickle
 #Local functions
 from app.utils.line_count import LineCount
 from app.utils.ordered_set import OrderedSet
@@ -611,7 +611,7 @@ def RefVirusAnnotator(
 	################################################################################
 	print("- Generate genomic organisation model (GOM) database")
 	################################################################################
-	GOMIDList = OrderedSet([TaxoGrouping for TaxoGrouping in TaxoGroupingList if not TaxoGrouping.startswith(("_","*"))])
+	GOMIDList = OrderedSet([TaxoGrouping for TaxoGrouping in TaxoGroupingList.astype('str') if not TaxoGrouping.startswith(("_","*"))])
 	GOMDB = GOMDB_Constructor (	TaxoGroupingList = TaxoGroupingList,
 					PPHMMLocationTable = PPHMMLocationTable,
 					GOMIDList = GOMIDList)
@@ -634,8 +634,8 @@ def RefVirusAnnotator(
 		globals()[key] = Parameters[key]
 	
 	Parameters.close()
-	
-	PPHMMDesc		= ["PPHMM|"+ClusterDesc for ClusterDesc in ClusterDescList]
+
+	PPHMMDesc		= ["PPHMM|"+ClusterDesc for ClusterDesc in ClusterDescList.astype("str")]
 	GOMDesc			= ["GOM|"+TaxoGrouping for TaxoGrouping in GOMIDList]
 	np.savetxt(	fname	= VariableShelveDir+"/PPHMMandGOMsignatures.txt",
 			X	= np.column_stack((	VirusNameList,
@@ -673,19 +673,20 @@ def RefVirusAnnotator(
 	Parameters = shelve.open(VariableShelveFile,"n")
 	for key in [	#"PPHMMSignatureTable",
 			#"PPHMMLocationTable",
-			"PPHMMSignatureTable_coo",
-			"PPHMMLocationTable_coo",
+			"PPHMMSignatureTable_coo", ##
+			"PPHMMLocationTable_coo", ##
 			"GOMIDList",
 			#"GOMDB",
-			"GOMDB_coo",
-			"GOMSignatureTable",
+			"GOMDB_coo", ##
+			"GOMSignatureTable", ##
 			]:
 		try:
 			Parameters[key] = locals()[key]
 			print("\t"+key)
 		except TypeError:
 			pass
-	
+	th = dict(Parameters) # RM <<
+	pickle.dump(th, open("test.p", "wb"))
 	Parameters.close()
 
 

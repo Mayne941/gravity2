@@ -29,7 +29,7 @@ def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_Meta
 		#-------------------------------------------------------------------------------
 		ClusterSizeList.append(len(Cluster))
 		
-		ClusterSizeByTaxoGroupingList.append(", ".join(["%s: %s"%(TaxoGrouping, N_ProtSeqsInTheTaxoGroup) for TaxoGrouping, N_ProtSeqsInTheTaxoGroup in sorted(list(Counter(zip(*TaxoLists)[-1]).items()),
+		ClusterSizeByTaxoGroupingList.append(", ".join(["%s: %s"%(TaxoGrouping, N_ProtSeqsInTheTaxoGroup) for TaxoGrouping, N_ProtSeqsInTheTaxoGroup in sorted(list(Counter(list(zip(*TaxoLists))[-1]).items()),
 																	key = operator.itemgetter(1),
 																	reverse = True
 																	)]
@@ -56,10 +56,10 @@ def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_Meta
 				if ClusterTaxo_UniqueTaxoLabel[0] not in ["", "Unassigned", "unassigned"]:
 					ClusterTaxo = ClusterTaxo + ClusterTaxo_UniqueTaxoLabel
 			else:
-				ClusterTaxo = ClusterTaxo + ["/".join(ClusterTaxo_UniqueTaxoLabel)]
+				ClusterTaxo = ClusterTaxo + [b"/".join(ClusterTaxo_UniqueTaxoLabel)]
 				break
 		
-		ClusterTaxoList.append("; ".join(ClusterTaxo))
+		ClusterTaxoList.append(b"; ".join(ClusterTaxo))
 		
 		ClusterProtSeqIDList.append(", ".join(Cluster))
 		

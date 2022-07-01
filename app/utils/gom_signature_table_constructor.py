@@ -13,8 +13,8 @@ def GOMSignatureTable_Constructor (PPHMMLocationTable, GOMDB, GOMIDList):
 		Virus_i = 1
 		for PPHMMLocation in PPHMMLocationTable:
 			RelevantPPHMMIndices = np.where(list(map(any, list(zip(list(map(any, GOMDB[GOM].transpose() != 0)), PPHMMLocation != 0)))))[0]
-			GOMSignatureList.append(dcor(GOMDB[GOM][:, RelevantPPHMMIndices].transpose(), PPHMMLocation[RelevantPPHMMIndices].reshape(-1,1)))
-			
+			GOMSignatureList.append(dcor(GOMDB[GOM][:, RelevantPPHMMIndices].T, PPHMMLocation[RelevantPPHMMIndices].reshape(-1,1)))
+
 			#Progress bar
 			sys.stdout.write("\033[K" + "GOM construction %s (%s/%s): [%-20s] %s/%s GOMs" % (GOM, GOM_i, N_GOMs, '='*int(float(Virus_i)/N_Viruses*20), Virus_i, N_Viruses) + "\r")
 			sys.stdout.flush()

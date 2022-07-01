@@ -6,13 +6,14 @@ import matplotlib.pyplot as plt
 #plt.switch_backend('agg')
 import numpy as np
 import shelve, os, subprocess, re
-
+import pickle
 #Local functions
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.gomdb_constructor import GOMDB_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.taxo_label_constructor import TaxoLabel_Constructor
 from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
+from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
 
 def GRAViTyDendrogramAndHeatmapConstruction(
 	ShelveDir,
@@ -68,6 +69,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 			print("\t\tto bootstrapped dendrogram file")
 			#-------------------------------------------------------------------------------
 			BootstrappedVirusDendrogramFile	= VariableShelveDir+"/BootstrappedDendrogram.IncompleteGenomes=%s.Scheme=%s.Method=%s.p=%s.nwk"%(str(int(IncludeIncompleteGenomes)), SimilarityMeasurementScheme, Dendrogram_LinkageMethod, p)
+
 			if os.path.isfile(BootstrappedVirusDendrogramFile):
 				os.remove(BootstrappedVirusDendrogramFile)
 	
@@ -97,6 +99,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 	################################################################################
 	print("- Retrieve variables")
 	################################################################################
+	# RM << 
 	if IncludeIncompleteGenomes == True:
 		print("\tfrom ReadGenomeDescTable.AllGenomes.shelve")
 		#-------------------------------------------------------------------------------
@@ -108,14 +111,14 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 	
 	#VariableShelveFile = VariableShelveDir+"/ReadGenomeDescTable.shelve"
 	Parameters = shelve.open(VariableShelveFile)
-	for key in [	
+	for key in [	# RM << Unclear what utility of this is
 			"SeqIDLists",
 			"FamilyList",
 			"GenusList",
 			"VirusNameList",
-			
 			"TaxoGroupingList",
 			]:
+
 		globals()[key] = Parameters[key]
 		print("\t\t" + key)
 	
@@ -131,8 +134,11 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.CompleteGenomes.shelve"
 	
 	#VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.shelve"
-	Parameters = shelve.open(VariableShelveFile)
-	for key in [	"PPHMMSignatureTable",
+	#Parameters = shelve.open(VariableShelveFile) ##
+
+	Parameters = pickle.load(open("test.p", "rb"))
+	
+	for key in ["PPHMMSignatureTable",
 			"PPHMMLocationTable",
 			"PPHMMSignatureTable_coo",
 			"PPHMMLocationTable_coo",
@@ -142,11 +148,11 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		try:
 			globals()[key] = Parameters[key]
 			print("\t\t"+key)
-		except KeyError:
+		except KeyError:  # RM <<
 			pass
 	
-	Parameters.close()
-	
+	# Parameters.close() ## 
+
 	if "PPHMMSignatureTable_coo" in list(globals().keys()):	globals()["PPHMMSignatureTable"] = PPHMMSignatureTable_coo.toarray()
 	if "PPHMMLocationTable_coo" in list(globals().keys()):	globals()["PPHMMLocationTable"] = PPHMMLocationTable_coo.toarray()
 	
@@ -332,9 +338,9 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		
 		#Save the plot to file
 		#-------------------------------------------------------------------------------
-		plt		.savefig(HeatmapFile, format = "pdf")
+		plt.savefig(HeatmapFile, format = "pdf")
 	
-	if Heatmap_WithDendrogram == True:
+	if Heatmap_WithDendrogram != True: ### RM << !!!!
 		################################################################################
 		print("- Construct GRAViTy heat map with dendrogram")
 		################################################################################
@@ -342,6 +348,7 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		
 		#Load the tree
 		#-------------------------------------------------------------------------------
+		breakpoint()
 		VirusDendrogram = Phylo.read(Heatmap_DendrogramFile, "newick")
 		
 		#Determine virus order
@@ -513,8 +520,6 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 		################################################################################
 		print("- Virus grouping")
 		################################################################################
-		from GRAViTy.Utilities.OrderedSet import OrderedSet
-		from GRAViTy.Utilities.VirusGrouping_Estimator import VirusGrouping_Estimator
 		
 		(VirusGroupingList,
 		OptDistance_Cutoff,

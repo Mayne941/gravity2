@@ -1,7 +1,7 @@
 from sklearn.feature_selection import mutual_info_classif
 import numpy as np
 import shelve, os, sys
-
+import pickle
 #Local functions
 from app.utils.ordered_set import OrderedSet
 
@@ -76,7 +76,8 @@ def MutualInformationCalculator (
 		VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.CompleteGenomes.shelve"
 	
 	#VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.shelve"
-	Parameters = shelve.open(VariableShelveFile)
+	#Parameters = shelve.open(VariableShelveFile) # RM <<
+	Parameters = pickle.load(open("test.p", "rb"))
 	for key in  [	
 			"PPHMMSignatureTable",
 			"PPHMMSignatureTable_coo",
@@ -87,7 +88,8 @@ def MutualInformationCalculator (
 		except KeyError:
 			pass
 	
-	Parameters.close()
+	#Parameters.close() #RM <<
+
 	if "PPHMMSignatureTable_coo" in list(globals().keys()):	globals()["PPHMMSignatureTable"] = PPHMMSignatureTable_coo.toarray()
 	
 	print("\tfrom PPHMMDBConstruction.shelve")
@@ -102,7 +104,7 @@ def MutualInformationCalculator (
 	
 	Parameters.close()
 	
-	PPHMMDesc = ["PPHMM|"+ClusterDesc for ClusterDesc in ClusterDescList]
+	PPHMMDesc = ["PPHMM|"+ClusterDesc for ClusterDesc in ClusterDescList.astype("str")]
 	PPHMMDesc = np.array(PPHMMDesc)
 	
 	if VirusGroupingFile == None:
@@ -135,8 +137,8 @@ def MutualInformationCalculator (
 		#-------------------------------------------------------------------------------
 		ResultDict[VirusGroupingScheme]	= {}
 		VirusGroupingIDList		= [VirusGroupingID for VirusGroupingID in OrderedSet(VirusGroupingList) if VirusGroupingID!="-"]
-		
-		IngroupVirus_IndexList		= np.where([(VirusGroupingID != "-" and not VirusGroupingID.startswith("O_")) for VirusGroupingID in VirusGroupingList])[0]
+
+		IngroupVirus_IndexList		= np.where([(VirusGroupingID != "-" and not VirusGroupingID.startswith("O_")) for VirusGroupingID in VirusGroupingList.astype("str")])[0]
 		IngroupVirus_PPHMM_IndexList	= np.where(np.sum(PPHMMSignatureTable[IngroupVirus_IndexList] != 0, axis = 0) != 0)[0]
 		IngroupVirus_PPHMMDesc		= PPHMMDesc[IngroupVirus_PPHMM_IndexList]
 		
@@ -169,16 +171,20 @@ def MutualInformationCalculator (
 		
 		#Sort the PPHMMs according to mutual information scores
 		#-------------------------------------------------------------------------------
-		PPHMMOrder = list(zip(*sorted(	[(AverageMutualInformationScore_i, AverageMutualInformationScore) for AverageMutualInformationScore_i, AverageMutualInformationScore in enumerate(AverageMutualInformationScoreList)],
+		PPHMMOrder = list([zip(*sorted(	[(AverageMutualInformationScore_i, AverageMutualInformationScore) for AverageMutualInformationScore_i, AverageMutualInformationScore in enumerate(AverageMutualInformationScoreList)],
 						key = lambda x: x[1],
 						reverse = True,
 						)
-					)[0]
+					)][0]
 				)
-		ResultDict[VirusGroupingScheme]["AverageMutualInformationScoreList"] = AverageMutualInformationScoreList[PPHMMOrder]
-		ResultDict[VirusGroupingScheme]["PPHMMDesc"] = IngroupVirus_PPHMMDesc[PPHMMOrder]
-		ResultDict[VirusGroupingScheme]["PPHMMSignatureTable"] = PPHMMSignatureTable_Subset[:,PPHMMOrder]
-		
+
+		#ResultDict[VirusGroupingScheme]["AverageMutualInformationScoreList"] = AverageMutualInformationScoreList[PPHMMOrder]
+		ResultDict[VirusGroupingScheme]["AverageMutualInformationScoreList"] = [x for _, x in sorted(zip(PPHMMOrder[0], AverageMutualInformationScoreList))]
+		#ResultDict[VirusGroupingScheme]["PPHMMDesc"] = IngroupVirus_PPHMMDesc[PPHMMOrder]
+		ResultDict[VirusGroupingScheme]["PPHMMDesc"] = [x for _, x in sorted(zip(PPHMMOrder[0], IngroupVirus_PPHMMDesc))]
+		#ResultDict[VirusGroupingScheme]["PPHMMSignatureTable"] = PPHMMSignatureTable_Subset[:,PPHMMOrder]
+		ResultDict[VirusGroupingScheme]["PPHMMSignatureTable"] = [x for _, x in sorted(zip(PPHMMOrder[0], PPHMMSignatureTable_Subset))]
+
 		#Write the results to file
 		#-------------------------------------------------------------------------------
 		Dat	= np.column_stack((	list(map(", ".join, SeqIDLists)),
@@ -190,11 +196,15 @@ def MutualInformationCalculator (
 						GenusList,
 						TaxoGroupingList,
 						VirusGroupingList,
-						PPHMMSignatureTable_Subset[:,PPHMMOrder],
+						#PPHMMSignatureTable_Subset[:,PPHMMOrder], # RM <
+						sorted(zip(PPHMMOrder[0], PPHMMSignatureTable_Subset))
 					))
-		Dat	= np.vstack((		["Sequence ID", "Virus name", "Baltimore classification group", "Order", "Family", "Subfamily", "Genus", "TaxoGrouping", "Virus grouping"]+IngroupVirus_PPHMMDesc[PPHMMOrder].tolist(),
+		''' # RM < DISABLED FOR DEV
+#		Dat	= np.vstack((		["Sequence ID", "Virus name", "Baltimore classification group", "Order", "Family", "Subfamily", "Genus", "TaxoGrouping", "Virus grouping"]+IngroupVirus_PPHMMDesc[PPHMMOrder].tolist(),
+		Dat	= np.vstack((["Sequence ID", "Virus name", "Baltimore classification group", "Order", "Family", "Subfamily", "Genus", "TaxoGrouping", "Virus grouping"]+sorted(zip(PPHMMOrder[0], IngroupVirus_PPHMMDesc)),
 						Dat,
-						["Average mutual information score"]+[""]*8+AverageMutualInformationScoreList[PPHMMOrder].astype(str).tolist(),
+						#["Average mutual information score"]+[""]*8+AverageMutualInformationScoreList[PPHMMOrder].astype(str).tolist(), # RM <
+						["Average mutual information score"]+[""]*8+PPHMMOrder[1].astype(str).tolist(),
 					))
 		
 		MutualInformationScoreFile = MutualInformationScoreDir+"/MIScore.Scheme=%s.txt"%VirusGroupingScheme
@@ -207,7 +217,8 @@ def MutualInformationCalculator (
 			MutualInformationScore_txt.write("N_Sampling: %d\n"%N_Sampling+
 							"Sampling strategy: %s\n"%SamplingStrategy+
 							"Sample size per virus group: %s\n"%SampleSizePerGroup)
-	
+		'''
+
 	if IncludeIncompleteGenomes == True:
 		################################################################################
 		print("- Save variables to MutualInformationCalculator.AllGenomes.shelve")
