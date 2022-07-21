@@ -1,5 +1,5 @@
 from copy import copy
-import os, shelve, string, random, subprocess
+import os, shelve, string, random, subprocess, pickle
 from scipy.sparse import coo_matrix
 
 #Local functions
@@ -104,7 +104,8 @@ def UcfVirusAnnotator (
 		#print "\t\tfrom RefVirusAnnotator.shelve"
 		#-------------------------------------------------------------------------------
 		#VariableShelveFile_RefVirus = VariableShelveDir_RefVirus+"/RefVirusAnnotator.shelve"
-		Parameters = shelve.open(VariableShelveFile_RefVirus)
+		#Parameters = shelve.open(VariableShelveFile_RefVirus)
+		Parameters = pickle.load(open("test.p", "rb"))
 		for key in [	"GOMIDList",
 				"GOMDB",
 				"GOMDB_coo",
@@ -115,7 +116,7 @@ def UcfVirusAnnotator (
 			except KeyError:
 				pass
 		
-		Parameters.close()
+		#Parameters.close()
 		
 		GOMIDList_RefVirus = copy(GOMIDList)
 		if "GOMDB_coo" in list(globals().keys()): globals()["GOMDB"] = {GOMID:GOM_coo.toarray() for GOMID, GOM_coo in GOMDB_coo.items()}

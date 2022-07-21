@@ -14,14 +14,14 @@ import os, shelve, sys, random, string, subprocess, operator
 sys.setrecursionlimit(10000)
 
 #Local functions
-from GRAViTy.Utilities.OrderedSet import OrderedSet
-from GRAViTy.Utilities.DistMat2Tree import DistMat2Tree
-from GRAViTy.Utilities.SimilarityMat_Constructor import SimilarityMat_Constructor
-from GRAViTy.Utilities.TaxoLabel_Constructor import TaxoLabel_Constructor
-from GRAViTy.Utilities.PPHMMSignatureTable_Constructor import PPHMMSignatureTable_Constructor
-from GRAViTy.Utilities.GOMDB_Constructor import GOMDB_Constructor
-from GRAViTy.Utilities.GOMSignatureTable_Constructor import GOMSignatureTable_Constructor
-from GRAViTy.Utilities.VirusGrouping_Estimator import VirusGrouping_Estimator
+from app.utils.ordered_set import OrderedSet
+from app.utils.dist_mat_to_tree import DistMat2Tree
+from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
+from app.utils.taxo_label_constructor import TaxoLabel_Constructor
+from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
+from app.utils.gomdb_constructor import GOMDB_Constructor
+from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
+from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
 
 def calc_min_interval(x, alpha):
 	"""
@@ -226,7 +226,7 @@ def VirusClassificationAndEvaluation (
 	
 	SimilarityMeasurementScheme		= "PG",
 	p					= 1,
-	Dendrogram_LinkageMethod		= "average", #’single’, ’complete’, ’average’, ’weighted’
+	Dendrogram_LinkageMethod		= "average", #'single', 'complete', 'average', 'weighted'
 	
 	DatabaseAssignmentSimilarityScore_Cutoff	= 0.01,
 	N_PairwiseSimilarityScores		= 10000,

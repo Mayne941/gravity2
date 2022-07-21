@@ -7,9 +7,8 @@ from app.src.virus_classification import VirusClassificationAndEvaluation
 from app.utils.check_input import check_FILEPATH, check_FILEPATHS, check_PERCENT, check_PROB, check_POS, check_POSINTEGER, check_NONNEG, check_NONNEGINTEGER, check_NONPOS, check_N_AlignmentMerging
 from app.utils.str_to_bool import str2bool
 
-import optparse, os, multiprocessing
+import optparse, os, multiprocessing, textwrap, time
 
-import textwrap
 class IndentedHelpFormatterWithNL(optparse.IndentedHelpFormatter):
 	def format_description(self, description):
 		if not description: return ""
@@ -67,6 +66,7 @@ class IndentedHelpFormatterWithNL(optparse.IndentedHelpFormatter):
 		return "".join(result)
 
 def main ():
+	actual_start = time.time()
 	parser = optparse.OptionParser(	usage = "usage: %prog [options]",
 					version = "%prog 1.1.0",
 					formatter = IndentedHelpFormatterWithNL())
@@ -812,7 +812,10 @@ def main ():
 	print("-"*50)
 	print("VirusGrouping: %s"%options.VirusGrouping)
 	print("="*100)
-	
+
+	print("&"*100)
+	print("STARTING BENCHMARK: REFVIRUSANNOTATOR")
+	start = time.time()
 	VirusClassificationAndEvaluation (
 		ShelveDir_UcfVirus = options.ShelveDir_UcfVirus,
 		ShelveDirs_RefVirus = options.ShelveDirs_RefVirus,
@@ -845,6 +848,11 @@ def main ():
 		
 		VirusGrouping = str2bool(options.VirusGrouping),
 		)
+
+	print(f"TIME TO COMPLETE VirusClassificationAndEvaluation: {time.time() - start}" %elapsed)
+	print("&"*100)
+
+	print(f"Time to complete: {time.time() - actual_start}")
 
 if __name__ == '__main__':
 	main()

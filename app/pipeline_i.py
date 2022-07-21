@@ -13,6 +13,10 @@ import optparse, os, multiprocessing
 import time
 import textwrap
 
+''' Dev run cmd # RM <
+source ./env_vars.sh && python3 -m app.pipeline_i --GenomeDescTableFile "./data/VMR_Test_Ref_smol.txt" --ShelveDir "./output/Analysis/Ref/VI" --Database "VI" --Database_Header "Baltimore Group" --TaxoGrouping_Header "Taxonomic grouping" --N_Bootstrap 10 --GenomeSeqFile "./output/GenomeSeqs.VI.gb"
+'''
+
 class IndentedHelpFormatterWithNL(optparse.IndentedHelpFormatter):
 	def format_description(self, description):
 		if not description: return ""
