@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap as LSC
 import matplotlib.pyplot as plt
 #plt.switch_backend('agg')
-import os, shelve, sys, random, string, subprocess, operator
+import os, shelve, sys, random, string, subprocess, operator, pickle
 sys.setrecursionlimit(10000)
 
 #Local functions
@@ -475,7 +475,10 @@ def VirusClassificationAndEvaluation (
 			#-------------------------------------------------------------------------------
 			VariableShelveFile_RefVirus = VariableShelveDir_RefVirus+"/RefVirusAnnotator.CompleteGenomes.shelve"
 		#VariableShelveFile_RefVirus = VariableShelveDir_RefVirus+"/RefVirusAnnotator.shelve"
-		Parameters = shelve.open(VariableShelveFile_RefVirus)
+		#Parameters = shelve.open(VariableShelveFile_RefVirus)
+		breakpoint()
+		Parameters = pickle.load(open(f"{VariableShelveDir_RefVirus}/RefVirusAnnotator.CompleteGenomes.p", "rb"))
+
 		for key in [	
 				"PPHMMSignatureTable",
 				"PPHMMLocationTable",

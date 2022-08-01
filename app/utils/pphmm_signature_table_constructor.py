@@ -30,7 +30,7 @@ def PPHMMSignatureTable_Constructor (
 	#Specify PPHMMQueryFile and PPHMMScanOutFile
 	#---------------------------------------------------------------------
 	PPHMMDB_Summary			= HMMER_PPHMMDB+"_Summary.txt"
-	N_PPHMMs			= LineCount(PPHMMDB_Summary)-1
+	N_PPHMMs				= LineCount(PPHMMDB_Summary)-1
 	PPHMMQueryFile			= HMMER_hmmscanDir+"/QProtSeqs.fasta"
 	PPHMMScanOutFile		= HMMER_hmmscanDir+"/PPHMMScanOut.txt"
 	

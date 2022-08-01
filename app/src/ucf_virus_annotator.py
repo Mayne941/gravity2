@@ -29,16 +29,11 @@ def UcfVirusAnnotator (
 	'''
 	ShelveDirs_RefVirus	= ShelveDirs_RefVirus.split(", ")
 	
-	################################################################################
 	print("- Define dir/file paths")
-	################################################################################
 	print("\tto program output shelve")
-	#-------------------------------------------------------------------------------
 	VariableShelveDir_UcfVirus	= ShelveDir_UcfVirus+"/Shelves"
 	
-	################################################################################
 	print("- Retrieve variables")
-	################################################################################
 	if IncludeIncompleteGenomes_UcfVirus == True:
 		print("\tfrom ReadGenomeDescTable.AllGenomes.shelve")
 		#-------------------------------------------------------------------------------
@@ -62,9 +57,7 @@ def UcfVirusAnnotator (
 	TranslTableList_UcfVirus = copy(TranslTableList)
 	
 	if not os.path.isfile(GenomeSeqFile_UcfVirus):
-		################################################################################
 		print("- Download GenBank file")
-		################################################################################
 		print("GenomeSeqFile_UcfVirus doesn't exist. GRAViTy is downloading the GenBank file(s)")
 		print("Here are the accession numbers to be downloaded: ")
 		print("\n".join(["\n".join(x) for x in SeqIDLists_UcfVirus]))
@@ -78,13 +71,9 @@ def UcfVirusAnnotator (
 	for ShelveDir_RefVirus in ShelveDirs_RefVirus:
 		RefVirusGroup_i = RefVirusGroup_i+1
 		RefVirusGroup = ShelveDir_RefVirus.split("/")[-1]
-		################################################################################
 		print("- Annotate unclassified viruses using the PPHMM and GOM databases of the reference viruses: %s (%d/%d)"%(RefVirusGroup, RefVirusGroup_i, N_RefVirusGroups))
-		################################################################################
 		print("\tDefine dir/file paths")
-		#-------------------------------------------------------------------------------
 		print("\t\tto HMMER PPHMM database of the reference virus group")
-		#-------------------------------------------------------------------------------
 		HMMERDir_RefVirus		= ShelveDir_RefVirus+"/HMMER"
 		HMMER_PPHMMDBDir_RefVirus	= HMMERDir_RefVirus+"/HMMER_PPHMMDB"
 		HMMER_PPHMMDB_RefVirus		= HMMER_PPHMMDBDir_RefVirus+"/HMMER_PPHMMDB"
@@ -105,7 +94,7 @@ def UcfVirusAnnotator (
 		#-------------------------------------------------------------------------------
 		#VariableShelveFile_RefVirus = VariableShelveDir_RefVirus+"/RefVirusAnnotator.shelve"
 		#Parameters = shelve.open(VariableShelveFile_RefVirus)
-		Parameters = pickle.load(open("test.p", "rb"))
+		Parameters = pickle.load(open(f"{VariableShelveDir_RefVirus}/RefVirusAnnotator.CompleteGenomes.p", "rb"))
 		for key in [	"GOMIDList",
 				"GOMDB",
 				"GOMDB_coo",
@@ -131,7 +120,8 @@ def UcfVirusAnnotator (
 		#Generate PPHMMSignatureTable and PPHMMLocationTable
 		#-------------------------------------------------------------------------------
 		(PPHMMSignatureTable,
-		PPHMMLocationTable) = PPHMMSignatureTable_Constructor(	SeqIDLists		= SeqIDLists_UcfVirus,
+		PPHMMLocationTable) = PPHMMSignatureTable_Constructor(	
+									SeqIDLists		= SeqIDLists_UcfVirus,
 									GenBankFile		= GenomeSeqFile_UcfVirus,
 									TranslTableList		= TranslTableList_UcfVirus,
 									SeqLength_Cutoff	= SeqLength_Cutoff,
