@@ -6,6 +6,7 @@ from app.src.virus_classification import VirusClassificationAndEvaluation
 
 from app.utils.check_input import check_FILEPATH, check_FILEPATHS, check_PERCENT, check_PROB, check_POS, check_POSINTEGER, check_NONNEG, check_NONNEGINTEGER, check_NONPOS, check_N_AlignmentMerging
 from app.utils.str_to_bool import str2bool
+from app.utils.benchmark import benchmark_start, benchmark_end
 
 import optparse, os, multiprocessing, textwrap, time
 
@@ -645,6 +646,8 @@ def main ():
 	if not os.path.exists(options.ShelveDir_UcfVirus):
 		os.makedirs(options.ShelveDir_UcfVirus)
 	
+	start = benchmark_start("ReadGenomeDescTable")
+
 	ReadGenomeDescTable(
 		GenomeDescTableFile	= options.GenomeDescTableFile_UcfVirus,
 		ShelveDir		= options.ShelveDir_UcfVirus,
@@ -653,6 +656,8 @@ def main ():
 		#TaxoGrouping_Header	= options.TaxoGrouping_Header,
 		#TaxoGroupingFile	= options.TaxoGroupingFile,
 		)
+	
+	benchmark_end("ReadGenomeDescTable", start)
 	
 	if str2bool(options.UseUcfVirusPPHMMs) == True:
 		print("Input for PPHMMDBConstruction:")
@@ -699,6 +704,8 @@ def main ():
 		print("HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging: %s"%options.HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging)
 		print("="*100)
 		
+		start = benchmark_start("PPHMMDBConstruction")
+
 		PPHMMDBConstruction (
 			GenomeSeqFile = options.GenomeSeqFile_UcfVirus,
 			ShelveDir = options.ShelveDir_UcfVirus,
@@ -730,7 +737,9 @@ def main ():
 			
 			HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = str2bool(options.HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging),
 			)
-	
+
+		benchmark_end("PPHMMDBConstruction", start)
+
 	print("Input for UcfVirusAnnotator:")
 	print("="*100)
 	print("Main input")
@@ -750,6 +759,8 @@ def main ():
 	print("HMMER_HitScore_Cutoff: %s"%options.HMMER_HitScore_Cutoff)
 	print("="*100)
 	
+	start = benchmark_start("UcfVirusAnnotator")
+
 	UcfVirusAnnotator (
 		GenomeSeqFile_UcfVirus = options.GenomeSeqFile_UcfVirus,
 		ShelveDir_UcfVirus = options.ShelveDir_UcfVirus,
@@ -763,7 +774,9 @@ def main ():
 		HMMER_C_EValue_Cutoff = options.HMMER_C_EValue_Cutoff,
 		HMMER_HitScore_Cutoff = options.HMMER_HitScore_Cutoff,
 		)
-	
+
+	benchmark_end("UcfVirusAnnotator", start)
+
 	print("Input for VirusClassificationAndEvaluation:\n")
 	print("="*100)
 	print("Main input")
@@ -814,8 +827,9 @@ def main ():
 	print("="*100)
 
 	print("&"*100)
-	print("STARTING BENCHMARK: REFVIRUSANNOTATOR")
-	start = time.time()
+
+	start = benchmark_start("VirusClassificationAndEvaluation")
+
 	VirusClassificationAndEvaluation (
 		ShelveDir_UcfVirus = options.ShelveDir_UcfVirus,
 		ShelveDirs_RefVirus = options.ShelveDirs_RefVirus,
@@ -849,8 +863,7 @@ def main ():
 		VirusGrouping = str2bool(options.VirusGrouping),
 		)
 
-	print(f"TIME TO COMPLETE VirusClassificationAndEvaluation: {time.time() - start}" %elapsed)
-	print("&"*100)
+	benchmark_end("VirusClassificationAndEvaluation", start)	
 
 	print(f"Time to complete: {time.time() - actual_start}")
 

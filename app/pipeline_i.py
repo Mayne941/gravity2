@@ -7,6 +7,7 @@ from app.src.mutual_information_calculator import MutualInformationCalculator
 
 from app.utils.check_input import check_FILEPATH, check_FILEPATHS, check_PERCENT, check_PROB, check_POS, check_POSINTEGER, check_NONNEG, check_NONNEGINTEGER, check_NONPOS, check_N_AlignmentMerging
 from app.utils.str_to_bool import str2bool
+from app.utils.benchmark import benchmark_start, benchmark_end
 
 import pdb
 import optparse, os, multiprocessing
@@ -698,9 +699,8 @@ def main():
 	if not os.path.exists(options.ShelveDir):
 		os.makedirs(options.ShelveDir)
 	
-	print("&"*100)
-	print("STARTING BENCHMARK: READGENOMEDESCTABLE")
-	start = time.time()
+	start = benchmark_start("ReadGenomeDescTable")
+
 	ReadGenomeDescTable(
 		GenomeDescTableFile	= options.GenomeDescTableFile,
 		ShelveDir		= options.ShelveDir,
@@ -709,10 +709,9 @@ def main():
 		TaxoGrouping_Header	= options.TaxoGrouping_Header,
 		TaxoGroupingFile	= options.TaxoGroupingFile,
 		)
-	elapsed = time.time() - start
-	print("TIME TO COMPLETE: %s" %elapsed)
-	print("&"*100)
-	
+
+	benchmark_end("ReadGenomeDescTable", start)	
+
 	print("Input for PPHMMDBConstruction:")
 	print("="*100)
 	print("Main input")
@@ -757,9 +756,8 @@ def main():
 	print("HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging: %s"%options.HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging)
 	print("="*100)
 	
-	print("&"*100)
-	print("STARTING BENCHMARK: PPHMMDBCONSTRUCTION")
-	start = time.time()
+	start = benchmark_start("PPHMMDBConstruction")
+
 	PPHMMDBConstruction (
 		GenomeSeqFile = options.GenomeSeqFile,
 		ShelveDir = options.ShelveDir,
@@ -791,9 +789,8 @@ def main():
 		
 		HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = str2bool(options.HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging),
 		)
-	elapsed = time.time() - start
-	print("TIME TO COMPLETE: %s" %elapsed)
-	print("&"*100)
+
+	benchmark_end("PPHMMDBConstruction", start)	
 
 
 	print("Input for RefVirusAnnotator:")
@@ -830,9 +827,8 @@ def main():
 	print("PPHMMClustering_MCLInflation_ForPPHMMSorting: %s"%options.PPHMMClustering_MCLInflation_ForPPHMMSorting)
 	print("="*100)
 	
-	print("&"*100)
-	print("STARTING BENCHMARK: REFVIRUSANNOTATOR")
-	start = time.time()
+	start = benchmark_start("RefVirusAnnotator")
+
 	RefVirusAnnotator (
 		GenomeSeqFile = options.GenomeSeqFile,
 		ShelveDir = options.ShelveDir,
@@ -855,9 +851,8 @@ def main():
 		
 		PPHMMClustering_MCLInflation = options.PPHMMClustering_MCLInflation_ForPPHMMSorting,
 		)
-	elapsed = time.time() - start
-	print("TIME TO COMPLETE: %s" %elapsed)
-	print("&"*100)
+
+	benchmark_end("RefVirusAnnotator", start)	
 
 	print("Input for GRAViTyDendrogramAndHeatmapConstruction:")
 	print("="*100)
@@ -899,9 +894,8 @@ def main():
 	print("VirusGrouping: %s"%options.VirusGrouping)
 	print("="*100)
 	
-	print("&"*100)
-	print("STARTING BENCHMARK: GRAViTyDendrogramAndHeatmapConstruction")
-	start = time.time()
+	start = benchmark_start("GRAViTyDendrogramAndHeatmapConstruction")
+
 	GRAViTyDendrogramAndHeatmapConstruction (
 		ShelveDir = options.ShelveDir,
 		IncludeIncompleteGenomes = str2bool(options.AnnotateIncompleteGenomes),
@@ -926,10 +920,9 @@ def main():
 
 		VirusGrouping = str2bool(options.VirusGrouping),
 		)
-	elapsed = time.time() - start
-	print("TIME TO COMPLETE: %s" %elapsed)
-	print("&"*100)
-	
+
+	benchmark_end("GRAViTyDendrogramAndHeatmapConstruction", start)	
+
 	print("Input for MutualInformationCalculator:")
 	print("="*100)
 	print("Main input")
@@ -950,9 +943,8 @@ def main():
 	print("SampleSizePerGroup: %s"%options.SampleSizePerGroup)
 	print("="*100)
 	
-	print("&"*100)
-	print("STARTING BENCHMARK: MutualInformationCalculator")
-	start = time.time()
+	start = benchmark_start("MutualInformationCalculator")
+
 	MutualInformationCalculator (
 		ShelveDir = options.ShelveDir,
 		IncludeIncompleteGenomes = str2bool(options.AnnotateIncompleteGenomes),
@@ -962,9 +954,8 @@ def main():
 		SamplingStrategy = options.SamplingStrategy,
 		SampleSizePerGroup = options.SampleSizePerGroup,
 		)
-	elapsed = time.time() - start
-	print("TIME TO COMPLETE: %s" %elapsed)
-	print("&"*100)
+
+	benchmark_end("MutualInformationCalculator", start)	
 
 	total_elapsed = time.time() - actual_start
 	print("Time to complete: %s"%total_elapsed)
