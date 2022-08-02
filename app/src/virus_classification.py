@@ -1067,7 +1067,7 @@ def VirusClassificationAndEvaluation (
 	TaxoAssignmentRangeTable	= None
 	FinalisedTaxoAssignmentRangeList= None
 
-	'''
+	''' RM << DIsabled for dev
 	if Bootstrap == True:
 		TaxoOfMaxSimScoreRangeTable	= np.zeros((N_UcfViruses, 0))
 		MaxSimScoreRangeTable		= np.zeros((N_UcfViruses, 0))
