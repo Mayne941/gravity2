@@ -24,7 +24,7 @@ app = FastAPI(
     version = "1.0",
     description = description,
     contact = {
-        "name": "Richard Mayne",
+        "name": "Mayne Bio Analytics Ltd",
         "url": "http://www.mayneba.com",
         "email": "director@mayneba.com"
     },
