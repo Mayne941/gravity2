@@ -7,15 +7,20 @@ from app.src.mutual_information_calculator import MutualInformationCalculator
 from app.utils.str_to_bool import str2bool
 from app.utils.benchmark import benchmark_start, benchmark_end
 from app.utils.generate_logs import Log_Generator_Pl1
-from app.utils.argparse.pl1_args import generate_pipeline_i_arguments
+from app.utils.arg_parsers import generate_pipeline_i_arguments
 import optparse, os
 import time
 
 class Pipeline_I:
 	def __init__(self):
+		'''Argparser'''
 		self.parser = generate_pipeline_i_arguments()
 		self.options, _ = self.parser.parse_args()
-		self.log_gen = Log_Generator_Pl1(self.options)
+		'''Create directories'''
+		if not os.path.exists(self.options.ShelveDir):
+			os.makedirs(self.options.ShelveDir)
+		'''Logs'''
+		self.log_gen = Log_Generator_Pl1(self.options, self.options.ShelveDir)
 		
 	def main(self):
 		actual_start = time.time()
@@ -29,9 +34,6 @@ class Pipeline_I:
 			if Proceed != "Y":
 				raise SystemExit("GRAViTy terminated.")
 		
-		'''Create directories'''
-		if not os.path.exists(self.options.ShelveDir):
-			os.makedirs(self.options.ShelveDir)
 		
 		'''I: Fire Read Genom Desc Table'''
 		[print(log_text) for log_text in logs[0]]

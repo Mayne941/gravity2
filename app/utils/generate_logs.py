@@ -1,7 +1,8 @@
 class Log_Generator_Pl1:
     '''Generate list of lists containing input config, for printing and saving to persistent log'''
-    def __init__(self, options) -> None:
+    def __init__(self, options, fpath) -> None:
         self.options = options
+        self.fpath = fpath
 
     def text_gen_start(self) -> list:
         return ["Input for ReadGenomeDescTable:",
@@ -132,10 +133,14 @@ class Log_Generator_Pl1:
         ]
 
     def entrypoint(self) -> list:
-        logs = self.text_gen_start()
+        logs = [self.text_gen_start()]
         logs.append(self.text_gen_pre_pphmdb())
         logs.append(self.text_gen_pre_refvirusannotator())
         logs.append(self.text_gen_pre_dendrogram())
         logs.append(self.text_gen_pre_mutalinfo())
+
+        with open(self.fpath + "/input_parameter_log.txt", "w") as f:
+            for list_type in logs:
+                [f.write(f"{item}\n") for item in list_type]
 
         return logs

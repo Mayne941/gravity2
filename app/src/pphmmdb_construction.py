@@ -13,29 +13,22 @@ from app.utils.raw_input_with_timeout import raw_input_with_timeout
 from app.utils.download_genbank_file import DownloadGenBankFile
 
 def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_MetaDataDict):
-	ClusterSizeList			= []
-	ClusterSizeByTaxoGroupingList	= []
-	ClusterSizeByProtList		= []
-	ClusterTaxoList			= []
-	ClusterProtSeqIDList		= []
-	ClusterDescList			= []
-	N_PPHMMs			= len(Cluster_MetaDataDict)
+	ClusterSizeList, ClusterSizeByTaxoGroupingList, ClusterSizeByProtList, ClusterTaxoList, ClusterProtSeqIDList, ClusterDescList = [], [], [], [], [], []
+	N_PPHMMs = len(Cluster_MetaDataDict)
+
 	for PPHMM_i in range(N_PPHMMs):
 		Cluster = Cluster_MetaDataDict[PPHMM_i]["Cluster"]
 		DescList = Cluster_MetaDataDict[PPHMM_i]["DescList"]
 		TaxoLists = Cluster_MetaDataDict[PPHMM_i]["TaxoLists"]
 		
-		#Cluster annotations
-		#-------------------------------------------------------------------------------
+		'''Cluster annotations'''
 		ClusterSizeList.append(len(Cluster))
-		
 		ClusterSizeByTaxoGroupingList.append(", ".join(["%s: %s"%(TaxoGrouping, N_ProtSeqsInTheTaxoGroup) for TaxoGrouping, N_ProtSeqsInTheTaxoGroup in sorted(list(Counter(list(zip(*TaxoLists))[-1]).items()),
 																	key = operator.itemgetter(1),
 																	reverse = True
 																	)]
 							)
 						)
-		
 		ClusterSizeByProtList.append(", ".join(["%s: %s"%(Desc, N_ProtSeqsWithDesc) for Desc, N_ProtSeqsWithDesc in sorted(	list(Counter(DescList).items()),
 																	key = operator.itemgetter(1),
 																	reverse = True
@@ -51,6 +44,7 @@ def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_Meta
 		ClusterTaxo_UniqueVirusName,
 		ClusterTaxo_UniqueTaxoGroup) = [list(set(TaxoList)) for TaxoList in zip(*TaxoLists)]
 		ClusterTaxo = []
+
 		for ClusterTaxo_UniqueTaxoLabel in [ClusterTaxo_UniqueBaltimoreGroup, ClusterTaxo_UniqueOrder, ClusterTaxo_UniqueFamily, ClusterTaxo_UniqueSubFam, ClusterTaxo_UniqueGenus]:
 			if len(ClusterTaxo_UniqueTaxoLabel) == 1:
 				if ClusterTaxo_UniqueTaxoLabel[0] not in ["", "Unassigned", "unassigned"]:
@@ -60,7 +54,6 @@ def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_Meta
 				break
 		
 		ClusterTaxoList.append(b"; ".join(ClusterTaxo))
-		
 		ClusterProtSeqIDList.append(", ".join(Cluster))
 		
 		ClusterDescCount = sorted(list(Counter(DescList).items()), key = operator.itemgetter(1), reverse = True)
@@ -71,22 +64,20 @@ def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_Meta
 		
 		ClusterDescList.append("%s|%s" %(ClusterDesc, ClusterTaxoList[-1]))
 		
-		#Make a PPHMM using HMMER
-		#-------------------------------------------------------------------------------
+		'''Make a PPHMM using HMMER'''
 		AlnClusterFile = ClustersDir+"/Cluster_%s.fasta" %PPHMM_i
 		HMMER_PPHMMFile = HMMER_PPHMMDir+"/PPHMM_%s.hmm" %PPHMM_i
 		_ = subprocess.Popen("hmmbuild %s %s" %(HMMER_PPHMMFile, AlnClusterFile), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
-		#Modify the DESC line in the HMM file to ClusterDesc|ClusterTaxo
-		#-------------------------------------------------------------------------------
+		'''Modify the DESC line in the HMM file to ClusterDesc|ClusterTaxo'''
 		with open(HMMER_PPHMMFile, "r+") as HMMER_PPHMM_txt:
 			contents = HMMER_PPHMM_txt.readlines()
-			contents.insert(2, "DESC  %s\n" %ClusterDescList[-1])
+			contents.insert(2, f"DESC  {ClusterDescList[-1]}\n")
 			contents = "".join(contents)
-			HMMER_PPHMM_txt.seek(0)			#Put cursor at the beginning of the file
+			HMMER_PPHMM_txt.seek(0)				#Put cursor at the beginning of the file
 			HMMER_PPHMM_txt.write(contents)		#Write the contents
-			HMMER_PPHMM_txt.truncate()		#Delete everything after the cursor
+			HMMER_PPHMM_txt.truncate()			#Delete everything after the cursor
 		
 		#Progress bar
 		sys.stdout.write("\033[K"+ "Make HMMER PPHMMs: [%-20s] %d/%d PPHHMs" % ('='*int(float(PPHMM_i + 1)/N_PPHMMs*20), PPHMM_i+1, N_PPHMMs) + "\r")
@@ -95,18 +86,15 @@ def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_Meta
 	sys.stdout.write("\033[K")
 	sys.stdout.flush()
 	
-	#Make a HMMER HMM DB
-	#-------------------------------------------------------------------------------
+	'''Make a HMMER HMM DB'''
 	_ = subprocess.Popen("find %s -name '*.hmm' -exec cat {} \; > %s" %(HMMER_PPHMMDir, HMMER_PPHMMDB), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 	out, err = _.communicate()
 	_ = subprocess.Popen("hmmpress %s" %HMMER_PPHMMDB, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 	out, err = _.communicate()
 	
-	#Make a PPHMMDBSummary file
-	#-------------------------------------------------------------------------------
+	'''Make a PPHMMDBSummary file'''
 	ClusterIDList = ["Cluster_%s"%Cluster_i for Cluster_i in range(N_PPHMMs)]
-	
-	np.savetxt(	fname = HMMER_PPHMMDB+"_Summary.txt",
+	np.savetxt(fname = HMMER_PPHMMDB+"_Summary.txt",
 			X = np.column_stack((	ClusterIDList,
 						ClusterDescList,
 						ClusterSizeList,
@@ -128,47 +116,33 @@ def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_Meta
 def PPHMMDBConstruction (
 	GenomeSeqFile,
 	ShelveDir,
-	
 	ProteinLength_Cutoff		= 100,
 	IncludeIncompleteGenomes	= True,
-	
 	BLASTp_evalue_Cutoff		= 1E-3,
 	BLASTp_PercentageIden_Cutoff	= 50,
 	BLASTp_QueryCoverage_Cutoff	= 75,
 	BLASTp_SubjectCoverage_Cutoff	= 75,
 	BLASTp_num_alignments		= 1000000,
 	BLASTp_N_CPUs			= 20,
-	
 	MUSCLE_GapOpenCost		= -3.0,
 	MUSCLE_GapExtendCost		= -0.0,
-	
 	ProtClustering_MCLInflation	= 2,
-	
 	N_AlignmentMerging		= 0,
-	
 	HHsuite_evalue_Cutoff		= 1E-6,
 	HHsuite_pvalue_Cutoff		= 0.05,
 	HHsuite_N_CPUs			= 10,
 	HHsuite_QueryCoverage_Cutoff	= 85,
 	HHsuite_SubjectCoverage_Cutoff	= 85,
-	
 	PPHMMClustering_MCLInflation	= 5,
-	
 	HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = True,
 	):
 	print("################################################################################")
 	print("#Build a database of virus protein profile hidden Markov models (PPHMMs)       #")
 	print("################################################################################")
-	'''
-	Build a database of virus protein profile hidden Markov models (PPHMMs).
-	---------------------------------------------
-	'''
 	
-	################################################################################
+	'''Build a database of virus protein profile hidden Markov models (PPHMMs)'''
 	print("- Define dir/file paths")
-	################################################################################
 	print("\tto BLASTp shelve directory")
-	#-------------------------------------------------------------------------------
 	BLASTMainDir		= ShelveDir+"/BLAST"
 	if os.path.exists(BLASTMainDir):
 		_ = subprocess.call("rm -rf %s" %BLASTMainDir, shell = True)
@@ -989,18 +963,6 @@ def PPHMMDBConstruction (
 							HMMER_PPHMMDB = HMMER_PPHMMDB,
 							ClustersDir = ClustersDir,
 							Cluster_MetaDataDict = Cluster_MetaDataDict)
-	'''
-	if IncludeIncompleteGenomes == True:
-		################################################################################
-		print "- Save variables to PPHMMDBConstruction.AllGenomes.shelve"
-		################################################################################
-		VariableShelveFile = VariableShelveDir+"/PPHMMDBConstruction.AllGenomes.shelve"
-	elif IncludeIncompleteGenomes == False:
-		################################################################################
-		print "- Save variables to PPHMMDBConstruction.CompleteGenomes.shelve"
-		################################################################################
-		VariableShelveFile = VariableShelveDir+"/PPHMMDBConstruction.CompleteGenomes.shelve"
-	'''
 	VariableShelveFile = VariableShelveDir+"/PPHMMDBConstruction.shelve"
 	Parameters = shelve.open(VariableShelveFile,"n")
 	for key in [	"ClusterIDList",
