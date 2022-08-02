@@ -8,8 +8,8 @@ from app.utils.str_to_bool import str2bool
 from app.utils.benchmark import benchmark_start, benchmark_end
 from app.utils.generate_logs import Log_Generator_Pl1
 from app.utils.arg_parsers import generate_pipeline_i_arguments
-import optparse, os
-import time
+
+import optparse, os, time
 
 class Pipeline_I:
 	def __init__(self):
