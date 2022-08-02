@@ -1,4 +1,3 @@
-#!/usr/bin/env python2.7
 from app.src.read_genome_desc_table import ReadGenomeDescTable
 from app.src.pphmmdb_construction import PPHMMDBConstruction
 from app.src.ucf_virus_annotator import UcfVirusAnnotator
@@ -25,12 +24,12 @@ class Pipeline_II:
 	def main(self):
 		actual_start = time.time()
 		logs = self.log_gen.entrypoint()
-
+		breakpoint()
 		'''Catch bad database flags'''
 		if (self.options.Database != None and self.options.Database_Header == None):
-			raise optparse.OptionValueError("You have specified DATABASE as %s, 'Database_Header' cannot be 'None'"%self.options.Database)
+			raise optparse.OptionValueError(f"You have specified DATABASE as {self.options.Database}, 'Database_Header' cannot be 'None'")
 		if (self.options.Database == None and self.options.Database_Header != None):
-			Proceed = input ("You have specified 'Database_Header' as %s, but 'Database' is 'None'. GRAViTy will analyse all genomes. Do you want to proceed? [Y/n]: " %self.options.Database_Header)
+			Proceed = input (f"You have specified 'Database_Header' as {self.options.Database_Header}, but 'Database' is 'None'. GRAViTy will analyse all genomes. Do you want to proceed? [Y/n]: ")
 			if Proceed != "Y":
 				raise SystemExit("GRAViTy terminated.")
 		

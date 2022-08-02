@@ -25,7 +25,7 @@ class Pipeline_I:
 	def main(self):
 		actual_start = time.time()
 		logs = self.log_gen.entrypoint()
-
+		breakpoint()
 		'''Catch bad database flags'''
 		if (self.options.Database != None and self.options.Database_Header == None):
 			raise optparse.OptionValueError(f"You have specified DATABASE as {self.options.Database}, 'Database_Header' cannot be 'None'")

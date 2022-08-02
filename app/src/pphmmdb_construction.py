@@ -5,8 +5,7 @@ from Bio.SeqRecord import SeqRecord
 from collections import Counter
 import numpy as np
 import shelve, subprocess, os, operator, sys, random, string, re
-import pdb
-#Local functions
+
 from app.utils.line_count import LineCount
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.raw_input_with_timeout import raw_input_with_timeout
