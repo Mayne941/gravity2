@@ -77,7 +77,7 @@ def MutualInformationCalculator (
 	
 	#VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.shelve"
 	#Parameters = shelve.open(VariableShelveFile) # RM <<
-	Parameters = pickle.load(open("test.p", "rb"))
+	Parameters = pickle.load(open(f"{VariableShelveDir}/RefVirusAnnotator.CompleteGenomes.p", "rb"))
 	for key in  [	
 			"PPHMMSignatureTable",
 			"PPHMMSignatureTable_coo",

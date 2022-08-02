@@ -135,8 +135,8 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 	
 	#VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.shelve"
 	#Parameters = shelve.open(VariableShelveFile) ##
-
-	Parameters = pickle.load(open("test.p", "rb"))
+	
+	Parameters = pickle.load(open(f"{VariableShelveDir}/RefVirusAnnotator.CompleteGenomes.p", "rb"))
 	
 	for key in ["PPHMMSignatureTable",
 			"PPHMMLocationTable",

@@ -686,7 +686,7 @@ def RefVirusAnnotator(
 		except TypeError:
 			pass
 	th = dict(Parameters) # RM <<
-	pickle.dump(th, open("test.p", "wb"))
+	pickle.dump(th, open(f"{VariableShelveDir}/RefVirusAnnotator.CompleteGenomes.p", "wb"))
 	Parameters.close()
 
 

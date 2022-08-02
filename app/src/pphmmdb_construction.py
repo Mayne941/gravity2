@@ -116,6 +116,7 @@ def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_Meta
 			fmt = '%s',
 			delimiter = "\t",
 			header = "# Cluster ID\tCluster desc\tSequence number\tProtein ID\tNumber of sequences by class\tNumber of sequences by protein")
+
 	return (np.array(ClusterIDList),
 		np.array(ClusterDescList),
 		np.array(ClusterSizeList),

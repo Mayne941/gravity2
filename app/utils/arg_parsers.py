@@ -1,21 +1,14 @@
-#!/usr/bin/env python2.7
-from app.src.read_genome_desc_table import ReadGenomeDescTable
-from app.src.pphmmdb_construction import PPHMMDBConstruction
-from app.src.ucf_virus_annotator import UcfVirusAnnotator
-from app.src.virus_classification import VirusClassificationAndEvaluation
-
 from app.utils.check_input import check_FILEPATH, check_FILEPATHS, check_PERCENT, check_PROB, check_POS, check_POSINTEGER, check_NONNEG, check_NONNEGINTEGER, check_NONPOS, check_N_AlignmentMerging
-from app.utils.str_to_bool import str2bool
-from app.utils.benchmark import benchmark_start, benchmark_end
 
-import optparse, os, multiprocessing, textwrap, time
+import optparse
+import textwrap
+import multiprocessing
 
 class IndentedHelpFormatterWithNL(optparse.IndentedHelpFormatter):
 	def format_description(self, description):
 		if not description: return ""
 		desc_width = self.width - self.current_indent
 		indent = " "*self.current_indent
-		# the above is still the same
 		bits = description.split('\n')
 		formatted_bits = [
 			textwrap.fill(bit,
@@ -27,20 +20,6 @@ class IndentedHelpFormatterWithNL(optparse.IndentedHelpFormatter):
 		return result
 	
 	def format_option(self, option):
-		# The help for each option consists of two parts:
-		#	 * the opt strings and metavars
-		#	 eg. ("-x", or "-fFILENAME, --file=FILENAME")
-		#	 * the user-supplied help string
-		#	 eg. ("turn on expert mode", "read data from FILENAME")
-		#
-		# If possible, we write both of these on the same line:
-		#	 -x		turn on expert mode
-		#
-		# But if the opt string list is too long, we put the help
-		# string on a second line, indented to the same column it would
-		# start in if it fit on the first line.
-		#	 -fFILENAME, --file=FILENAME
-		#			 read data from FILENAME
 		result = []
 		opts = self.option_strings[option]
 		opt_width = self.help_position - self.current_indent - 2
@@ -66,35 +45,26 @@ class IndentedHelpFormatterWithNL(optparse.IndentedHelpFormatter):
 			result.append("\n")
 		return "".join(result)
 
-def main ():
-	actual_start = time.time()
+def generate_pipeline_i_arguments():
 	parser = optparse.OptionParser(	usage = "usage: %prog [options]",
 					version = "%prog 1.1.0",
 					formatter = IndentedHelpFormatterWithNL())
 	
-	parser.add_option(	'--GenomeDescTableFile_UcfVirus',
-				dest 	= "GenomeDescTableFile_UcfVirus",
-				help 	= "Full path to the Virus Metadata Resource-like (VMR-like) tab delimited file of unclassified viruses, wth headers. "
+	parser.add_option(	'--GenomeDescTableFile',
+				dest 	= "GenomeDescTableFile",
+				help 	= "Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. "
 					  "VMR can be downloaded from https://talk.ictvonline.org/taxonomy/vmr/",
 				metavar	= "FILEPATH",
 				type	= "string",
 				action	= "callback",
 				callback= check_FILEPATH,
 	)
-	parser.add_option(	'--ShelveDir_UcfVirus',
-				dest	= "ShelveDir_UcfVirus",
-				help	= "Full path to the shelve directory of unclassified viruses, storing GRAViTy outputs.",
+	parser.add_option(	'--ShelveDir',
+				dest	= "ShelveDir",
+				help	= "Full path to the shelve directory, storing GRAViTy outputs.",
 				metavar	= "DIRECTORYPATH",
 				type	= "string",
 	)
-	parser.add_option(	'--ShelveDirs_RefVirus',
-				dest	= "ShelveDirs_RefVirus",
-				help	= "Full path(s) to the shelve director(y/ies) of reference virus(es). "
-					  "For example: 'path/to/shelve/ref1, path/to/shelve/ref2, ...'",
-				metavar	= "DIRECTORYPATH",
-				type	= "string",
-	)
-	
 	parser.add_option(	'--Database',
 				dest	= "Database",
 				default	= None,
@@ -111,7 +81,6 @@ def main ():
 				metavar	= "DATABASE COLUMN HEADER",
 				type	= "string",
 	)
-	'''
 	parser.add_option(	'--TaxoGrouping_Header',
 				dest	= "TaxoGrouping_Header",
 				default	= "Family",
@@ -133,33 +102,12 @@ def main ():
 				action	= "callback",
 				callback= check_FILEPATH,
 	)
-	'''
-	parser.add_option(	'--GenomeSeqFile_UcfVirus',
-				dest	= "GenomeSeqFile_UcfVirus",
-				help	= "Full path to the genome sequence GenBank file of unclassified viruses.",
+	parser.add_option(	'--GenomeSeqFile',
+				dest	= "GenomeSeqFile",
+				help	= "Full path to the genome sequence GenBank file. "
+					  "If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column",
 				metavar	= "FILEPATH",
 				type	= "string",
-				#action	= "callback",
-				#callback= check_FILEPATH,
-	)
-	parser.add_option(	'--UseUcfVirusPPHMMs',
-				dest	= "UseUcfVirusPPHMMs",
-				default	= True,
-				help	= "Annotate reference and unclassified viruses using the PPHMM database derived from unclassified viruses if True. [default: %default]",
-				metavar	= "BOOLEAN",
-				type	= "choice",
-				choices	= ["True", "False",],
-	)
-	parser.add_option(	'--GenomeSeqFiles_RefVirus',
-				dest	= "GenomeSeqFiles_RefVirus",
-				default	= None,
-				help	= "Full path(s) to the genome sequence GenBank file(s) of reference viruses. "
-					  "For example: 'path/to/GenBank/ref1, path/to/GenBank/ref2, ...' "
-					  "This cannot be 'None' if UseUcfVirusPPHMMs = True. ",
-				metavar	= "FILEPATH",
-				type	= "string",
-				action	= "callback",
-				callback= check_FILEPATHS,
 	)
 	
 	ProtExtractionGroup 	= optparse.OptionGroup(	parser		= parser,
@@ -206,7 +154,7 @@ def main ():
 					dest	= "BLASTp_PercentageIden_Cutoff",
 					default	= 50,
 					help	= "Threshold for protein sequence similarity detection. "
-						  "A hit with a percentage identity < PERCENTAGE IDENTITY will be ignored. [default: %default]",
+						  "A hit with a percentage identity < PERCENTAGE IDENTITY will be ignored [default: %default]",
 					metavar	= "PERCENTAGE IDENTITY",
 					type	= "float",
 					action	= "callback",
@@ -216,7 +164,7 @@ def main ():
 					dest	= "BLASTp_QueryCoverage_Cutoff",
 					default	= 75,
 					help	= "Threshold for protein sequence similarity detection. "
-						  "A hit with a query coverage < COVERAGE will be ignored. [default: %default]",
+						  "A hit with a query coverage < COVERAGE will be ignored [default: %default]",
 					metavar	= "COVERAGE",
 					type	= "float",
 					action	= "callback",
@@ -226,7 +174,7 @@ def main ():
 					dest	= "BLASTp_SubjectCoverage_Cutoff",
 					default	= 75,
 					help	= "Threshold for protein sequence similarity detection. "
-						  "A hit with a subject coverage < COVERAGE will be ignored. [default: %default]",
+						  "A hit with a subject coverage < COVERAGE will be ignored [default: %default]",
 					metavar	= "COVERAGE",
 					type	= "float",
 					action	= "callback",
@@ -279,6 +227,7 @@ def main ():
 					action	= "callback",
 					callback= check_POS,
 	)
+	
 	parser.add_option_group(ProtClusteringGroup)
 	
 	MergingProtAlnsGroup	= optparse.OptionGroup( parser		= parser,
@@ -372,38 +321,20 @@ def main ():
 	)
 	parser.add_option_group(HHsuiteGroup)
 	
-	VirusAnnotationUsingRefDBGroup 	= optparse.OptionGroup(	parser		= parser,
-								title		= "Unclassified virus annotation options",
-								description	= "Virus genomes are 6-framed translated and are scanned against the reference PPHMM database(s), using HMMER (hmmscan). "
-										  "Two types of information are collected: PPHMM hit scores (PPHMM signatures) and hit locations (PPHMM LOCATION signatures). ")
-	
-	VirusAnnotationUsingRefDBGroup.add_option('--AnnotateIncompleteGenomes_UcfVirus',
-					dest	= "AnnotateIncompleteGenomes_UcfVirus",
-					default	= True,
-					help	= "Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes. [default: %default]",
-					metavar	= "BOOLEAN",
-					type	= "choice",
-					choices	= ["True", "False",],
-	)
-	VirusAnnotationUsingRefDBGroup.add_option('--UsingDatabaseIncludingIncompleteRefViruses',
-					dest	= "UsingDatabaseIncludingIncompleteRefViruses",
+	VirusAnnotationGroup 	= optparse.OptionGroup(	parser		= parser,
+							title		= "Reference virus annotation options",
+							description	= "Virus genomes are 6-framed translated and are scanned against the PPHMM database, using HMMER (hmmscan, see 'HMMER options' for more options). "
+									  "Two types of information are collected: PPHMM hit scores (PPHMM signatures) and hit locations (PPHMM LOCATION signatures).")
+
+	VirusAnnotationGroup.add_option('--AnnotateIncompleteGenomes',
+					dest	= "AnnotateIncompleteGenomes",
 					default	= False,
-					help	= "Annotate unclassified viruses using the PPHMM and GOM databases derived from all reference viruses if True, "
-						  "otherwise using those derived from complete reference genomes only. [default: %default]",
+					help	= "Annotate all viral genomes if True, otherwise only complete genomes. [default: %default]",
 					metavar	= "BOOLEAN",
 					type	= "choice",
 					choices	= ["True", "False",],
 	)
-	#VirusAnnotationUsingRefDBGroup.add_option('--SeqLength_Cutoff',
-	#				dest	= "SeqLength_Cutoff",
-	#				default	= 0,
-	#				help	= "Sequences with length < LENGTH nt will be ignored [default: %default]",
-	#				metavar	= "LENGTH",
-	#				type	= "int",
-	#				action	= "callback",
-	#				callback= check_NONNEGINTEGER,
-	#)
-	parser.add_option_group(VirusAnnotationUsingRefDBGroup)
+	parser.add_option_group(VirusAnnotationGroup)
 	
 	HMMERGroup	= optparse.OptionGroup( parser		= parser,
 						title		= "HMMER options",
@@ -440,6 +371,59 @@ def main ():
 				callback= check_NONNEG,
 	)	
 	parser.add_option_group(HMMERGroup)
+	
+	RemoveSingletonPPHMMGroup 	= optparse.OptionGroup(	parser		= parser,
+								title		= "Remove singleton PPHMM options",
+								description	= "Remove singleton PPHMMs (PPHMM that show similarity to only one virus) from the database. "
+										  "Note that some singleton PPHMMs may be informative, in particular those that show similarity to the only representative of its taxonomic group (N = 1). "
+										  "Sometimes, a taxonomic group only has a few members. Singleton PPHMMs associated with those taxonomic groups can also be informative. "
+										  "Some viruses (which may belong to a large taxonomic group) may exhibit similarity to singleton PPHMMs excluively. "
+										  "Thus removing singleton PPHMMs can be dangerous. "
+										  "This action modifies the PPHMM database permanently. Use with caution. "
+										  )
+	RemoveSingletonPPHMMGroup.add_option(	'--RemoveSingletonPPHMMs',
+						dest	= "RemoveSingletonPPHMMs",
+						default	= False,
+						help	= "Remove singleton PPHMMs from the database if True. [default: %default]",
+						metavar	= "BOOLEAN",
+						type	= "choice",
+						choices	= ["True", "False",],
+	)
+	RemoveSingletonPPHMMGroup.add_option(	'--N_VirusesOfTheClassToIgnore',
+						dest	= "N_VirusesOfTheClassToIgnore",
+						default	= 1,
+						help	= "When 'RemoveSingletonPPHMMs' == TRUE, singleton PPHMMs are removed from the PPHMM database "
+							  "only if they show similarity to viruses that belong to taxonomic groups with more than NUMBER members. [default: %default]",
+						metavar	= "NUMBER",
+						type	= "int",
+						action	= "callback",
+						callback= check_POSINTEGER,
+	)
+	parser.add_option_group(RemoveSingletonPPHMMGroup)
+	
+	PPHMMSortingGroup 	= optparse.OptionGroup(	parser		= parser,
+							title		= "PPHMM sorting options",
+							description	= "Sort PPHMMs in the table and the database based on their pairiwse similarity and their presence/absence patterns in the viruses. "
+									  "PPHMM pairwise similarity scores were determined by HHsuite (hhsearch, see 'HHsuite options' for more options), and PPHMM clustering was performed by the MCL algorithm. "
+									  "This action modifies the PPHMM database permanently. Use with caution. ")
+	PPHMMSortingGroup.add_option(	'--PPHMMSorting',
+					dest	= "PPHMMSorting",
+					default	= False,
+					help	= "Sort PPHMMs if True. [default: %default]",
+					metavar	= "BOOLEAN",
+					type	= "choice",
+					choices	= ["True", "False",],
+	)	
+	PPHMMSortingGroup.add_option(	'--PPHMMClustering_MCLInflation_ForPPHMMSorting',
+					dest	= "PPHMMClustering_MCLInflation_ForPPHMMSorting",
+					default	= 2,
+					help	= "Cluster granularity. Increasing INFLATION will increase cluster granularity. [default: %default]",
+					metavar	= "INFLATION",
+					type	= "float",
+					action	= "callback",
+					callback= check_POS,
+	)
+	parser.add_option_group(PPHMMSortingGroup)
 	
 	SimilarityMeasurementGroup = optparse.OptionGroup(	parser		= parser,
 								title		= "Virus (dis)similarity measurement options",
@@ -484,30 +468,20 @@ def main ():
 	)
 	parser.add_option_group(SimilarityMeasurementGroup)
 	
-	VirusClassificationGroup = optparse.OptionGroup(	parser		= parser,
-								title		= "Virus classification options",
-								description	= "In summary, GRAViTy proposes a candidate taxonomic group for an unclassified virus by identifying the most similar virus(es) in the refernece database(s). "
-										  "To validate the candidate taxonomic assignment, GRAViTy employs two-step evaluation protocol.\n\n"
-										  
-										  "In the first step, GRAViTy checks whether or not the unclassified virus is 'similar enough' to the proposed candidate group, of which the CGJ similarity threshold is group specific. "
-										  "To estimate the threshold for a particular taxonomic group, GRAViTy builds distributions of its inter-group and intra-group CGJ similarity scores. "
-										  "GRAViTy then computes the score that best separate the two distributions using the support vector machine (SVM) algorithm. "
-										  "The SVM algorithm used is implemented in SVC function, available from Scikit-learn python library, with 'balanced' class weight option. "
-										  "If the observed CGJ similarity is less than the threshold, the candidate taxonomic assignment is rejected, and the sample is relabelled as 'Unclassified', "
-										  "otherwise, the second step of the evaluation will be employed to further evaluate the candidate taxonomic assignment.\n\n"
-										  
-										  "In the second step, a dendrogram containing reference viruses and the unclassified virus is used, and the evaluator will look at its neighbourhood. "
-										  "The taxonomic proposal will be accepted if any of the following conditions are met:\n"
-										  "\ti)	the sister clade is composed entirely of the members of the proposed candidate taxonomic group\n"
-										  "\tii)	the immediate out group is composed entirely of the members of the proposed candidate taxonomic group\n"
-										  "\tiii)	one of the two basal branches of its sister clade leading to a clade that is composed entirely of the members of the proposed candidate taxonomic group\n"
-										  "To best estimate the placement of viruses, if multiple unclassified viruses are to be analysed at the same time, "
-										  "a dendrogram containing all unclassified viruses will be used. "
-										  "Furthermore, since there can be multiple reference databases, there are possibilities that a virus might be assigned to multiple taxonomic groups belonging to different databases. "
-										  "In such cases, the finalised taxonomic assignment is the one associated with the highest CGJ similarity score.\n\n"
-										  
-										  "GRAViTy can also perform bootstrapping to evaluate the uncertainty of the proposed taxonomic group.")
-	VirusClassificationGroup.add_option(	'--Dendrogram_LinkageMethod',
+	DendrogramConstructionGroup = optparse.OptionGroup(	parser		= parser,
+								title		= "Dendrogram construction options",
+								description	= "GRAViTy can generate a (bootstrapped) dendrogram based on the pairwise distance matrix using a hierarchical clustering algorithm. "
+										  "Various algorithms of hierarchical clustering are implemented in GRAViTy, specified by using 'Dendrogram_LinkageMethod' argument. "
+										  "See the help text of 'Dendrogram_LinkageMethod' for more details.")
+	DendrogramConstructionGroup.add_option(	'--Dendrogram',
+						dest	= "Dendrogram",
+						default	= True,
+						help	= "Construct dendrogram if True. [default: %default]",
+						metavar	= "BOOLEAN",
+						type	= "choice",
+						choices	= ["True", "False",],
+	)
+	DendrogramConstructionGroup.add_option(	'--Dendrogram_LinkageMethod',
 						dest	= "Dendrogram_LinkageMethod",
 						default	= "average",
 						help	= "LINKAGE for dendrogram construction. [default: %default]\n "
@@ -522,7 +496,8 @@ def main ():
 						type	= "choice",
 						choices	= ["single", "complete", "average", "weighted", "centroid", "median", "ward"],
 	)
-	VirusClassificationGroup.add_option(	'--Bootstrap',
+	
+	DendrogramConstructionGroup.add_option(	'--Bootstrap',
 						dest	= "Bootstrap",
 						default	= True,
 						help	= "Perform bootstrapping if True. [default: %default]",
@@ -530,7 +505,7 @@ def main ():
 						type	= "choice",
 						choices	= ["True", "False",],
 	)
-	VirusClassificationGroup.add_option(	'--N_Bootstrap',
+	DendrogramConstructionGroup.add_option(	'--N_Bootstrap',
 						dest	= "N_Bootstrap",
 						default	= 10,
 						help	= "The number of pseudoreplicate datasets by resampling. [default: %default]",
@@ -539,52 +514,48 @@ def main ():
 						action	= "callback",
 						callback= check_POSINTEGER,
 	)
-	VirusClassificationGroup.add_option(	'--Bootstrap_method',
+	DendrogramConstructionGroup.add_option(	'--Bootstrap_method',
 						dest	= "Bootstrap_method",
 						default	= "booster",
-						help	= "Two METHODs for dendrogram summary construction are implemented in GRAViTy. [default: %default] "
+						help	= "Two METHODs for tree summary construction are implemented in GRAViTy. [default: %default]\n "
 							  "If METHOD = 'sumtrees', SumTrees (Sukumaran, J & MT Holder, 2010, Bioinformatics; https://dendropy.org/programs/sumtrees.html) will be used to summarize non-parameteric bootstrap support for splits on the best estimated dendrogram. The calculation is based on the standard Felsenstein bootstrap method.\n "
 							  "If METHOD = 'booster', BOOSTER (Lemoine et al., 2018, Nature; https://booster.pasteur.fr/) will be used. With large trees and moderate phylogenetic signal, BOOSTER tends to be more informative than the standard Felsenstein bootstrap method.",
 						metavar	= "METHOD",
 						type	= "choice",
 						choices	= ["booster", "sumtrees"],
 	)
-	VirusClassificationGroup.add_option(	'--Bootstrap_N_CPUs',
+	DendrogramConstructionGroup.add_option(	'--Bootstrap_N_CPUs',
 						dest	= "Bootstrap_N_CPUs",
 						default	= multiprocessing.cpu_count(),
-						help	= "Number of threads (CPUs) to use in dendrogram summary. Only used when 'Bootstrap_method' == 'booster' [default: %default - all threads]",
+						help	= "Number of threads (CPUs) to use in tree summary. Only used when 'Bootstrap_method' == 'booster' [default: %default - all threads]",
 						metavar	= "THREADS",
 						type	= "int",
 						action	= "callback",
 						callback= check_POSINTEGER,
 	)
-	
-	VirusClassificationGroup.add_option(	'--DatabaseAssignmentSimilarityScore_Cutoff',
-						dest	= "DatabaseAssignmentSimilarityScore_Cutoff",
-						default	= 0.01,
-						help	= "Threshold to determine if the unclassified virus at least belongs to a particular database. [default: %default] "
-							  "For example, an unclassified virus is assigned to the family 'X' in the reference 'Baltimore group X' database, with the (greatest) similarity score of 0.1. "
-							  "This score might be too low to justify that the virus is a member of the family 'X', and fail the similarity threshold test. "
-							  "However, since the similarity score of 0.1 > %default, GRAViTy will make a guess that it might still be a virus of the 'Baltimore group X' database, under the default setting.",
-						metavar	= "SCORE",
-						type	= "int",
-						action	= "callback",
-						callback= check_POS,
-	)
-	VirusClassificationGroup.add_option(	'--N_PairwiseSimilarityScores',
-						dest	= "N_PairwiseSimilarityScores",
-						default	= 10000,
-						help	= "Number of data points in the distributions of intra- and inter-group similarity scores used to estimate the similarity threshold. [default: %default]",
-						metavar	= "NUMBER",
-						type	= "int",
-						action	= "callback",
-						callback= check_POSINTEGER,
-	)	
-	parser.add_option_group(VirusClassificationGroup)
+	parser.add_option_group(DendrogramConstructionGroup)
 	
 	HeatmapConstructionGroup = optparse.OptionGroup(	parser		= parser,
 								title		= "Heatmap construction options",
 								description	= "GRAViTy can generate a heatmap (with the dendrogram) to represent the pairwise (dis)similarity matrix")
+	HeatmapConstructionGroup.add_option(	'--Heatmap',
+						dest	= "Heatmap",
+						default	= False,
+						help	= "Construct (dis)similarity heatmap if True. [default: %default]",
+						metavar	= "BOOLEAN",
+						type	= "choice",
+						choices	= ["True", "False",],
+	)
+	HeatmapConstructionGroup.add_option(	'--Heatmap_VirusOrderScheme',
+						dest	= "Heatmap_VirusOrderScheme",
+						default	= None,
+						help	= "Full path to the virus order file. The indices of the genome entries start from 0 [default: %default].",
+						metavar	= "FILEPATH",
+						type	= "string",
+						action	= "callback",
+						callback= check_FILEPATH,
+	)
+	
 	HeatmapConstructionGroup.add_option(	'--Heatmap_WithDendrogram',
 						dest	= "Heatmap_WithDendrogram",
 						default	= True,
@@ -592,6 +563,15 @@ def main ():
 						metavar	= "BOOLEAN",
 						type	= "choice",
 						choices	= ["True", "False",],
+	)
+	HeatmapConstructionGroup.add_option(	'--Heatmap_DendrogramFile',
+						dest	= "Heatmap_DendrogramFile",
+						default	= None,
+						help	= "Full path to the dendrogram file. If 'None', the dendrogram will be estimated by GRAViTy [default: %default]",
+						metavar = "FILE",
+						type	= "string",
+						action	= "callback",
+						callback= check_FILEPATH,
 	)
 	HeatmapConstructionGroup.add_option(	'--Heatmap_DendrogramSupport_Cutoff',
 						dest	= "Heatmap_DendrogramSupport_Cutoff",
@@ -619,256 +599,61 @@ def main ():
 	)
 	parser.add_option_group(VirusGroupingGroup)
 	
-	options, arguments = parser.parse_args()
+	VirusGroupingForMICalGroup = optparse.OptionGroup(	parser		= parser,
+								title		= "Virus grouping for mutual information calculation options",
+								description	= "GRAViTy can calculate mutual information between (various schemes of) taxonomic groupings and values of PPHMM scores "
+										  "to determine which PPHMMs are highly (or weakly) correlated with the virus taxonomic scheme(s).")
+	VirusGroupingForMICalGroup.add_option(	'--VirusGroupingSchemesFile',
+						dest	= "VirusGroupingFile",
+						default	= None,
+						help	= "Fill path to the virus grouping scheme file. [default: %default] "
+							  "The file contains column(s) of arbitrary taxonomic grouping scheme(s) that users want to investigate. The file may look something like: \n\n"
+							  "Scheme 1\tScheme 2\t...\n"
+							  "A\tX\t...\n"
+							  "A\tX\t...\n"
+							  "B\tX\t...\n"
+							  "B\tX\t...\n"
+							  "C\tY\t...\n"
+							  "C\tY\t...\n"
+							  "...\t...\t...\n\n"
+							  "If 'None', the taxonomic grouping as specified in 'Taxonomic grouping' column in the VMR will be used. "
+							  "Note that the file must contain headers.",
+						metavar	= "FILEPATH",
+						type	= "string",
+						action	= "callback",
+						callback= check_FILEPATH,
+	)
+	parser.add_option_group(VirusGroupingForMICalGroup)
 	
-	print("Input for ReadGenomeDescTable:")
-	print("="*100)
+	SamplingGroup = optparse.OptionGroup(	parser		= parser,
+						title		= "Virus sampling options",
+						description	= "")
+	SamplingGroup.add_option(	'--N_Sampling',
+					dest = "N_Sampling",
+					default = 10,
+					help = "The number of mutual information scores sample size. [default: %default]",
+					metavar = "NUMBER",
+					type = "int",
+					action = "callback",
+					callback = check_POSINTEGER,
+	)
+	SamplingGroup.add_option(	'--SamplingStrategy',
+					dest = "SamplingStrategy",
+					default = "balance_with_repeat",
+					help = "Virus sampling scheme. [default: %default]",
+					metavar = "SCHEME",
+					type = "choice",
+					choices = [None, "balance_without_repeat", "balance_with_repeat"],
+	)
+	SamplingGroup.add_option(	'--SampleSizePerGroup',
+					dest = "SampleSizePerGroup",
+					default = 10,
+					help = "If 'SamplingStrategy' != None, this option specifies the number of viruses to be sampled per taxonomic group [default: %default]",
+					metavar = "NUMBER",
+					type = "int",
+					action = "callback",
+					callback = check_POSINTEGER,
+	)
+	parser.add_option_group(SamplingGroup)
 	
-	print("\n")
-	print("Main input")
-	print("-"*50)
-	print("GenomeDescTableFile_UcfVirus: %s"%options.GenomeDescTableFile_UcfVirus)
-	print("ShelveDir_UcfVirus: %s"		%options.ShelveDir_UcfVirus)
-	print("Database: %s"			%options.Database)
-	print("Database_Header: %s"		%options.Database_Header)
-	#print "TaxoGrouping_Header: %s"	%options.TaxoGrouping_Header
-	#print "TaxoGroupingFile: %s"		%options.TaxoGroupingFile
-	print("="*100)
-	
-	if (options.Database != None and options.Database_Header == None):
-		raise optparse.OptionValueError("You have specified DATABASE as %s, 'Database_Header' cannot be 'None'"%options.Database)
-	
-	if (options.Database == None and options.Database_Header != None):
-		Proceed = input ("You have specified 'Database_Header' as %s, but 'Database' is 'None'. GRAViTy will analyse all genomes. Do you want to proceed? [Y/n]: " %options.Database_Header)
-		if Proceed != "Y":
-			raise SystemExit("GRAViTy terminated.")
-	
-	if not os.path.exists(options.ShelveDir_UcfVirus):
-		os.makedirs(options.ShelveDir_UcfVirus)
-	
-	start = benchmark_start("ReadGenomeDescTable")
-
-	ReadGenomeDescTable(
-		GenomeDescTableFile	= options.GenomeDescTableFile_UcfVirus,
-		ShelveDir		= options.ShelveDir_UcfVirus,
-		Database		= options.Database,
-		Database_Header		= options.Database_Header,
-		#TaxoGrouping_Header	= options.TaxoGrouping_Header,
-		#TaxoGroupingFile	= options.TaxoGroupingFile,
-		)
-	
-	benchmark_end("ReadGenomeDescTable", start)
-	
-	if str2bool(options.UseUcfVirusPPHMMs) == True:
-		print("Input for PPHMMDBConstruction:")
-		print("="*100)
-		print("Main input")
-		print("-"*50)
-		print("GenomeSeqFile_UcfVirus: %s"	%options.GenomeSeqFile_UcfVirus)
-		print("ShelveDir_UcfVirus: %s"		%options.ShelveDir_UcfVirus)
-		
-		print("\n")
-		print("Protein extraction options")
-		print("-"*50)
-		print("ProteinLength_Cutoff: %s"	%options.ProteinLength_Cutoff)
-		print("IncludeProteinsFromIncompleteGenomes: %s"%options.IncludeProteinsFromIncompleteGenomes)
-		
-		print("\n")
-		print("Protein clustering options")
-		print("-"*50)
-		print("BLASTp_evalue_Cutoff: %s"	%options.BLASTp_evalue_Cutoff)
-		print("BLASTp_PercentageIden_Cutoff: %s"%options.BLASTp_PercentageIden_Cutoff)
-		print("BLASTp_QueryCoverage_Cutoff: %s"	%options.BLASTp_QueryCoverage_Cutoff)
-		print("BLASTp_SubjectCoverage_Cutoff: %s"%options.BLASTp_SubjectCoverage_Cutoff)
-		print("BLASTp_num_alignments: %s"	%options.BLASTp_num_alignments)
-		print("BLASTp_N_CPUs: %s"		%options.BLASTp_N_CPUs)
-		
-		print("MUSCLE_GapOpenCost: %s"		%options.MUSCLE_GapOpenCost)
-		print("MUSCLE_GapExtendCost: %s"	%options.MUSCLE_GapExtendCost)
-		
-		print("ProtClustering_MCLInflation: %s"%options.ProtClustering_MCLInflation)
-		
-		print("\n")
-		print("Protein alignment merging options")
-		print("-"*50)
-		print("N_AlignmentMerging: %s"		%options.N_AlignmentMerging)
-		
-		print("HHsuite_evalue_Cutoff: %s"	%options.HHsuite_evalue_Cutoff)
-		print("HHsuite_pvalue_Cutoff: %s"	%options.HHsuite_pvalue_Cutoff)
-		print("HHsuite_N_CPUs: %s"		%options.HHsuite_N_CPUs)
-		print("HHsuite_QueryCoverage_Cutoff: %s"%options.HHsuite_QueryCoverage_Cutoff)
-		print("HHsuite_SubjectCoverage_Cutoff: %s"%options.HHsuite_SubjectCoverage_Cutoff)
-		
-		print("PPHMMClustering_MCLInflation_ForAlnMerging: %s"%options.PPHMMClustering_MCLInflation_ForAlnMerging)
-		
-		print("HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging: %s"%options.HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging)
-		print("="*100)
-		
-		start = benchmark_start("PPHMMDBConstruction")
-
-		PPHMMDBConstruction (
-			GenomeSeqFile = options.GenomeSeqFile_UcfVirus,
-			ShelveDir = options.ShelveDir_UcfVirus,
-			
-			ProteinLength_Cutoff = options.ProteinLength_Cutoff,
-			IncludeIncompleteGenomes = str2bool(options.IncludeProteinsFromIncompleteGenomes),
-			
-			BLASTp_evalue_Cutoff = options.BLASTp_evalue_Cutoff,
-			BLASTp_PercentageIden_Cutoff = options.BLASTp_PercentageIden_Cutoff,
-			BLASTp_QueryCoverage_Cutoff = options.BLASTp_QueryCoverage_Cutoff,
-			BLASTp_SubjectCoverage_Cutoff = options.BLASTp_SubjectCoverage_Cutoff,
-			BLASTp_num_alignments = options.BLASTp_num_alignments,
-			BLASTp_N_CPUs = options.BLASTp_N_CPUs,
-			
-			MUSCLE_GapOpenCost = options.MUSCLE_GapOpenCost,
-			MUSCLE_GapExtendCost = options.MUSCLE_GapExtendCost,
-			
-			ProtClustering_MCLInflation = options.ProtClustering_MCLInflation,
-			
-			N_AlignmentMerging = options.N_AlignmentMerging,
-			
-			HHsuite_evalue_Cutoff = options.HHsuite_evalue_Cutoff,
-			HHsuite_pvalue_Cutoff = options.HHsuite_pvalue_Cutoff,
-			HHsuite_N_CPUs = options.HHsuite_N_CPUs,
-			HHsuite_QueryCoverage_Cutoff = options.HHsuite_QueryCoverage_Cutoff,
-			HHsuite_SubjectCoverage_Cutoff = options.HHsuite_SubjectCoverage_Cutoff,
-			
-			PPHMMClustering_MCLInflation = options.PPHMMClustering_MCLInflation_ForAlnMerging,
-			
-			HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = str2bool(options.HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging),
-			)
-
-		benchmark_end("PPHMMDBConstruction", start)
-
-	print("Input for UcfVirusAnnotator:")
-	print("="*100)
-	print("Main input")
-	print("-"*50)
-	print("GenomeSeqFile_UcfVirus: %s"%options.GenomeSeqFile_UcfVirus)
-	print("ShelveDir_UcfVirus: %s"%options.ShelveDir_UcfVirus)
-	print("ShelveDirs_RefVirus: %s"%options.ShelveDirs_RefVirus)
-	
-	print("\n")
-	print("Unclassified virus annotation options")
-	print("-"*50)
-	print("AnnotateIncompleteGenomes_UcfVirus: %s"%options.AnnotateIncompleteGenomes_UcfVirus)
-	print("UsingDatabaseIncludingIncompleteRefViruses: %s"%options.UsingDatabaseIncludingIncompleteRefViruses)	
-	#print "SeqLength_Cutoff: %s"%options.SeqLength_Cutoff
-	print("HMMER_N_CPUs: %s"%options.HMMER_N_CPUs)
-	print("HMMER_C_EValue_Cutoff: %s"%options.HMMER_C_EValue_Cutoff)
-	print("HMMER_HitScore_Cutoff: %s"%options.HMMER_HitScore_Cutoff)
-	print("="*100)
-	
-	start = benchmark_start("UcfVirusAnnotator")
-
-	UcfVirusAnnotator (
-		GenomeSeqFile_UcfVirus = options.GenomeSeqFile_UcfVirus,
-		ShelveDir_UcfVirus = options.ShelveDir_UcfVirus,
-		ShelveDirs_RefVirus = options.ShelveDirs_RefVirus,
-		
-		IncludeIncompleteGenomes_UcfVirus = str2bool(options.AnnotateIncompleteGenomes_UcfVirus),
-		IncludeIncompleteGenomes_RefVirus = str2bool(options.UsingDatabaseIncludingIncompleteRefViruses),
-		#SeqLength_Cutoff = options.SeqLength_Cutoff,
-		SeqLength_Cutoff = 0,
-		HMMER_N_CPUs = options.HMMER_N_CPUs,
-		HMMER_C_EValue_Cutoff = options.HMMER_C_EValue_Cutoff,
-		HMMER_HitScore_Cutoff = options.HMMER_HitScore_Cutoff,
-		)
-
-	benchmark_end("UcfVirusAnnotator", start)
-
-	print("Input for VirusClassificationAndEvaluation:\n")
-	print("="*100)
-	print("Main input")
-	print("-"*50)
-	print("ShelveDir_UcfVirus: %s"%options.ShelveDir_UcfVirus)
-	print("ShelveDirs_RefVirus: %s"%options.ShelveDirs_RefVirus)
-	print("AnnotateIncompleteGenomes_UcfVirus: %s"%options.AnnotateIncompleteGenomes_UcfVirus)
-	print("UsingDatabaseIncludingIncompleteRefViruses: %s"%options.UsingDatabaseIncludingIncompleteRefViruses)
-	
-	print("\n")
-	print("Virus annotation (with PPHMM database derived from unclassified viruses) options")
-	print("-"*50)
-	print("UseUcfVirusPPHMMs: %s"%options.UseUcfVirusPPHMMs)
-	print("GenomeSeqFile_UcfVirus: %s"%options.GenomeSeqFile_UcfVirus)
-	print("GenomeSeqFiles_RefVirus: %s"%options.GenomeSeqFiles_RefVirus)
-	#print "SeqLength_Cutoff: %s"%options.SeqLength_Cutoff
-	print("HMMER_N_CPUs: %s"%options.HMMER_N_CPUs)
-	print("HMMER_C_EValue_Cutoff: %s"%options.HMMER_C_EValue_Cutoff)
-	print("HMMER_HitScore_Cutoff: %s"%options.HMMER_HitScore_Cutoff)
-	
-	print("\n")
-	print("Virus (dis)similarity measurement options")
-	print("-"*50)
-	print("SimilarityMeasurementScheme: %s"%options.SimilarityMeasurementScheme)
-	print("p: %s"%options.p)
-	
-	print("\n")
-	print("Virus classification options")
-	print("-"*50)
-	print("Dendrogram_LinkageMethod: %s"%options.Dendrogram_LinkageMethod)
-	print("Bootstrap: %s"%options.Bootstrap)
-	print("N_Bootstrap: %s"%options.N_Bootstrap)
-	print("Bootstrap_method: %s"%options.Bootstrap_method)
-	print("Bootstrap_N_CPUs: %s"%options.Bootstrap_N_CPUs)	
-	print("DatabaseAssignmentSimilarityScore_Cutoff: %s"%options.DatabaseAssignmentSimilarityScore_Cutoff)
-	print("N_PairwiseSimilarityScores: %s"%options.N_PairwiseSimilarityScores)
-	
-	print("\n")
-	print("Heatmap construction options")
-	print("-"*50)
-	print("Heatmap_WithDendrogram: %s"%options.Heatmap_WithDendrogram)
-	print("Heatmap_DendrogramSupport_Cutoff: %s"%options.Heatmap_DendrogramSupport_Cutoff)
-	
-	print("\n")
-	print("Virus grouping options")
-	print("-"*50)
-	print("VirusGrouping: %s"%options.VirusGrouping)
-	print("="*100)
-
-	print("&"*100)
-
-	start = benchmark_start("VirusClassificationAndEvaluation")
-
-	VirusClassificationAndEvaluation (
-		ShelveDir_UcfVirus = options.ShelveDir_UcfVirus,
-		ShelveDirs_RefVirus = options.ShelveDirs_RefVirus,
-		IncludeIncompleteGenomes_UcfVirus = str2bool(options.AnnotateIncompleteGenomes_UcfVirus),
-		IncludeIncompleteGenomes_RefVirus = str2bool(options.UsingDatabaseIncludingIncompleteRefViruses),
-		
-		UseUcfVirusPPHMMs = str2bool(options.UseUcfVirusPPHMMs),
-		GenomeSeqFile_UcfVirus = options.GenomeSeqFile_UcfVirus,
-		GenomeSeqFiles_RefVirus = options.GenomeSeqFiles_RefVirus,
-		#SeqLength_Cutoff = options.SeqLength_Cutoff,
-		SeqLength_Cutoff = 0,
-		HMMER_N_CPUs = int(options.HMMER_N_CPUs),
-		HMMER_C_EValue_Cutoff = float(options.HMMER_C_EValue_Cutoff),
-		HMMER_HitScore_Cutoff = float(options.HMMER_HitScore_Cutoff),
-		
-		SimilarityMeasurementScheme = options.SimilarityMeasurementScheme,
-		p = float(options.p),
-		Dendrogram_LinkageMethod = options.Dendrogram_LinkageMethod,
-		
-		DatabaseAssignmentSimilarityScore_Cutoff = float(options.DatabaseAssignmentSimilarityScore_Cutoff),
-		N_PairwiseSimilarityScores = int(options.N_PairwiseSimilarityScores),
-		
-		Heatmap_WithDendrogram = str2bool(options.Heatmap_WithDendrogram),
-		Heatmap_DendrogramSupport_Cutoff = float(options.Heatmap_DendrogramSupport_Cutoff),
-		
-		Bootstrap = str2bool(options.Bootstrap),
-		N_Bootstrap = int(options.N_Bootstrap),
-		Bootstrap_method = options.Bootstrap_method,
-		Bootstrap_N_CPUs = int(options.Bootstrap_N_CPUs),
-		
-		VirusGrouping = str2bool(options.VirusGrouping),
-		)
-
-	benchmark_end("VirusClassificationAndEvaluation", start)	
-
-	print(f"Time to complete: {time.time() - actual_start}")
-
-if __name__ == '__main__':
-	main()
-
-
-
+	return parser
