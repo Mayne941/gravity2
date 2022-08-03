@@ -20,7 +20,6 @@ class Pipeline_II:
 
 	def main(self):
 		actual_start = time.time()
-		# RM < Update for API
 		logs = self.log_gen.entrypoint()
 
 		'''Catch bad database flags'''
