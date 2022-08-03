@@ -188,7 +188,6 @@ class ReadGenomeDescTable:
 		master_data["TranslTableList"]		= self.TranslTableList[IncludedGenomes_IndexList]
 		master_data["TaxoGroupingList"]		= self.TaxoGroupingList[IncludedGenomes_IndexList]
 		master_data["DatabaseList"]			= self.DatabaseList
-
 		return master_data
 
 	def save_desc_table(self, complete_desc_table, fname):
