@@ -31,11 +31,10 @@ class Pipeline_I:
 			if Proceed != "Y":
 				raise SystemExit("GRAViTy terminated.")
 		
-		
 		'''I: Fire Read Genom Desc Table'''
 		[print(log_text) for log_text in logs[0]]
 		start = benchmark_start("ReadGenomeDescTable")
-		ReadGenomeDescTable(
+		rgdt = ReadGenomeDescTable(
 			GenomeDescTableFile	= self.options['GenomeDescTableFile'],
 			ShelveDir		= self.options['ShelveDir'],
 			Database		= self.options['Database'],
@@ -43,6 +42,7 @@ class Pipeline_I:
 			TaxoGrouping_Header	= self.options['TaxoGrouping_Header'],
 			TaxoGroupingFile	= self.options['TaxoGroupingFile'],
 			)
+		rgdt.entrypoint()
 		benchmark_end("ReadGenomeDescTable", start)	
 
 		'''II: Fire PPHMDB Constructor'''
