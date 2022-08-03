@@ -14,8 +14,8 @@ import optparse, os, time
 class Pipeline_I:
 	def __init__(self):
 		'''Argparser'''
-		self.parser = generate_pipeline_i_arguments()
-		self.options, _ = self.parser.parse_args()
+		# self.parser = generate_pipeline_i_arguments()
+		# self.options, _ = self.parser.parse_args()
 		'''Create directories'''
 		if not os.path.exists(self.options.ShelveDir):
 			os.makedirs(self.options.ShelveDir)
@@ -24,7 +24,8 @@ class Pipeline_I:
 		
 	def main(self):
 		actual_start = time.time()
-		logs = self.log_gen.entrypoint()
+		# RM < Update log gen for API
+		# logs = self.log_gen.entrypoint()
 		breakpoint()
 		'''Catch bad database flags'''
 		if (self.options.Database != None and self.options.Database_Header == None):

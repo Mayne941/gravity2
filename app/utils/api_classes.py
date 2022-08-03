@@ -121,8 +121,10 @@ class Pipeline_ii_data(BaseModel):
         description = "Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded from https://talk.ictvonline.org/taxonomy/vmr/")
     ShelveDir_UcfVirus: DirectoryPath = Query('output/Analysis/Ucf/Test_ucf_UseUcfPPHMMs',
         description = "Full path to the shelve directory of unclassified viruses, storing GRAViTy outputs.")
-    ShelveDirs_RefVirus: DirectoryPath = Query('output/Analysis/Ref/VI, output/Analysis/Ref/VII',
+    ShelveDirs_RefVirus: str = Query('output/Analysis/Ref/VI, output/Analysis/Ref/VII',
         description = "Full path(s) to the shelve director(y/ies) of reference virus(es). For example: 'path/to/shelve/ref1, path/to/shelve/ref2, ...'")
+    GenomeDescTableFile_UcfVirus: FilePath = Query("data/VMR_test_Ucf.txt",
+        description = "Full path to the Virus Metadata Resource-like (VMR-like) tab delimited file of unclassified viruses, wth headers. VMR can be downloaded from https://talk.ictvonline.org/taxonomy/vmr/")
     # RM < Switch database default to None
     Database: Union[str, None] = Query(None,
         description = "GRAViTy will only analyse genomes that are labelled with DATABASE in the database column. The database column can be specified by the DATABASE HEADER argument. If 'None', all entries are analysed.")

@@ -3,6 +3,9 @@ from app.utils.check_input import check_FILEPATH, check_FILEPATHS, check_PERCENT
 import optparse
 import textwrap
 import multiprocessing
+'''
+DEPRECATED FROM APP VERSION 1.0 (PYTHON3)
+'''
 
 class IndentedHelpFormatterWithNL(optparse.IndentedHelpFormatter):
 	def format_description(self, description):
