@@ -126,7 +126,7 @@ class Pipeline_ii_data(BaseModel):
     GenomeDescTableFile_UcfVirus: FilePath = Query("data/VMR_test_Ucf.txt",
         description = "Full path to the Virus Metadata Resource-like (VMR-like) tab delimited file of unclassified viruses, wth headers. VMR can be downloaded from https://talk.ictvonline.org/taxonomy/vmr/")
     # RM < Switch database default to None
-    Database: Union[str, None] = Query(None,
+    Database: Union[None, str] = Query(None,
         description = "GRAViTy will only analyse genomes that are labelled with DATABASE in the database column. The database column can be specified by the DATABASE HEADER argument. If 'None', all entries are analysed.")
     # RM < Switch database_header default to None
     Database_Header: Union[str, None] = Query(None,

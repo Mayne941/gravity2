@@ -33,12 +33,13 @@ class Pipeline_II:
 		'''I: Fire Read Genom Desc Table'''
 		[print(log_text) for log_text in logs[0]]
 		start = benchmark_start("ReadGenomeDescTable")
-		ReadGenomeDescTable(
+		rgdt = ReadGenomeDescTable(
 			GenomeDescTableFile	= self.options['GenomeDescTableFile_UcfVirus'],
 			ShelveDir			= self.options['ShelveDir_UcfVirus'],
 			Database			= self.options['Database'],
 			Database_Header		= self.options['Database_Header'],
 			)
+		rgdt.entrypoint()
 		benchmark_end("ReadGenomeDescTable", start)
 		
 		'''II: Fire PPHMDB Constructor'''
