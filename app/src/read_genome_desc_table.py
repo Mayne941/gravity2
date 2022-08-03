@@ -177,17 +177,17 @@ class ReadGenomeDescTable:
 			if self.Database != None: 
 				master_data["DatabaseList"] = self.DatabaseList[IncludedGenomes_IndexList]
 
-		master_data["BaltimoreList"]		= self.BaltimoreList[IncludedGenomes_IndexList]
-		master_data["OrderList"]			= self.OrderList[IncludedGenomes_IndexList]
-		master_data["FamilyList"]			= self.FamilyList[IncludedGenomes_IndexList]
-		master_data["SubFamList"]			= self.SubFamList[IncludedGenomes_IndexList]
-		master_data["GenusList"]			= self.GenusList[IncludedGenomes_IndexList]
-		master_data["VirusNameList"]		= self.VirusNameList[IncludedGenomes_IndexList]		
-		master_data["SeqIDLists"]			= self.SeqIDLists[IncludedGenomes_IndexList]
-		master_data["SeqStatusList"]		= self.SeqStatusList[IncludedGenomes_IndexList]
-		master_data["TranslTableList"]		= self.TranslTableList[IncludedGenomes_IndexList]
-		master_data["TaxoGroupingList"]		= self.TaxoGroupingList[IncludedGenomes_IndexList]
-		master_data["DatabaseList"]			= self.DatabaseList
+		self.BaltimoreList = master_data["BaltimoreList"]		= self.BaltimoreList[IncludedGenomes_IndexList]
+		self.OrderList 	   = master_data["OrderList"]			= self.OrderList[IncludedGenomes_IndexList]
+		self.FamilyList    = master_data["FamilyList"]			= self.FamilyList[IncludedGenomes_IndexList]
+		self.SubFamList    = master_data["SubFamList"]			= self.SubFamList[IncludedGenomes_IndexList]
+		self.GenusList 	   = master_data["GenusList"]			= self.GenusList[IncludedGenomes_IndexList]
+		self.VirusNameList = master_data["VirusNameList"]		= self.VirusNameList[IncludedGenomes_IndexList]		
+		self.SeqIDLists    = master_data["SeqIDLists"]			= self.SeqIDLists[IncludedGenomes_IndexList]
+		self.SeqStatusList = master_data["SeqStatusList"]		= self.SeqStatusList[IncludedGenomes_IndexList]
+		self.TranslTableList = master_data["TranslTableList"]		= self.TranslTableList[IncludedGenomes_IndexList]
+		self.TaxoGroupingList = master_data["TaxoGroupingList"]		= self.TaxoGroupingList[IncludedGenomes_IndexList]
+		self.DatabaseList  = master_data["DatabaseList"]			= self.DatabaseList
 		return master_data
 
 	def save_desc_table(self, complete_desc_table, fname):
@@ -264,10 +264,11 @@ class ReadGenomeDescTable:
 		if self.Database != None:
 			'''If a database is provided, filter to these specific entries'''
 			all_desc_table = self.update_desc_table("all_genomes")
+
 		self.save_desc_table(all_desc_table, "/ReadGenomeDescTable.AllGenomes.shelve")
-		
+	
 		'''Create ReadGenomeDescTable "complete genomes' db'''
 		print("- Save variables to ReadGenomeDescTable.CompleteGenomes.shelve")
 		complete_desc_table = self.update_desc_table("complete_genomes")
 		self.save_desc_table(complete_desc_table, "/ReadGenomeDescTable.CompleteGenomes.shelve")
-		breakpoint()
+
