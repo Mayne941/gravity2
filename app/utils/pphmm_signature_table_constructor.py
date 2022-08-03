@@ -43,10 +43,13 @@ def PPHMMSignatureTable_Constructor (
 		GenBankIDList	= []
 		GenBankDescList	= []
 		for SeqID in SeqIDList:
-			GenBankRecord = Records_dict[SeqID]
-			GenBankSeqList.append(GenBankRecord.seq)
-			GenBankIDList.append(GenBankRecord.id)
-			GenBankDescList.append(GenBankRecord.description)
+			try:
+				GenBankRecord = Records_dict[SeqID]
+				GenBankSeqList.append(GenBankRecord.seq)
+				GenBankIDList.append(GenBankRecord.id)
+				GenBankDescList.append(GenBankRecord.description)
+			except:
+				breakpoint()
 		
 		#sort lists by sequence/segment lengthes
 		#---------------------------------------------------------------------

@@ -95,8 +95,34 @@ class ReadGenomeDescTable:
 				Line = Line.split("\r\n")[0].split("\n")[0].split("\t")
 				SeqIDList = re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}",Line[SeqID_i])
 
-				# if SeqIDList != [] or Line[SeqID_i]!="":
-				# 	'''Ignore record without sequences'''
+				if SeqIDList != [] or Line[SeqID_i]!="":
+					'''Ignore record without sequences'''
+					self.VirusIndexList.append(Virus_i)
+					self.BaltimoreList.append(Line[Baltimore_i])
+					self.OrderList.append(Line[Order_i])
+					self.FamilyList.append(Line[Family_i])
+					self.SubFamList.append(Line[Subfamily_i])
+					self.GenusList.append(Line[Genus_i])
+					self.VirusNameList.append(re.sub(r"^\/|\/$","",re.sub(r"[\/ ]{2,}","/",re.sub(r"[^\w^ ^\.^\-]+","/",re.sub(r"[ ]{2,}"," ",Line[VirusName_i]))))) #clean the virus name
+					self.TaxoGroupingList.append(Line[TaxoGrouping_i])
+					self.SeqStatusList.append(Line[SeqStatus_i])
+					
+					if SeqIDList != []:
+						self.SeqIDLists.append(SeqIDList)
+					else:
+						self.SeqIDLists.append([Line[SeqID_i]])
+					
+					try:
+						self.TranslTableList.append(int(Line[TranslTable_i]))
+					except ValueError:
+						print(("Genetic code is not specified. GRAViTy will use the standard code for %s"%self.VirusNameList[-1]))
+						self.TranslTableList.append(1)
+					if self.Database_Header != None: 
+						self.DatabaseList.append(Line[Database_i])
+
+
+
+				# if SeqIDList != []: 
 				# 	self.VirusIndexList.append(Virus_i)
 				# 	self.BaltimoreList.append(Line[Baltimore_i])
 				# 	self.OrderList.append(Line[Order_i])
@@ -105,13 +131,9 @@ class ReadGenomeDescTable:
 				# 	self.GenusList.append(Line[Genus_i])
 				# 	self.VirusNameList.append(re.sub(r"^\/|\/$","",re.sub(r"[\/ ]{2,}","/",re.sub(r"[^\w^ ^\.^\-]+","/",re.sub(r"[ ]{2,}"," ",Line[VirusName_i]))))) #clean the virus name
 				# 	self.TaxoGroupingList.append(Line[TaxoGrouping_i])
+				# 	self.SeqIDLists.append(SeqIDList)
 				# 	self.SeqStatusList.append(Line[SeqStatus_i])
-					
-				# 	if SeqIDList != []:
-				# 		self.SeqIDLists.append(SeqIDList)
-				# 	else:
-				# 		self.SeqIDLists.append([Line[SeqID_i]])
-					
+
 				# 	try:
 				# 		self.TranslTableList.append(int(Line[TranslTable_i]))
 				# 	except ValueError:
@@ -120,51 +142,29 @@ class ReadGenomeDescTable:
 				# 	if self.Database_Header != None: 
 				# 		self.DatabaseList.append(Line[Database_i])
 
-
-
-				if SeqIDList != []: 
-					self.VirusIndexList.append(Virus_i)
-					self.BaltimoreList.append(Line[Baltimore_i])
-					self.OrderList.append(Line[Order_i])
-					self.FamilyList.append(Line[Family_i])
-					self.SubFamList.append(Line[Subfamily_i])
-					self.GenusList.append(Line[Genus_i])
-					self.VirusNameList.append(re.sub(r"^\/|\/$","",re.sub(r"[\/ ]{2,}","/",re.sub(r"[^\w^ ^\.^\-]+","/",re.sub(r"[ ]{2,}"," ",Line[VirusName_i]))))) #clean the virus name
-					self.TaxoGroupingList.append(Line[TaxoGrouping_i])
-					self.SeqIDLists.append(SeqIDList)
-					self.SeqStatusList.append(Line[SeqStatus_i])
-
-					try:
-						self.TranslTableList.append(int(Line[TranslTable_i]))
-					except ValueError:
-						print(("Genetic code is not specified. GRAViTy will use the standard code for %s"%self.VirusNameList[-1]))
-						self.TranslTableList.append(1)
-					if self.Database_Header != None: 
-						self.DatabaseList.append(Line[Database_i])
-
-				elif Line[SeqID_i]!="":
-					self.VirusIndexList.append(Virus_i)
-					self.BaltimoreList.append(Line[Baltimore_i])
-					self.OrderList.append(Line[Order_i])
-					self.FamilyList.append(Line[Family_i])
-					self.SubFamList.append(Line[Subfamily_i])
-					self.GenusList.append(Line[Genus_i])
-					self.VirusNameList.append(re.sub(r"^\/|\/$","",re.sub(r"[\/ ]{2,}","/",re.sub(r"[^\w^ ^\.^\-]+","/",re.sub(r"[ ]{2,}"," ",Line[VirusName_i]))))) #clean the virus name
-					self.TaxoGroupingList.append(Line[TaxoGrouping_i])
-					self.SeqIDLists.append([Line[SeqID_i]])
-					self.SeqStatusList.append(Line[SeqStatus_i])
+				# elif Line[SeqID_i]!="":
+				# 	self.VirusIndexList.append(Virus_i)
+				# 	self.BaltimoreList.append(Line[Baltimore_i])
+				# 	self.OrderList.append(Line[Order_i])
+				# 	self.FamilyList.append(Line[Family_i])
+				# 	self.SubFamList.append(Line[Subfamily_i])
+				# 	self.GenusList.append(Line[Genus_i])
+				# 	self.VirusNameList.append(re.sub(r"^\/|\/$","",re.sub(r"[\/ ]{2,}","/",re.sub(r"[^\w^ ^\.^\-]+","/",re.sub(r"[ ]{2,}"," ",Line[VirusName_i]))))) #clean the virus name
+				# 	self.TaxoGroupingList.append(Line[TaxoGrouping_i])
+				# 	self.SeqIDLists.append([Line[SeqID_i]])
+				# 	self.SeqStatusList.append(Line[SeqStatus_i])
 				
-					try:
-						self.TranslTableList.append(int(Line[TranslTable_i]))
-					except ValueError:
-						print(("Genetic code is not specified. GRAViTy will use the standard code for %s"%self.VirusNameList[-1]))
-						self.TranslTableList.append(1)
-					if self.Database_Header != None: 
-						self.DatabaseList.append(Line[Database_i])
+				# 	try:
+				# 		self.TranslTableList.append(int(Line[TranslTable_i]))
+				# 	except ValueError:
+				# 		print(("Genetic code is not specified. GRAViTy will use the standard code for %s"%self.VirusNameList[-1]))
+				# 		self.TranslTableList.append(1)
+				# 	if self.Database_Header != None: 
+				# 		self.DatabaseList.append(Line[Database_i])
 				
-				else:
-					'''We don't want these lines'''
-					continue
+				# else:
+				# 	'''We don't want these lines'''
+				# 	continue
 
 	def update_desc_table(self, flag) -> dict:
 		'''Create dictionary in GRAViTy structure for saving to persistent storage'''
@@ -271,3 +271,4 @@ class ReadGenomeDescTable:
 		print("- Save variables to ReadGenomeDescTable.CompleteGenomes.shelve")
 		complete_desc_table = self.update_desc_table("complete_genomes")
 		self.save_desc_table(complete_desc_table, "/ReadGenomeDescTable.CompleteGenomes.shelve")
+		breakpoint()
