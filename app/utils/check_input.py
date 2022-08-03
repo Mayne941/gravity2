@@ -1,4 +1,7 @@
 import optparse, os
+'''
+DEPRECATED FROM APP VERSION 1.0 (PYTHON3)
+'''
 
 def check_FILEPATH (option, opt_str, value, parser):
 	if value != None and (not os.path.isfile(value)):
