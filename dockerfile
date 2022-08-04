@@ -3,11 +3,13 @@ FROM python:3.9-slim-buster
 EXPOSE 80
 
 COPY ./app /workspace/app 
-#COPY other files/folders
+#COPY other files/folders # RM <
 WORKDIR /workspace
 RUN mkdir logs etc
 
-#RUN sh file with cmd line tools 
+RUN apt install hmmer
+RUN apt install mcl
+# RM < Automate muscle install https://drive5.com/muscle5/manual/install.html
 RUN apt-get update
 RUN apt-get install --upgrade pip
 RUN pip install -r requirements.txt --prefer-binary

@@ -29,7 +29,7 @@ def MutualInformationCalculator (
 	print("\tto program output shelve")
 	#-------------------------------------------------------------------------------
 	VariableShelveDir		= ShelveDir+"/Shelves"
-	
+
 	print("\t\tto Mutual information score directory")
 	#-------------------------------------------------------------------------------
 	MutualInformationScoreDir	= VariableShelveDir+"/MutualInformationScore"

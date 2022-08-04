@@ -2,8 +2,8 @@ from app.utils.console_messages import section_header
 
 import numpy as np
 from collections import Counter
-import os, shelve
-import re
+import os, shelve, re, pickle
+
 '''
 Read genome description table (Virus Metadata Resource -- VMR)
 ---------------------------------------------
@@ -72,7 +72,7 @@ class ReadGenomeDescTable:
 			header = next(GenomeDescTable_txt)
 			header = header.split("\r\n")[0].split("\n")[0].split("\t")
 			
-			# RM < Check with new VMR that format still consistent
+			# RM < new VMR format is not consistent with this
 			Baltimore_i		= header.index("Baltimore Group")
 			Order_i			= header.index("Order")
 			Family_i		= header.index("Family")
@@ -120,52 +120,6 @@ class ReadGenomeDescTable:
 					if self.Database_Header != None: 
 						self.DatabaseList.append(Line[Database_i])
 
-
-
-				# if SeqIDList != []: 
-				# 	self.VirusIndexList.append(Virus_i)
-				# 	self.BaltimoreList.append(Line[Baltimore_i])
-				# 	self.OrderList.append(Line[Order_i])
-				# 	self.FamilyList.append(Line[Family_i])
-				# 	self.SubFamList.append(Line[Subfamily_i])
-				# 	self.GenusList.append(Line[Genus_i])
-				# 	self.VirusNameList.append(re.sub(r"^\/|\/$","",re.sub(r"[\/ ]{2,}","/",re.sub(r"[^\w^ ^\.^\-]+","/",re.sub(r"[ ]{2,}"," ",Line[VirusName_i]))))) #clean the virus name
-				# 	self.TaxoGroupingList.append(Line[TaxoGrouping_i])
-				# 	self.SeqIDLists.append(SeqIDList)
-				# 	self.SeqStatusList.append(Line[SeqStatus_i])
-
-				# 	try:
-				# 		self.TranslTableList.append(int(Line[TranslTable_i]))
-				# 	except ValueError:
-				# 		print(("Genetic code is not specified. GRAViTy will use the standard code for %s"%self.VirusNameList[-1]))
-				# 		self.TranslTableList.append(1)
-				# 	if self.Database_Header != None: 
-				# 		self.DatabaseList.append(Line[Database_i])
-
-				# elif Line[SeqID_i]!="":
-				# 	self.VirusIndexList.append(Virus_i)
-				# 	self.BaltimoreList.append(Line[Baltimore_i])
-				# 	self.OrderList.append(Line[Order_i])
-				# 	self.FamilyList.append(Line[Family_i])
-				# 	self.SubFamList.append(Line[Subfamily_i])
-				# 	self.GenusList.append(Line[Genus_i])
-				# 	self.VirusNameList.append(re.sub(r"^\/|\/$","",re.sub(r"[\/ ]{2,}","/",re.sub(r"[^\w^ ^\.^\-]+","/",re.sub(r"[ ]{2,}"," ",Line[VirusName_i]))))) #clean the virus name
-				# 	self.TaxoGroupingList.append(Line[TaxoGrouping_i])
-				# 	self.SeqIDLists.append([Line[SeqID_i]])
-				# 	self.SeqStatusList.append(Line[SeqStatus_i])
-				
-				# 	try:
-				# 		self.TranslTableList.append(int(Line[TranslTable_i]))
-				# 	except ValueError:
-				# 		print(("Genetic code is not specified. GRAViTy will use the standard code for %s"%self.VirusNameList[-1]))
-				# 		self.TranslTableList.append(1)
-				# 	if self.Database_Header != None: 
-				# 		self.DatabaseList.append(Line[Database_i])
-				
-				# else:
-				# 	'''We don't want these lines'''
-				# 	continue
-
 	def update_desc_table(self, flag) -> dict:
 		'''Create dictionary in GRAViTy structure for saving to persistent storage'''
 		master_data = {}
@@ -190,28 +144,9 @@ class ReadGenomeDescTable:
 		self.DatabaseList  = master_data["DatabaseList"]			= self.DatabaseList
 		return master_data
 
-	def save_desc_table(self, complete_desc_table, fname):
-		'''Save dictionary in GRAViTy structure to persistent storage'''
-		# RM < Shelve > pickle
-		parameters = shelve.open(self.VariableShelveDir + fname, "n")
-		for key in ["BaltimoreList",
-				"OrderList",
-				"FamilyList",
-				"SubFamList",
-				"GenusList",
-				"VirusNameList",
-				"SeqIDLists",
-				"SeqStatusList",
-				"TaxoGroupingList",
-				"TranslTableList",
-				"DatabaseList",
-				]:
-			try:
-				parameters[key] = complete_desc_table[key]
-				print("\t" + key)
-			except TypeError:
-				pass
-		parameters.close()
+	def save_desc_table(self, table, fname):
+		'''Save dictionary in GRAViTy structure to persistent storage'''	
+		pickle.dump(table, open(f"{self.VariableShelveDir + fname}", "wb"))
 
 	def entrypoint(self) -> None:
 		'''RM < UPDATE DOCSTRING'''
@@ -260,15 +195,15 @@ class ReadGenomeDescTable:
 		self.DatabaseList	  = all_desc_table["DatabaseList"]		 = np.array(self.DatabaseList)
 
 		'''Create ReadGenomeDescTable "all genomes' db'''
-		print("- Save variables to ReadGenomeDescTable.AllGenomes.shelve")
+		print("- Save variables to ReadGenomeDescTable.AllGenomes.p")
 		if self.Database != None:
 			'''If a database is provided, filter to these specific entries'''
 			all_desc_table = self.update_desc_table("all_genomes")
 
-		self.save_desc_table(all_desc_table, "/ReadGenomeDescTable.AllGenomes.shelve")
+		self.save_desc_table(all_desc_table, "/ReadGenomeDescTable.AllGenomes.p")
 	
 		'''Create ReadGenomeDescTable "complete genomes' db'''
 		print("- Save variables to ReadGenomeDescTable.CompleteGenomes.shelve")
 		complete_desc_table = self.update_desc_table("complete_genomes")
-		self.save_desc_table(complete_desc_table, "/ReadGenomeDescTable.CompleteGenomes.shelve")
+		self.save_desc_table(complete_desc_table, "/ReadGenomeDescTable.CompleteGenomes.p")
 

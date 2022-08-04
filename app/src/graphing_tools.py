@@ -53,7 +53,6 @@ def GRAViTyDendrogramAndHeatmapConstruction(
 	print("\tto program output shelve")
 	#-------------------------------------------------------------------------------
 	VariableShelveDir = ShelveDir+"/Shelves"
-	
 	if Dendrogram == True:
 		print("\t\tto virus dendrogram file")
 		#-------------------------------------------------------------------------------

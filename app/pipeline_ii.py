@@ -17,11 +17,8 @@ class Pipeline_II:
 			os.makedirs(self.options["ShelveDir_UcfVirus"])
 		'''Logs'''
 		self.log_gen = Log_Generator_Pl2(self.options, self.options["ShelveDir_UcfVirus"])
-
-	def main(self):
-		actual_start = time.time()
-		logs = self.log_gen.entrypoint()
-
+		self.actual_start = time.time()
+		self.logs = self.log_gen.entrypoint()
 		'''Catch bad database flags'''
 		if (self.options['Database'] != None and self.options['Database_Header'] == None):
 			raise optparse.OptionValueError(f"You have specified DATABASE as {self.options['Database']}, 'Database_Header' cannot be 'None'")
@@ -30,8 +27,9 @@ class Pipeline_II:
 			if Proceed != "Y":
 				raise SystemExit("GRAViTy terminated.")
 		
+	def read_genome_desc_table(self):
 		'''I: Fire Read Genom Desc Table'''
-		[print(log_text) for log_text in logs[0]]
+		[print(log_text) for log_text in self.logs[0]]
 		start = benchmark_start("ReadGenomeDescTable")
 		rgdt = ReadGenomeDescTable(
 			GenomeDescTableFile	= self.options['GenomeDescTableFile_UcfVirus'],
@@ -42,9 +40,12 @@ class Pipeline_II:
 		rgdt.entrypoint()
 		benchmark_end("ReadGenomeDescTable", start)
 		
+		self.pphmmdb_construction()
+	
+	def pphmmdb_construction(self):
 		'''II: Fire PPHMDB Constructor'''
 		if str2bool(self.options['UseUcfVirusPPHMMs']) == True:
-			[print(log_text) for log_text in logs[1]]				
+			[print(log_text) for log_text in self.logs[1]]				
 			start = benchmark_start("PPHMMDBConstruction")
 			PPHMMDBConstruction (
 				GenomeSeqFile = self.options['GenomeSeqFile_UcfVirus'],
@@ -71,8 +72,11 @@ class Pipeline_II:
 				)
 			benchmark_end("PPHMMDBConstruction", start)
 
+		self.ucf_virus_annotator()
+
+	def ucf_virus_annotator(self):
 		'''III: Fire UCF Virus Annotator'''
-		[print(log_text) for log_text in logs[2]]
+		[print(log_text) for log_text in self.logs[2]]
 		start = benchmark_start("UcfVirusAnnotator")
 		UcfVirusAnnotator (
 			GenomeSeqFile_UcfVirus = self.options['GenomeSeqFile_UcfVirus'],
@@ -87,8 +91,11 @@ class Pipeline_II:
 			)
 		benchmark_end("UcfVirusAnnotator", start)
 
+		self.virus_classification()
+
+	def virus_classification(self):
 		'''IV: Fire Classifiers'''
-		[print(log_text) for log_text in logs[3]]
+		[print(log_text) for log_text in self.logs[3]]
 		start = benchmark_start("VirusClassificationAndEvaluation")
 		VirusClassificationAndEvaluation (
 			ShelveDir_UcfVirus = self.options['ShelveDir_UcfVirus'],
@@ -117,7 +124,7 @@ class Pipeline_II:
 			)
 		benchmark_end("VirusClassificationAndEvaluation", start)	
 
-		print(f"Time to complete: {time.time() - actual_start}")
+		print(f"Time to complete: {time.time() - self.actual_start}")
 
 if __name__ == '__main__':
 	pl = Pipeline_II()

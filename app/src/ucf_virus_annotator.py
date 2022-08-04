@@ -42,7 +42,7 @@ def UcfVirusAnnotator (
 		print("\tfrom ReadGenomeDescTable.CompleteGenomes.shelve")
 		#-------------------------------------------------------------------------------
 		VariableShelveFile_UcfVirus = VariableShelveDir_UcfVirus+"/ReadGenomeDescTable.CompleteGenomes.shelve"
-	
+
 	#VariableShelveFile_UcfVirus = VariableShelveDir_UcfVirus+"/ReadGenomeDescTable.shelve"
 	Parameters = shelve.open(VariableShelveFile_UcfVirus)
 	for key in [	
