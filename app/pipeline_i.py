@@ -50,7 +50,7 @@ class Pipeline_I:
 		'''II: Fire PPHMDB Constructor'''
 		[print(log_text) for log_text in self.logs[1]]	
 		start = benchmark_start("PPHMMDBConstruction")
-		PPHMMDBConstruction (
+		pph = PPHMMDBConstruction (
 			GenomeSeqFile = self.options['GenomeSeqFile'],
 			ShelveDir = self.options['ShelveDir'],
 			ProteinLength_Cutoff = self.options['ProteinLength_Cutoff'],
@@ -73,8 +73,9 @@ class Pipeline_I:
 			PPHMMClustering_MCLInflation = self.options['PPHMMClustering_MCLInflation_ForAlnMerging'],	
 			HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = str2bool(self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']),
 			)
+		pph.main()
 		benchmark_end("PPHMMDBConstruction", start)	
-
+		breakpoint()
 		self.ref_virus_annotator()
 
 	def ref_virus_annotator(self):

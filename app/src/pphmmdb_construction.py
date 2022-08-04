@@ -36,7 +36,7 @@ class PPHMMDBConstruction:
 				PPHMMClustering_MCLInflation	= 5,
 				HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = True,
 			) -> None:
-		self.Genome_SeqFile = GenomeSeqFile
+		self.GenomeSeqFile = GenomeSeqFile
 		self.ShelveDir = ShelveDir
 		self.ProteinLength_Cutoff = ProteinLength_Cutoff
 		self.IncludeIncompleteGenomes = IncludeIncompleteGenomes
@@ -165,67 +165,61 @@ class PPHMMDBConstruction:
 			np.array(ClusterSizeByProtList),
 			)
 
+	def mkdirs(self):
+		'''Return all directories for db storage'''
+		print("Generating directories")
+
+		'''Blast dirs'''
+		BLASTMainDir		= self.ShelveDir+"/BLAST"
+		if os.path.exists(BLASTMainDir):
+			'''Clear previous results'''
+			_ = subprocess.call("rm -rf %s" %BLASTMainDir, shell = True)
+		os.makedirs(BLASTMainDir)
+
+		BLASTQueryFile		= BLASTMainDir+"/Query.fasta"
+		BLASTSubjectFile	= BLASTMainDir+"/Subjects.fasta"
+		BLASTOutputFile		= BLASTMainDir+"/BLASTOutput.txt"
+		BLASTBitScoreFile	= BLASTMainDir+"/BitScoreMat.txt"
+		BLASTProtClusterFile= BLASTMainDir+"/ProtClusters.txt"
+		ClustersDir			= BLASTMainDir+"/Clusters"; os.makedirs(ClustersDir)
+		
+		'''HMMER dirs'''
+		HMMERDir			= self.ShelveDir+"/HMMER"
+		'''Delete existing HMMER libraries'''
+		if os.path.exists(HMMERDir):
+			'''Clear previous results'''
+			_ = subprocess.call("rm -rf %s" %HMMERDir, shell = True)
+		os.makedirs(HMMERDir)
+		HMMER_PPHMMDir		= HMMERDir+"/HMMER_PPHMMs"; os.makedirs(HMMER_PPHMMDir)
+		HMMER_PPHMMDBDir	= HMMERDir+"/HMMER_PPHMMDB"; os.makedirs(HMMER_PPHMMDBDir)
+		HMMER_PPHMMDB		= HMMER_PPHMMDBDir+"/HMMER_PPHMMDB"
+
+		VariableShelveDir 	= self.ShelveDir+"/Shelves"
+
+		'''HHsuite dirs, regardless of if it's enabled'''
+		HHsuiteDir	= self.ShelveDir+"/HHsuite"
+		if os.path.exists(HHsuiteDir):
+			'''Clear previous results'''
+			_ = subprocess.call("rm -rf %s" %HHsuiteDir, shell = True)
+		os.makedirs(HHsuiteDir)
+		HHsuite_PPHMMDir = HHsuiteDir + "/HHsuite_PPHMMs";os.makedirs(HHsuite_PPHMMDir)
+		HHsuite_PPHMMDBDir= HHsuiteDir +"/HHsuite_PPHMMDB";os.makedirs(HHsuite_PPHMMDBDir)
+		HHsuite_PPHMMDB	= HHsuite_PPHMMDBDir+"/HHsuite_PPHMMDB"
+			
+		return  BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile, \
+				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDBDir, \
+				HMMER_PPHMMDB, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB
+
 
 	def main(self):
 		'''RM < DOCSTRING'''
 		section_header("#Build a database of virus protein profile hidden Markov models (PPHMMs) #")
 
-		'''Build a database of virus protein profile hidden Markov models (PPHMMs)'''
-		# RM < Make function
-		print("- Define dir/file paths")
-		print("\tto BLASTp shelve directory")
-		BLASTMainDir		= self.ShelveDir+"/BLAST"
-		if os.path.exists(BLASTMainDir):
-			'''Clear previous results'''
-			_ = subprocess.call("rm -rf %s" %BLASTMainDir, shell = True)
-		
-		os.makedirs(BLASTMainDir)
-		
-		print("\t\tto BLASTp query file")
-		BLASTQueryFile		= BLASTMainDir+"/Query.fasta"
-		print("\t\tto BLASTp subject file")
-		BLASTSubjectFile	= BLASTMainDir+"/Subjects.fasta"
-		print("\t\tto BLASTp output file")
-		BLASTOutputFile		= BLASTMainDir+"/BLASTOutput.txt"
-		print("\t\tto BLASTp bit score matrix file")
-		BLASTBitScoreFile	= BLASTMainDir+"/BitScoreMat.txt"
-		print("\t\tto protein cluster file")
-		BLASTProtClusterFile= BLASTMainDir+"/ProtClusters.txt"
-		print("\t\tto protein cluster directory")
-		ClustersDir			= BLASTMainDir+"/Clusters";os.makedirs(ClustersDir)
-		print("\tto HMMER shelve directory")
-		HMMERDir			= self.ShelveDir+"/HMMER"
-
-		'''Delete existing HMMER libraries'''
-		if os.path.exists(HMMERDir):
-			_ = subprocess.call("rm -rf %s" %HMMERDir, shell = True)
-		os.makedirs(HMMERDir)
-		
-		print("\t\tto HMMER PPHMM directory")
-		HMMER_PPHMMDir		= HMMERDir+"/HMMER_PPHMMs";os.makedirs(HMMER_PPHMMDir)
-		print("\t\tto HMMER PPHMM database directory")
-		HMMER_PPHMMDBDir	= HMMERDir+"/HMMER_PPHMMDB";os.makedirs(HMMER_PPHMMDBDir)
-		print("\t\t\tto HMMER PPHMM database")
-		HMMER_PPHMMDB		= HMMER_PPHMMDBDir+"/HMMER_PPHMMDB"
-		
-		if self.N_AlignmentMerging != 0:
-			print("\tto HHsuite shelve directory")
-			HHsuiteDir	= self.ShelveDir+"/HHsuite"
-
-			if os.path.exists(HHsuiteDir):
-				_ = subprocess.call("rm -rf %s" %HHsuiteDir, shell = True)
-			os.makedirs(HHsuiteDir)
-			
-			print("\t\tto HHsuite PPHMM directory")
-			HHsuite_PPHMMDir = HHsuiteDir + "/HHsuite_PPHMMs";os.makedirs(HHsuite_PPHMMDir)
-			print("\t\tto HHsuite PPHMM database directory")
-			HHsuite_PPHMMDBDir= HHsuiteDir +"/HHsuite_PPHMMDB";os.makedirs(HHsuite_PPHMMDBDir)
-			print("\t\t\tto HHsuite PPHMM database")
-			HHsuite_PPHMMDB	= HHsuite_PPHMMDBDir+"/HHsuite_PPHMMDB"
-		
-		print("\tto program output shelve")
-		VariableShelveDir 	= self.ShelveDir+"/Shelves"
-		
+		'''Build db dirs'''
+		BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile, \
+				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDBDir, \
+				HMMER_PPHMMDB, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB = self.mkdirs()		
+				
 		'''Retrieve Variables'''
 		# RM < Make function
 		print("- Retrieve variables")
@@ -267,7 +261,7 @@ class PPHMMDBConstruction:
 		
 		'''Get GenBank files if not exists'''
 		# RM < Make function
-		if not os.path.isfile(GenomeSeqFileGenomeSeqFile):
+		if not os.path.isfile(self.GenomeSeqFile):
 			print("- Download GenBank file")
 			print("GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s)")
 			print("Here are the accession numbers to be downloaded: ")
@@ -524,7 +518,7 @@ class PPHMMDBConstruction:
 						bitscore		= float(Line[7][:-1])
 						[SeqID_I, SeqID_II]	= sorted([qseqid, sseqid])
 						Pair			= ", ".join([SeqID_I, SeqID_II])
-						if ((qseqid != sseqid) and (pident >= self.BLASTp_PercentageIden_Cutoff) and (qcovs >= BLASTp_QueryCoverage_Cutoff) and ((qcovs*qlen/slen) >= BLASTp_SubjectCoverage_Cutoff)):
+						if ((qseqid != sseqid) and (pident >= self.BLASTp_PercentageIden_Cutoff) and (qcovs >= self.BLASTp_QueryCoverage_Cutoff) and ((qcovs*qlen/slen) >= self.BLASTp_SubjectCoverage_Cutoff)):
 							if Pair in SeenPair: 
 								'''If the pair has already been seen...'''
 								if bitscore > BitScoreMat[SeenPair[Pair]][2]: 
@@ -552,7 +546,7 @@ class PPHMMDBConstruction:
 		
 		'''Cluster using Muscle'''
 		print("- Cluster protein sequences based on BLASTp bit scores, using the MCL algorithm")
-		_ = subprocess.Popen("mcl %s --abc -o %s -I %s" %(BLASTBitScoreFile, BLASTProtClusterFile, ProtClustering_MCLInflation), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		_ = subprocess.Popen("mcl %s --abc -o %s -I %s" %(BLASTBitScoreFile, BLASTProtClusterFile, self.ProtClustering_MCLInflation), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		err, out = _.communicate()
 
 		# RM < Redo error handler
