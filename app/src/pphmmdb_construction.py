@@ -487,7 +487,7 @@ class PPHMMDBConstruction:
 		self.blastp_analysis(ProtList, BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile)
 		
 		'''Cluster using Muscle'''
-		self.mcl_clustering()
+		self.mcl_clustering(ProtIDList, BLASTBitScoreFile, BLASTProtClusterFile)
 		
 		'''Make Alignments'''
 		Cluster_MetaDataDict = self.make_alignments(ProtList, ProtIDList, BLASTProtClusterFile, ClustersDir)
