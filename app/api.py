@@ -88,7 +88,7 @@ def run_pipeline_i_from_graph_generator(payload):
     pl.make_graphs()
 
 @app.post("/pipeline_i_from_mutual_info_calculator/", tags=["Pipeline I"])
-async def pipeline_i__from_mutual_info_calculator(payload: Pipeline_i_data, background_tasks: BackgroundTasks):
+async def pipeline_i_from_mutual_info_calculator(payload: Pipeline_i_data, background_tasks: BackgroundTasks):
     payload = jsonable_encoder(payload)
     background_tasks.add_task(run_pipeline_i_from_mutual_info_calculator, payload)
     return "Task fired successfully, running in background"

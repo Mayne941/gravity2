@@ -269,7 +269,6 @@ def VirusClassificationAndEvaluation (
 	print("\tto program output shelve")
 	#-------------------------------------------------------------------------------
 	VariableShelveDir_UcfVirus	= ShelveDir_UcfVirus+"/Shelves"
-	
 	if UseUcfVirusPPHMMs == True:
 		print("\t\tto HMMER PPHMM database of unclassified viruses")
 		#-------------------------------------------------------------------------------
