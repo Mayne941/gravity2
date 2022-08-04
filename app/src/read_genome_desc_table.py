@@ -2,8 +2,8 @@ from app.utils.console_messages import section_header
 
 import numpy as np
 from collections import Counter
-import os, shelve
-import re
+import os, shelve, re, pickle
+
 '''
 Read genome description table (Virus Metadata Resource -- VMR)
 ---------------------------------------------
@@ -144,28 +144,9 @@ class ReadGenomeDescTable:
 		self.DatabaseList  = master_data["DatabaseList"]			= self.DatabaseList
 		return master_data
 
-	def save_desc_table(self, complete_desc_table, fname):
-		'''Save dictionary in GRAViTy structure to persistent storage'''
-		# RM < Shelve > pickle
-		parameters = shelve.open(self.VariableShelveDir + fname, "n")
-		for key in ["BaltimoreList",
-				"OrderList",
-				"FamilyList",
-				"SubFamList",
-				"GenusList",
-				"VirusNameList",
-				"SeqIDLists",
-				"SeqStatusList",
-				"TaxoGroupingList",
-				"TranslTableList",
-				"DatabaseList",
-				]:
-			try:
-				parameters[key] = complete_desc_table[key]
-				print("\t" + key)
-			except TypeError:
-				pass
-		parameters.close()
+	def save_desc_table(self, table, fname):
+		'''Save dictionary in GRAViTy structure to persistent storage'''	
+		pickle.dump(table, open(f"{self.VariableShelveDir + fname}", "wb"))
 
 	def entrypoint(self) -> None:
 		'''RM < UPDATE DOCSTRING'''
@@ -214,15 +195,15 @@ class ReadGenomeDescTable:
 		self.DatabaseList	  = all_desc_table["DatabaseList"]		 = np.array(self.DatabaseList)
 
 		'''Create ReadGenomeDescTable "all genomes' db'''
-		print("- Save variables to ReadGenomeDescTable.AllGenomes.shelve")
+		print("- Save variables to ReadGenomeDescTable.AllGenomes.p")
 		if self.Database != None:
 			'''If a database is provided, filter to these specific entries'''
 			all_desc_table = self.update_desc_table("all_genomes")
 
-		self.save_desc_table(all_desc_table, "/ReadGenomeDescTable.AllGenomes.shelve")
+		self.save_desc_table(all_desc_table, "/ReadGenomeDescTable.AllGenomes.p")
 	
 		'''Create ReadGenomeDescTable "complete genomes' db'''
 		print("- Save variables to ReadGenomeDescTable.CompleteGenomes.shelve")
 		complete_desc_table = self.update_desc_table("complete_genomes")
-		self.save_desc_table(complete_desc_table, "/ReadGenomeDescTable.CompleteGenomes.shelve")
+		self.save_desc_table(complete_desc_table, "/ReadGenomeDescTable.CompleteGenomes.p")
 

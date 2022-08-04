@@ -4,13 +4,15 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import Counter
 import numpy as np
-import shelve, subprocess, os, operator, sys, random, string, re
+import shelve, subprocess, os, operator, sys, random, string, re, pickle
 
 from app.utils.line_count import LineCount
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.raw_input_with_timeout import raw_input_with_timeout
 from app.utils.download_genbank_file import DownloadGenBankFile
 from app.utils.console_messages import section_header
+from app.utils.orf_identifier import get_orf_trasl_table, no_orf_match
+from app.utils.stdout_utils import clean_stdout, progress_bar, error_handler
 
 class PPHMMDBConstruction:
 	def __init__(self,
@@ -57,6 +59,8 @@ class PPHMMDBConstruction:
 		self.HHsuite_SubjectCoverage_Cutoff = HHsuite_SubjectCoverage_Cutoff
 		self.PPHMMClustering_MCLInflation = PPHMMClustering_MCLInflation
 		self.HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging
+		self.orf_tranl_table = get_orf_trasl_table()
+		self.orf_no_match = no_orf_match()
 
 	def Make_HMMER_PPHMM_DB(self, 
 				HMMER_PPHMMDir, 
@@ -210,261 +214,128 @@ class PPHMMDBConstruction:
 				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDBDir, \
 				HMMER_PPHMMDB, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB
 
+	def retrieve_variables(self, fname):
+		'''Read pickle file containing VMR data'''
+		return pickle.load(open(fname, "rb"))
 
-	def main(self):
-		'''RM < DOCSTRING'''
-		section_header("#Build a database of virus protein profile hidden Markov models (PPHMMs) #")
-
-		'''Build db dirs'''
-		BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile, \
-				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDBDir, \
-				HMMER_PPHMMDB, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB = self.mkdirs()		
-				
-		'''Retrieve Variables'''
-		# RM < Make function
-		print("- Retrieve variables")
-		if self.IncludeIncompleteGenomes == True:
-			print("\tfrom ReadGenomeDescTable.AllGenomes.shelve")
-			VariableShelveFile = VariableShelveDir+"/ReadGenomeDescTable.AllGenomes.shelve"
-			Parameters = shelve.open(VariableShelveFile)
-
-			for key in ["BaltimoreList",
-					"OrderList",
-					"FamilyList",
-					"SubFamList",
-					"GenusList",
-					"VirusNameList",
-					"TaxoGroupingList",
-					"SeqIDLists",
-					"TranslTableList"]:
-				globals()[key] = Parameters[key]
-				print("\t\t"+key)
-			Parameters.close()
-
-		elif self.IncludeIncompleteGenomes == False:
-			print("\tfrom ReadGenomeDescTable.CompleteGenomes.shelve")
-			VariableShelveFile = VariableShelveDir+"/ReadGenomeDescTable.CompleteGenomes.shelve"
-			Parameters = shelve.open(VariableShelveFile)
-
-			for key in ["BaltimoreList",
-					"OrderList",
-					"FamilyList",
-					"SubFamList",
-					"GenusList",
-					"VirusNameList",
-					"TaxoGroupingList",
-					"SeqIDLists",
-					"TranslTableList"]:
-				globals()[key] = Parameters[key]
-				print("\t\t"+key)
-			Parameters.close()
-		
-		'''Get GenBank files if not exists'''
-		# RM < Make function
+	def get_genbank(self, genomes):
+		'''Check if GenBank files exist; dl if needed. Index & transform.'''
 		if not os.path.isfile(self.GenomeSeqFile):
-			print("- Download GenBank file")
-			print("GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s)")
-			print("Here are the accession numbers to be downloaded: ")
-			print("\n".join(["\n".join(x) for x in SeqIDLists]))
-			DownloadGenBankFile(self.GenomeSeqFile, SeqIDLists)
+			print("- Download GenBank file\n GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s).")
+			DownloadGenBankFile(self.GenomeSeqFile, genomes["SeqIDLists"])
 		
-		print("- Read GenBank file")
+		print("- Reading GenBank file")
 		GenBankDict = SeqIO.index(self.GenomeSeqFile, "genbank")
-		GenBankDict = {k.split(".")[0]:v for k,v in GenBankDict.items()}
-		
-		'''Sequence extraction'''
-		# RM < Make function
+		return {k.split(".")[0]:v for k,v in GenBankDict.items()}
+
+	def sequence_extraction(self, genomes, GenBankDict):
+		'''Extract protein sequences from VMR using GenBank data; manually annotate ORFs if needed'''
 		print(f"- Extract/predict protein sequences from virus genomes, excluding proteins with lengthes <{self.ProteinLength_Cutoff} aa")
-		ProtList	= []
-		ProtIDList	= []
-		N_Viruses	= len(SeqIDLists)
-		Virus_i		= 1.0
+		ProtList, ProtIDList, N_Viruses, Virus_i = [], [], len(genomes["SeqIDLists"]), 1
 
-		for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(SeqIDLists, TranslTableList, BaltimoreList, OrderList, FamilyList, SubFamList, GenusList, VirusNameList, TaxoGroupingList):
-			for SeqID in SeqIDList:
-				GenBankRecord	= GenBankDict[SeqID]
-				GenBankID	= GenBankRecord.name
-				GenBankFeatures	= GenBankRecord.features
+		for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"]):
+			assert len(SeqIDList) == 1 # RM < removed a for loop here as SeqIDList only ever seemed to be 1 long - was this just for de-nesting?
+			SeqID = SeqIDList[0] 
+			GenBankRecord	= GenBankDict[SeqID]
+			GenBankID	= GenBankRecord.name
+			GenBankFeatures	= GenBankRecord.features
 
-				'''Extract protein sequences'''
-				ContainProtAnnotation = 0
-				for Feature in GenBankFeatures:
-					if(Feature.type == 'CDS' and "protein_id" in Feature.qualifiers and "translation" in Feature.qualifiers):
-						ContainProtAnnotation = 1
+			'''Extract protein sequences'''
+			ContainProtAnnotation = 0
+			for Feature in GenBankFeatures:
+				if(Feature.type == 'CDS' and "protein_id" in Feature.qualifiers and "translation" in Feature.qualifiers):
+					ContainProtAnnotation = 1
+					try:
+						ProtName = Feature.qualifiers["product"][0]
+					except KeyError:
 						try:
-							ProtName = Feature.qualifiers["product"][0]
+							ProtName = Feature.qualifiers["gene"][0]
 						except KeyError:
 							try:
-								ProtName = Feature.qualifiers["gene"][0]
+								ProtName = Feature.qualifiers["note"][0]
 							except KeyError:
-								try:
-									ProtName = Feature.qualifiers["note"][0]
-								except KeyError:
-									ProtName = "Hypothetical protein"
-						ProtID = Feature.qualifiers["protein_id"][0]
-						ProtSeq = Feature.qualifiers["translation"][0]
-						if len(ProtSeq) >= self.ProteinLength_Cutoff:
-							ProtRecord = SeqRecord(	Seq(ProtSeq),
-										id = GenBankID+"|"+ProtID,
-										name = GenBankID+"|"+ProtID,
-										description = ProtName,
-										annotations = {'taxonomy':[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
-							ProtList.append(ProtRecord)
-							ProtIDList.append(GenBankID+"|"+ProtID)
+								ProtName = "Hypothetical protein"
+					ProtID = Feature.qualifiers["protein_id"][0]
+					ProtSeq = Feature.qualifiers["translation"][0]
+					if len(ProtSeq) >= self.ProteinLength_Cutoff:
+						ProtRecord = SeqRecord(	Seq(ProtSeq),
+									id = GenBankID+"|"+ProtID,
+									name = GenBankID+"|"+ProtID,
+									description = ProtName,
+									annotations = {'taxonomy':[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
+						ProtList.append(ProtRecord)
+						ProtIDList.append(GenBankID+"|"+ProtID)
 
-				'''If the genome isn't annotated with any ORFs'''
-				if ContainProtAnnotation == 0:	
-					'''Identifying ORFs'''
-					if TranslTable==1:
-						Starts = "---M------**--*----M---------------M----------------------------"
-					elif TranslTable==2:
-						Starts = "----------**--------------------MMMM----------**---M------------"
-					elif TranslTable==3:
-						Starts = "----------**----------------------MM----------------------------"
-					elif TranslTable==4:
-						Starts = "--MM------**-------M------------MMMM---------------M------------"
-					elif TranslTable==5:
-						Starts = "---M------**--------------------MMMM---------------M------------"
-					elif TranslTable==6:
-						Starts = "--------------*--------------------M----------------------------"
-					elif TranslTable==7:
-						Starts = "--MM------**-------M------------MMMM---------------M------------"
-					elif TranslTable==8:
-						Starts = "---M------**--*----M---------------M----------------------------"
-					elif TranslTable==9:
-						Starts = "----------**-----------------------M---------------M------------"
-					elif TranslTable==10:
-						Starts = "----------**-----------------------M----------------------------"
-					elif TranslTable==11:
-						Starts = "---M------**--*----M------------MMMM---------------M------------"
-					elif TranslTable==12:
-						Starts = "----------**--*----M---------------M----------------------------"
-					elif TranslTable==13:
-						Starts = "---M------**----------------------MM---------------M------------"
-					elif TranslTable==14:
-						Starts = "-----------*-----------------------M----------------------------"
-					elif TranslTable==15:
-						Starts = "----------*---*--------------------M----------------------------"
-					elif TranslTable==16:
-						Starts = "----------*---*--------------------M----------------------------"
-					elif TranslTable==17:
-						print("Genetic code table 17 doesn't exist. Use the stardard code")
-						Starts = "---M------**--*----M---------------M----------------------------"
-					elif TranslTable==18:
-						print("Genetic code table 18 doesn't exist. Use the stardard code")
-						Starts = "---M------**--*----M---------------M----------------------------"
-					elif TranslTable==19:
-						print("Genetic code table 19 doesn't exist. Use the stardard code")
-						Starts = "---M------**--*----M---------------M----------------------------"
-					elif TranslTable==20:
-						print("Genetic code table 20 doesn't exist. Use the stardard code")
-						Starts = "---M------**--*----M---------------M----------------------------"
-					elif TranslTable==21:
-						Starts = "----------**-----------------------M---------------M------------"
-					elif TranslTable==22:
-						Starts = "------*---*---*--------------------M----------------------------"
-					elif TranslTable==23:
-						Starts = "--*-------**--*-----------------M--M---------------M------------"
-					elif TranslTable==24:
-						Starts = "---M------**-------M---------------M---------------M------------"
-					elif TranslTable==25:
-						Starts = "---M------**-----------------------M---------------M------------"
-					elif TranslTable==26:
-						Starts = "----------**--*----M---------------M----------------------------"
-					elif TranslTable==27:
-						Starts = "--------------*--------------------M----------------------------"
-					elif TranslTable==28:
-						Starts = "----------**--*--------------------M----------------------------"
-					elif TranslTable==29:
-						Starts = "--------------*--------------------M----------------------------"
-					elif TranslTable==30:
-						Starts = "--------------*--------------------M----------------------------"
-					elif TranslTable==31:
-						Starts = "----------**-----------------------M----------------------------"
-					else:
-						print("Genetic code table isn't specified or is out of range. Use the stardard code")
-						Starts = "---M------**--*----M---------------M----------------------------"
-					
-					CodonList = [Base1+Base2+Base3 for Base1 in "TCAG" for Base2 in "TCAG" for Base3 in "TCAG"]
-					
-					StartCodonList, StopCodonList = [], []
-					for i,j in enumerate(Starts):
-						if j == "M":
-							StartCodonList.append(CodonList[i])
-						if j == "*":
-							StopCodonList.append(CodonList[i])
-					
-					GenBankSeq = GenBankRecord.seq
-					SeqLength = len(GenBankSeq)
-					ORF_i = 0
-					for strand, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
-						for frame in range(3):
-							length = 3 * ((SeqLength-frame) // 3)					#Multiple of three
-							nuc_inframe = nuc[frame:(frame+length)]					#In-frame nucleotide sequence 
-							nuc_codonList = [str(nuc_inframe[i:i+3]) for i in range(0, length, 3)]	#Split the in-frame nucleotide sequence into codons
-							
-							StopCodon_indices = [i for i, codon in enumerate(nuc_codonList) if codon in StopCodonList] #Find stop codons
-							Coding_Start_IndexList = np.array([-1]+StopCodon_indices)+1
-							Coding_End_IndexList = np.array(StopCodon_indices+[len(nuc_codonList)])
-							
-							ProtSeqList = []
-							for i, j in zip(Coding_Start_IndexList, Coding_End_IndexList):
-								for k, codon in enumerate(nuc_codonList[i:j]):
-									if codon in StartCodonList:
-										ProtSeqList.append(Seq("".join(nuc_codonList[i:j][k:])).translate(table = TranslTable))
-										break
-							
-							for ProtSeq in ProtSeqList:
-								if len(ProtSeq) >= self.ProteinLength_Cutoff:	#Exclude protein sequences with <'ProteinLength_Cutoff' aa
-									ProtRecord = SeqRecord(	ProtSeq,
-												id = GenBankID+"|ORF%s"%ORF_i,
-												name = GenBankID+"|ORF%s"%ORF_i,
-												description = "Hypothetical protein",
-												annotations = {'taxonomy':[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
-									ProtList.append(ProtRecord)
-									ProtIDList.append(GenBankID+"|ORF%s"%ORF_i)
-									ORF_i = ORF_i + 1
-			'''Progress bar'''
-			sys.stdout.write("\033[K" + "Extract protein sequences: [%-20s] %d/%d viruses" % ('='*int(Virus_i/N_Viruses*20), Virus_i, N_Viruses) + "\r")
-			sys.stdout.flush()
-			Virus_i = Virus_i + 1.0
-		
-		sys.stdout.write("\033[K")
-		sys.stdout.flush()
-		
-		ProtIDList = np.array(ProtIDList)
-		print("- ALL-VERSUS-ALL BLASTp")
-		print("\tMake BLASTp database")
+			'''If the genome isn't annotated with any ORFs'''
+			if ContainProtAnnotation == 0:	
+				'''Identifying ORFs'''
+				try:
+					Starts = self.orf_tranl_table[TranslTable]
+				except KeyError:
+					'''No ORF found, use standard code'''
+					Starts = self.orf_no_match
+				
+				'''Generate start and stop codon lists'''
+				CodonList = [Base1+Base2+Base3 for Base1 in "TCAG" for Base2 in "TCAG" for Base3 in "TCAG"]
+				StartCodonList, StopCodonList = [], []
+				for i,j in enumerate(Starts):
+					if j == "M":
+						StartCodonList.append(CodonList[i])
+					if j == "*":
+						StopCodonList.append(CodonList[i])		
+
+				GenBankSeq, SeqLength, ORF_i = GenBankRecord.seq, len(GenBankSeq), 0
+				for _, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
+					'''Split into multople of 3, get in-frame nucleotide seq, split sequence into codons'''
+					for frame in range(3):
+						length = 3 * ((SeqLength-frame) // 3)					
+						nuc_inframe = nuc[frame:(frame+length)]					
+						nuc_codonList = [str(nuc_inframe[i:i+3]) for i in range(0, length, 3)]	
+						
+						'''Find stop codons'''
+						StopCodon_indices = [i for i, codon in enumerate(nuc_codonList) if codon in StopCodonList] 
+						Coding_Start_IndexList = np.array([-1]+StopCodon_indices)+1
+						Coding_End_IndexList = np.array(StopCodon_indices+[len(nuc_codonList)])
+						
+						ProtSeqList = []
+						for i, j in zip(Coding_Start_IndexList, Coding_End_IndexList):
+							for k, codon in enumerate(nuc_codonList[i:j]):
+								if codon in StartCodonList:
+									ProtSeqList.append(Seq("".join(nuc_codonList[i:j][k:])).translate(table = TranslTable))
+									break
+						
+						for ProtSeq in ProtSeqList:
+							'''Exclude protein sequences with <'ProteinLength_Cutoff' aa'''
+							if len(ProtSeq) >= self.ProteinLength_Cutoff:
+								ProtRecord = SeqRecord(	ProtSeq,
+											id = GenBankID+"|ORF%s"%ORF_i,
+											name = GenBankID+"|ORF%s"%ORF_i,
+											description = "Hypothetical protein",
+											annotations = {'taxonomy':[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
+								ProtList.append(ProtRecord)
+								ProtIDList.append(GenBankID+"|ORF%s"%ORF_i)
+								ORF_i = ORF_i + 1
+
+			progress_bar(f"\033[K Extract protein sequences: [{'='*int(Virus_i/N_Viruses*20)}] {Virus_i}/{N_Viruses} viruses \r")
+			Virus_i += 1
+
+		clean_stdout()
+
+		return ProtList, np.array(ProtIDList)
+
+	def make_blastp_db(self, BLASTSubjectFile, ProtList):
+		'''Make BLAST DB'''
 		with open(BLASTSubjectFile, "w") as BLASTSubject_txt:
 			SeqIO.write(ProtList, BLASTSubject_txt, "fasta")
 		
-		_ = subprocess.Popen("makeblastdb -in %s -dbtype prot" %BLASTSubjectFile, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		_ = subprocess.Popen(f"makeblastdb -in {BLASTSubjectFile} -dbtype prot", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
-
-		# RM < Redo error handler
-		# if err != "":
-		# 	print("Something is wrong with makeblastdb:")
-		# 	print("#"*50+"out"+"#"*50)
-		# 	print(out)
-		# 	print("#"*50+"err"+"#"*50)
-		# 	print(err)
-		# 	print("_"*100)
-		# 	while True:
-		# 		Input = raw_input_with_timeout(prompt = "Would you like to continue? [Y/N]: ", timelimit = 5, default_input = "Y")
-		# 		if Input == "N" or Input == "n":
-		# 			raise SystemExit("GRAViTy terminated.")
-		# 		elif Input == "Y" or Input == "y":
-		# 			print("Continue GRAViTy.")
-		# 			break
-		# 		else:
-		# 			print("Input can only be 'Y' or 'N'.")
+		error_handler(out, err, "makeblastdb")
 		
-
-		'''Set Blastp outfile format'''
-		# RM < Make function
-		print("\tPerforme ALL-VERSUS-ALL BLASTp analysis")
+	def blastp_analysis(self, ProtList, BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile):
+		'''Perform ALL-VERSUS-ALL BLASTp analysis'''
+		print("Perform ALL-VERSUS-ALL BLASTp analysis")
 		BitScoreMat, SeenPair, SeenPair_i, N_ProtSeqs = [], {}, 0, len(ProtList)
-
 		BLASTp_outfmt	= '"6 qseqid sseqid pident qcovs qlen slen evalue bitscore"'
 		for ProtSeq_i in range(N_ProtSeqs):
 			'''BLAST query fasta file'''
@@ -473,40 +344,19 @@ class PPHMMDBConstruction:
 				p = SeqIO.write(BLASTQuery, BLASTQuery_txt, "fasta")
 			
 			'''Perform BLASTp'''
-			_ = subprocess.Popen('blastp -query %s -db %s -out %s -evalue %s -outfmt %s -num_alignments %s -num_threads %s' %(	BLASTQueryFile,
-																		BLASTSubjectFile,
-																		BLASTOutputFile,
-																		self.BLASTp_evalue_Cutoff,
-																		BLASTp_outfmt,
-																		self.BLASTp_num_alignments,
-																		self.BLASTp_N_CPUs), stdout = subprocess.PIPE, stderr = subprocess.PIPE,
+			_ = subprocess.Popen(f'blastp -query {BLASTQueryFile} -db {BLASTSubjectFile} -out {BLASTOutputFile} -evalue {self.BLASTp_evalue_Cutoff} -outfmt {BLASTp_outfmt} -num_alignments {self.BLASTp_num_alignments} -num_threads {self.BLASTp_N_CPUs}', 	
+																		stdout = subprocess.PIPE, stderr = subprocess.PIPE,
 																		shell = True)
 			out, err = _.communicate()
-			
-			# RM < Redo error handler
-			if err != b"":
-				print("Something is wrong with blastp (protein ID = %s):"%ProtList[ProtSeq_i].id)
-				print("#"*50+"out"+"#"*50)
-				print(out)
-				print("#"*50+"err"+"#"*50)
-				print(err)
-				print("_"*100)
-				while True:
-					Input = raw_input_with_timeout(prompt = "Would you like to continue? [Y/N]: ", timelimit = 5, default_input = "Y")
-					if Input == "N" or Input == "n":
-						raise SystemExit("GRAViTy terminated.")
-					elif Input == "Y" or Input == "y":
-						print("Continue GRAViTy.")
-						break
-					else:
-						print("Input can only be 'Y' or 'N'.")
+			error_handler(out, err, f"blastp (protein ID = {ProtList[ProtSeq_i].id})")
 			
 			'''BitScoreMat conditioned on PIden, QCovs, and SCovs'''
 			if os.stat(BLASTOutputFile).st_size != 0: 
 				'''if BLAST returns something...'''
 				with open(BLASTOutputFile, "r") as BLASTOutput_txt:
 					for BLASTHit in BLASTOutput_txt.readlines():
-						if BLASTHit == "\n": break
+						if BLASTHit == "\n": 
+							break
 						Line			= BLASTHit.split("\t")
 						qseqid			= Line[0]
 						sseqid			= Line[1]
@@ -529,54 +379,38 @@ class PPHMMDBConstruction:
 								BitScoreMat.append([SeqID_I, SeqID_II, bitscore])
 								SeenPair_i = SeenPair_i+1
 			
-			'''progress bar'''
-			sys.stdout.write("\033[K" + "BLASTp: [%-20s] %d/%d proteins" % ('='*int(float(ProtSeq_i+1)/N_ProtSeqs*20), ProtSeq_i+1, N_ProtSeqs) + "\r")
-			sys.stdout.flush()
+			progress_bar(f"\033[K BLASTp: [{'='*int(float(ProtSeq_i+1)/N_ProtSeqs*20)}] {ProtSeq_i+1}/{N_ProtSeqs} proteins \r")
 		
-		sys.stdout.write("\033[K")
-		sys.stdout.flush()
+		clean_stdout()
 		
 		BitScoreMat = np.array(BitScoreMat)
-		print("\tSave protein-protein similarity scores (BLASTp bit scores)")
-		np.savetxt(	fname	= BLASTBitScoreFile,
-				X	= BitScoreMat,
-				fmt	= '%s',
-				delimiter= "\t",
-				header	= "SeqID_I\tSeqID_II\tBit score")
-		
-		'''Cluster using Muscle'''
-		print("- Cluster protein sequences based on BLASTp bit scores, using the MCL algorithm")
-		_ = subprocess.Popen("mcl %s --abc -o %s -I %s" %(BLASTBitScoreFile, BLASTProtClusterFile, self.ProtClustering_MCLInflation), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
-		err, out = _.communicate()
+		'''Save protein-protein similarity scores (BLASTp bit scores)'''
+		np.savetxt(fname = BLASTBitScoreFile,
+					X	 = BitScoreMat,
+					fmt	 = '%s',
+					delimiter= "\t",
+					header	 = "SeqID_I\tSeqID_II\tBit score"
+					)
 
-		# RM < Redo error handler
-		# if err != "":
-		# 	print("Something is wrong with mcl:")
-		# 	print("#"*50+"out"+"#"*50)
-		# 	print(out)
-		# 	print("#"*50+"err"+"#"*50)
-		# 	print(err)
-		# 	print("_"*100)
-		# 	while True:
-		# 		Input = raw_input_with_timeout(prompt = "Would you like to continue? [Y/N]: ", timelimit = 5, default_input = "Y")
-		# 		if Input == "N" or Input == "n":
-		# 			raise SystemExit ("GRAViTy terminated.")
-		# 		elif Input == "Y" or Input == "y":
-		# 			print("Continue GRAViTy.")
-		# 			break
-		# 		else:
-		# 			print("Input can only be 'Y' or 'N'.")
+	def mcl_clustering(self, ProtIDList, BLASTBitScoreFile, BLASTProtClusterFile):
+		'''Use Muscle to do clustering on BLASTp bit scores'''
+		print("- Doing protein sequence clustering based on BLASTp bit scores, using the MCL algorithm")
+		_ = subprocess.Popen(f"mcl {BLASTBitScoreFile} --abc -o {BLASTProtClusterFile} -I {self.ProtClustering_MCLInflation}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		err, out = _.communicate()
+		error_handler(out, err, f"Something is wrong with mcl")
 		
+		'''For each cluster found, pull out seen proteins by ID'''
 		SeenProtIDList = []
 		with open(BLASTProtClusterFile, 'r') as BLASTProtCluster_txt:
 			for Cluster in BLASTProtCluster_txt.readlines():
 				SeenProtIDList.extend(Cluster.split("\r\n")[0].split("\n")[0].split("\t"))
-		
+
+		'''Append seen protein IDs to clusters'''
 		with open(BLASTProtClusterFile, 'a') as BLASTProtCluster_txt:
 			BLASTProtCluster_txt.write("\n".join(list(set(ProtIDList)-set(SeenProtIDList))))
-		
-		'''Make Alignments'''
-		# RM < Make function
+
+	def make_alignments(self, ProtList, ProtIDList, BLASTProtClusterFile, ClustersDir):
+		'''Do protein alignments with muscle align, make cluster alignment annotations'''
 		print("- Make protein alignments")
 		N_Clusters		= LineCount(BLASTProtClusterFile)+1 #Count the number of clusters
 		Cluster_i		= 0
@@ -597,32 +431,19 @@ class PPHMMDBConstruction:
 				with open(UnAlnClusterFile, "w") as UnAlnClusterTXT:
 					p = SeqIO.write(HitList, UnAlnClusterTXT, "fasta")
 				
-				'''align cluster using muscle'''
+				'''Align cluster using muscle'''
 				AlnClusterFile = ClustersDir+"/Cluster_%s.fasta" %Cluster_i
-				_ = subprocess.Popen("~/repo/muscle/muscle -align %s -output %s"%(UnAlnClusterFile, #-gapopen %s -gapextend %s" %(	UnAlnClusterFile, # RM << LOTS WRONG HERE
-														AlnClusterFile),#,
-														#MUSCLE_GapOpenCost,
-														#MUSCLE_GapExtendCost),
-														stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+				# RM < Need to research how to replace these dead muscle kwargs
+				# RM < Harmonize muslce install location with Dockerfile
+				# _ = subprocess.Popen("~/repo/muscle/muscle -align %s -output %s"%(UnAlnClusterFile, #-gapopen %s -gapextend %s" %(	UnAlnClusterFile, # RM << LOTS WRONG HERE
+				# 										AlnClusterFile),#,
+				# 										#MUSCLE_GapOpenCost,
+				# 										#MUSCLE_GapExtendCost),
+				# 										stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+				_ = subprocess.Popen(f"~/repo/muscle/muscle -align {UnAlnClusterFile} -output {AlnClusterFile}",
+											stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 				err, out = _.communicate()
-
-				# RM < redo error handler
-				# if err != "":
-				# 	print("Something is wrong with muscle (Cluster_%s):"%Cluster_i)
-				# 	print("#"*50+"out"+"#"*50)
-				# 	print(out)
-				# 	print("#"*50+"err"+"#"*50)
-				# 	print(err)
-				# 	print("_"*100)
-				# 	while True:
-				# 		Input = raw_input_with_timeout(prompt = "Would you like to continue? [Y/N]: ", timelimit = 5, default_input = "Y")
-				# 		if Input == "N" or Input == "n":
-				# 			raise SystemExit("GRAViTy terminated.")
-				# 		elif Input == "Y" or Input == "y":
-				# 			print("Continue GRAViTy.")
-				# 			break
-				# 		else:
-				# 			print("Input can only be 'Y' or 'N'.")
+				error_handler(out, err, f"Something is wrong with muscle (Cluster_{Cluster_i}):")
 
 				'''Cluster annotations'''
 				Cluster_MetaDataDict[Cluster_i] = {	"Cluster":Cluster,
@@ -630,14 +451,49 @@ class PPHMMDBConstruction:
 									"TaxoLists":TaxoLists,
 									"AlignmentLength":AlignIO.read(AlnClusterFile, "fasta").get_alignment_length()
 									}
+				Cluster_i += 1
+				progress_bar(f"\033[K Make protein alignments: [{'='*int(float(Cluster_i)/N_Clusters*20)}] {Cluster_i}/{N_Clusters} alignments \r")
+		
+		clean_stdout()
+		return Cluster_MetaDataDict
+
+	def main(self):
+		'''RM < DOCSTRING'''
+		section_header("#Build a database of virus protein profile hidden Markov models (PPHMMs) #")
+
+		'''Build db dirs'''
+		BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile, \
+				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDBDir, \
+				HMMER_PPHMMDB, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB = self.mkdirs()		
 				
-				Cluster_i = Cluster_i+1
-				sys.stdout.write("\033[K" + "Make protein alignments: [%-20s] %d/%d alignments" % ('='*int(float(Cluster_i)/N_Clusters*20), Cluster_i, N_Clusters) + "\r")
-				sys.stdout.flush()
+		'''Retrieve Variables'''
+		if self.IncludeIncompleteGenomes == True:
+			VariableShelveFile = VariableShelveDir + "/ReadGenomeDescTable.AllGenomes.p"
+		elif self.IncludeIncompleteGenomes == False:
+			VariableShelveFile = VariableShelveDir + "/ReadGenomeDescTable.CompleteGenomes.p"
+
+		genomes =  self.retrieve_variables(VariableShelveFile)
+
+		'''Get GenBank files if not exists'''
+		GenBankDict = self.get_genbank(genomes)
+			
+		'''Sequence extraction'''
+		ProtList, ProtIDList = self.sequence_extraction(genomes, GenBankDict)
+
+		'''Make BLAST DB'''
+		self.make_blastp_db(BLASTSubjectFile, ProtList)
+
+		'''Do BLASTp analysis, save output'''
+		self.blastp_analysis(ProtList, BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile)
 		
-		sys.stdout.write("\033[K")
-		sys.stdout.flush()
+		'''Cluster using Muscle'''
+		self.mcl_clustering()
 		
+		'''Make Alignments'''
+		Cluster_MetaDataDict = self.make_alignments(ProtList, ProtIDList, BLASTProtClusterFile, ClustersDir)
+		breakpoint()
+
+		###########################################################
 		'''Merge & Make protein alignmens'''
 		# RM < Make function
 		if self.N_AlignmentMerging != 0:
@@ -655,31 +511,10 @@ class PPHMMDBConstruction:
 																Cluster_i),
 																stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 				out, err = _.communicate()
+				error_handler(out, err, f"Something is wrong with turning Cluster_{Cluster_i} into a PPHMM by hhmake.")
+				progress_bar(f"\033[K Make HHsuite PPHMMs: [{'='*int(float(Cluster_i+1)/len(Cluster_MetaDataDict)*20)}] {Cluster_i+1}/{len(Cluster_MetaDataDict)} PPHMMs \r")
 
-				# RM < Redo error handler
-				# if err != "":
-				# 	print("Something is wrong with turning Cluster_%s into a PPHMM by hhmake." %Cluster_i)
-				# 	print("#"*50+"out"+"#"*50)
-				# 	print(out)
-				# 	print("#"*50+"err"+"#"*50)
-				# 	print(err)
-				# 	print("_"*100)
-				# 	while True:
-				# 		Input = raw_input_with_timeout(prompt = "Would you like to continue? [Y/N]: ", timelimit = 5, default_input = "Y")
-				# 		if Input == "N" or Input == "n":
-				# 			raise SystemExit ("GRAViTy terminated.")
-				# 		elif Input == "Y" or Input == "y":
-				# 			print("Continue GRAViTy.")
-				# 			break
-				# 		else:
-				# 			print("Input can only be 'Y' or 'N'.")
-				
-				'''Progress bar'''
-				sys.stdout.write("\033[K" + "Make HHsuite PPHMMs: [%-20s] %d/%d PPHMMs" % ('='*int(float(Cluster_i+1)/len(Cluster_MetaDataDict)*20), Cluster_i+1, len(Cluster_MetaDataDict)) + "\r")
-				sys.stdout.flush()
-			
-			sys.stdout.write("\033[K")
-			sys.stdout.flush()
+			clean_stdout()
 			
 			print("\tMake a HHsuite PPHMM DB")
 			_ = subprocess.Popen("ffindex_build -s %s_hhm.ffdata %s_hhm.ffindex %s" %(HHsuite_PPHMMDB, HHsuite_PPHMMDB, HHsuite_PPHMMDir), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
