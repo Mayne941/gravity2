@@ -10,6 +10,7 @@ from app.utils.line_count import LineCount
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.raw_input_with_timeout import raw_input_with_timeout
 from app.utils.download_genbank_file import DownloadGenBankFile
+from app.utils.console_messages import section_header
 
 def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_MetaDataDict):
 	ClusterSizeList, ClusterSizeByTaxoGroupingList, ClusterSizeByProtList, ClusterTaxoList, ClusterProtSeqIDList, ClusterDescList = [], [], [], [], [], []
@@ -63,7 +64,7 @@ def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_Meta
 		
 		ClusterDescList.append("%s|%s" %(ClusterDesc, ClusterTaxoList[-1]))
 		
-		'''Make a PPHMM using HMMER'''
+		'''Make a PPHMM using HMMER hmmbuild'''
 		AlnClusterFile = ClustersDir+"/Cluster_%s.fasta" %PPHMM_i
 		HMMER_PPHMMFile = HMMER_PPHMMDir+"/PPHMM_%s.hmm" %PPHMM_i
 		_ = subprocess.Popen("hmmbuild %s %s" %(HMMER_PPHMMFile, AlnClusterFile), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
@@ -78,14 +79,14 @@ def Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_Meta
 			HMMER_PPHMM_txt.write(contents)		#Write the contents
 			HMMER_PPHMM_txt.truncate()			#Delete everything after the cursor
 		
-		#Progress bar
+		'''Progress bar'''
 		sys.stdout.write("\033[K"+ "Make HMMER PPHMMs: [%-20s] %d/%d PPHHMs" % ('='*int(float(PPHMM_i + 1)/N_PPHMMs*20), PPHMM_i+1, N_PPHMMs) + "\r")
 		sys.stdout.flush()
 	
 	sys.stdout.write("\033[K")
 	sys.stdout.flush()
 	
-	'''Make a HMMER HMM DB'''
+	'''Make a HMMER HMM DB with hmmpress'''
 	_ = subprocess.Popen("find %s -name '*.hmm' -exec cat {} \; > %s" %(HMMER_PPHMMDir, HMMER_PPHMMDB), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 	out, err = _.communicate()
 	_ = subprocess.Popen("hmmpress %s" %HMMER_PPHMMDB, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
@@ -135,10 +136,9 @@ def PPHMMDBConstruction (
 	PPHMMClustering_MCLInflation	= 5,
 	HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = True,
 	):
-	print("################################################################################")
-	print("#Build a database of virus protein profile hidden Markov models (PPHMMs)       #")
-	print("################################################################################")
 	
+	section_header("#Build a database of virus protein profile hidden Markov models (PPHMMs) #")
+	breakpoint()
 	'''Build a database of virus protein profile hidden Markov models (PPHMMs)'''
 	# RM < Make function
 	print("- Define dir/file paths")

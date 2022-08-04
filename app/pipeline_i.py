@@ -18,10 +18,8 @@ class Pipeline_I:
 			os.makedirs(self.options['ShelveDir'])
 		'''Logs'''
 		self.log_gen = Log_Generator_Pl1(self.options, self.options['ShelveDir'])
-		
-	def main(self):
-		actual_start = time.time()
-		logs = self.log_gen.entrypoint()
+		self.logs = self.log_gen.entrypoint()
+		self.actual_start = time.time()
 
 		'''Catch bad database flags'''
 		if (self.options['Database'] != None and self.options['Database_Header'] == None):
@@ -31,8 +29,9 @@ class Pipeline_I:
 			if Proceed != "Y":
 				raise SystemExit("GRAViTy terminated.")
 		
+	def read_genome_desc_table(self):
 		'''I: Fire Read Genom Desc Table'''
-		[print(log_text) for log_text in logs[0]]
+		[print(log_text) for log_text in self.logs[0]]
 		start = benchmark_start("ReadGenomeDescTable")
 		rgdt = ReadGenomeDescTable(
 			GenomeDescTableFile	= self.options['GenomeDescTableFile'],
@@ -45,8 +44,11 @@ class Pipeline_I:
 		rgdt.entrypoint()
 		benchmark_end("ReadGenomeDescTable", start)	
 
+		self.pphmmdb_construction()
+
+	def pphmmdb_construction(self):
 		'''II: Fire PPHMDB Constructor'''
-		[print(log_text) for log_text in logs[1]]	
+		[print(log_text) for log_text in self.logs[1]]	
 		start = benchmark_start("PPHMMDBConstruction")
 		PPHMMDBConstruction (
 			GenomeSeqFile = self.options['GenomeSeqFile'],
@@ -73,8 +75,11 @@ class Pipeline_I:
 			)
 		benchmark_end("PPHMMDBConstruction", start)	
 
+		self.ref_virus_annotator()
+
+	def ref_virus_annotator(self):
 		'''III: Fire Reference Virus Annotator'''
-		[print(log_text) for log_text in logs[2]]
+		[print(log_text) for log_text in self.logs[2]]
 		start = benchmark_start("RefVirusAnnotator")
 		RefVirusAnnotator (
 			GenomeSeqFile = self.options['GenomeSeqFile'],
@@ -96,8 +101,11 @@ class Pipeline_I:
 			)
 		benchmark_end("RefVirusAnnotator", start)	
 
+		self.make_graphs()
+
+	def make_graphs(self):
 		'''IV: Fire Heatmap and Dendrogram Constructors'''
-		[print(log_text) for log_text in logs[3]]
+		[print(log_text) for log_text in self.logs[3]]
 		start = benchmark_start("GRAViTyDendrogramAndHeatmapConstruction")
 		GRAViTyDendrogramAndHeatmapConstruction (
 			ShelveDir = self.options['ShelveDir'],
@@ -119,8 +127,11 @@ class Pipeline_I:
 			)
 		benchmark_end("GRAViTyDendrogramAndHeatmapConstruction", start)	
 
+		self.mutual_info_calculator()
+
+	def mutual_info_calculator(self):
 		'''V: Fire Mutal Info Calculator'''
-		[print(log_text) for log_text in logs[4]]
+		[print(log_text) for log_text in self.logs[4]]
 		start = benchmark_start("MutualInformationCalculator")
 		MutualInformationCalculator (
 			ShelveDir = self.options['ShelveDir'],
@@ -132,7 +143,7 @@ class Pipeline_I:
 			)
 		benchmark_end("MutualInformationCalculator", start)	
 
-		total_elapsed = time.time() - actual_start
+		total_elapsed = time.time() - self.actual_start
 		print("Time to complete: %s"%total_elapsed)
 
 if __name__ == '__main__':

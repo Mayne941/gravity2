@@ -16,8 +16,7 @@ def PPHMMSignatureTable_Constructor (
 	HMMER_HitScore_Cutoff	= 0,
 	SeqLength_Cutoff	= 0,
 	):
-	#Load GenBank record
-	#---------------------------------------------------------------------
+	'''Load GenBank record'''
 	_, file_extension = os.path.splitext(GenBankFile)
 	if file_extension in [".fas", ".fasta"]:
 		Records_dict = SeqIO.index(GenBankFile, "fasta")
@@ -27,8 +26,7 @@ def PPHMMSignatureTable_Constructor (
 	Records_dict = {k.split(".")[0]:v for k,v in Records_dict.items()}
 	N_Seq = len(SeqIDLists)
 	
-	#Specify PPHMMQueryFile and PPHMMScanOutFile
-	#---------------------------------------------------------------------
+	'''Specify PPHMMQueryFile and PPHMMScanOutFile'''
 	PPHMMDB_Summary			= HMMER_PPHMMDB+"_Summary.txt"
 	N_PPHMMs				= LineCount(PPHMMDB_Summary)-1
 	PPHMMQueryFile			= HMMER_hmmscanDir+"/QProtSeqs.fasta"
@@ -39,17 +37,12 @@ def PPHMMSignatureTable_Constructor (
 	
 	Seq_i				= 0.0
 	for SeqIDList, TranslTable in zip(SeqIDLists, TranslTableList):
-		GenBankSeqList	= []
-		GenBankIDList	= []
-		GenBankDescList	= []
+		GenBankSeqList, GenBankIDList, GenBankDescList	= [], [], []
 		for SeqID in SeqIDList:
-			try:
-				GenBankRecord = Records_dict[SeqID]
-				GenBankSeqList.append(GenBankRecord.seq)
-				GenBankIDList.append(GenBankRecord.id)
-				GenBankDescList.append(GenBankRecord.description)
-			except:
-				breakpoint()
+			GenBankRecord = Records_dict[SeqID]
+			GenBankSeqList.append(GenBankRecord.seq)
+			GenBankIDList.append(GenBankRecord.id)
+			GenBankDescList.append(GenBankRecord.description)
 		
 		#sort lists by sequence/segment lengthes
 		#---------------------------------------------------------------------
