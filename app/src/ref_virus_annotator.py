@@ -352,10 +352,12 @@ class RefVirusAnnotator:
 		TreeNewick_traits.ladderize(reverse = True)
 		PPHMMOrder_ByTree = np.array([int(Clade.name) for Clade in TreeNewick_traits.get_terminals()])
 		
+		#####################################################
+		# RM < To here 0508
 		'''Cluster PPHMMs by PPHMM similiarty, make DB'''
 		N_PPHMMs = self.PPHMMSignatureTable.shape[1]
 		for PPHMM_i in range(N_PPHMMs):
-			AlnClusterFile = ClustersDir+"/Cluster_{PPHMM_i}.fasta"
+			AlnClusterFile = ClustersDir+f"/Cluster_{PPHMM_i}.fasta"
 			Aln	= AlignIO.read(AlnClusterFile, "fasta")
 			N_Seqs	= len(Aln)
 			L_Seqs	= Aln.get_alignment_length()
@@ -538,16 +540,14 @@ class RefVirusAnnotator:
 		Contents = "".join(Contents)
 		with open(HMMER_PPHMMDbSummaryFile, "w") as HMMER_PPHMMDbSummary_txt:
 			HMMER_PPHMMDbSummary_txt.write(Contents)
-		
+		################################################################################
+
 		print("\tSort PPHMMSignatureTable and PPHMMLocationTable")
 		# RM < MODIFY INPLACE ON SELF VARS
 		self.PPHMMSignatureTable	= self.PPHMMSignatureTable[:,PPHMMOrder]
 		self.PPHMMLocationTable 	= self.PPHMMLocationTable[:,PPHMMOrder]
 		
-		print("\tReorganise the cluster meta data from PPHMMDBConstruction.shelve")
-		#-------------------------------------------------------------------------------
-		#Load cluster meta data from PPHMMDBConstruction.shelve
-		#-------------------------------------------------------------------------------
+		'''Load cluster meta data from PPHMMDBConstruction.shelve, reorganise'''
 		VariableShelveFile = self.VariableShelveDir+"/PPHMMDBConstruction.p"
 		parameters = pickle.load(open(VariableShelveFile, "rb"))
 		
