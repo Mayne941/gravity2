@@ -2,7 +2,7 @@ from app.utils.console_messages import section_header
 
 import numpy as np
 from collections import Counter
-import os, shelve, re, pickle
+import os, re, pickle
 
 '''
 Read genome description table (Virus Metadata Resource -- VMR)

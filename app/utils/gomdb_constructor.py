@@ -1,6 +1,8 @@
-def GOMDB_Constructor (TaxoGroupingList, PPHMMLocationTable, GOMIDList):
-	GOMDB = {}
-	for GOMID in GOMIDList:
-		GOMDB[GOMID] = PPHMMLocationTable[TaxoGroupingList.astype("str") == GOMID,:]
 
-	return GOMDB
+def GOMDB_Constructor (TaxoGroupingList, PPHMMLocationTable, GOMIDList):
+	print("Generate genomic organisation model (GOM) database")
+	GOMDb = {}
+	for id in GOMIDList:
+		GOMDb[id] = PPHMMLocationTable[TaxoGroupingList == id,:]
+
+	return GOMDb

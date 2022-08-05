@@ -4,15 +4,15 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import Counter
 import numpy as np
-import shelve, subprocess, os, operator, sys, random, string, re, pickle
+import subprocess, os, operator, random, string, re, pickle
 
 from app.utils.line_count import LineCount
 from app.utils.dist_mat_to_tree import DistMat2Tree
-from app.utils.raw_input_with_timeout import raw_input_with_timeout
 from app.utils.download_genbank_file import DownloadGenBankFile
 from app.utils.console_messages import section_header
 from app.utils.orf_identifier import get_orf_trasl_table, no_orf_match
 from app.utils.stdout_utils import clean_stdout, progress_bar, error_handler
+from app.utils.retrieve_pickle import retrieve_variables
 
 class PPHMMDBConstruction:
 	def __init__(self,
@@ -36,7 +36,7 @@ class PPHMMDBConstruction:
 				HHsuite_QueryCoverage_Cutoff	= 85,
 				HHsuite_SubjectCoverage_Cutoff	= 85,
 				PPHMMClustering_MCLInflation	= 5,
-				HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = True,
+				HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging = True,
 			) -> None:
 		self.GenomeSeqFile = GenomeSeqFile
 		self.ShelveDir = ShelveDir
@@ -58,7 +58,7 @@ class PPHMMDBConstruction:
 		self.HHsuite_QueryCoverage_Cutoff = HHsuite_QueryCoverage_Cutoff
 		self.HHsuite_SubjectCoverage_Cutoff = HHsuite_SubjectCoverage_Cutoff
 		self.PPHMMClustering_MCLInflation = PPHMMClustering_MCLInflation
-		self.HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging
+		self.HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging = HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging
 		self.orf_tranl_table = get_orf_trasl_table()
 		self.orf_no_match = no_orf_match()
 
@@ -89,8 +89,8 @@ class PPHMMDBConstruction:
 			_ = subprocess.call("rm -rf %s" %HMMERDir, shell = True)
 		os.makedirs(HMMERDir)
 		HMMER_PPHMMDir		= HMMERDir+"/HMMER_PPHMMs"; os.makedirs(HMMER_PPHMMDir)
-		HMMER_PPHMMDBDir	= HMMERDir+"/HMMER_PPHMMDB"; os.makedirs(HMMER_PPHMMDBDir)
-		HMMER_PPHMMDB		= HMMER_PPHMMDBDir+"/HMMER_PPHMMDB"
+		HMMER_PPHMMDbDir	= HMMERDir+"/HMMER_PPHMMDb"; os.makedirs(HMMER_PPHMMDbDir)
+		HMMER_PPHMMDb		= HMMER_PPHMMDbDir+"/HMMER_PPHMMDb"
 
 		VariableShelveDir 	= self.ShelveDir+"/Shelves"
 
@@ -105,12 +105,8 @@ class PPHMMDBConstruction:
 		HHsuite_PPHMMDB	= HHsuite_PPHMMDBDir+"/HHsuite_PPHMMDB"
 			
 		return  BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile, \
-				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDBDir, \
-				HMMER_PPHMMDB, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB
-
-	def retrieve_variables(self, fname):
-		'''2/10: Read pickle file containing VMR data'''
-		return pickle.load(open(fname, "rb"))
+				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDbDir, \
+				HMMER_PPHMMDb, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB
 
 	def get_genbank(self, genomes):
 		'''3/10: Check if GenBank files exist; dl if needed. Index & transform.'''
@@ -373,7 +369,7 @@ class PPHMMDBConstruction:
 					ClustersDir, 
 					HHsuite_PPHMMDir, 
 					HMMER_PPHMMDir, 
-					HMMER_PPHMMDBDir, 
+					HMMER_PPHMMDbDir, 
 					HHsuite_PPHMMDB, 
 					HHsuiteDir,
 				): # RM < Still a chunky function, refactor if time allows
@@ -405,10 +401,10 @@ class PPHMMDBConstruction:
 				print("Alignment merging complete")
 				break
 			
-			if self.HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging == True:
-				print("\t\tHMMER_PPHMMDB_ForEachRoundOfPPHMMMerging == True. Make a HMMER PPHMM DB. (Round %s)" %AlignmentMerging_i_round)
+			if self.HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging == True:
+				print("\t\tHMMER_PPHMMDb_ForEachRoundOfPPHMMMerging == True. Make a HMMER PPHMM DB. (Round %s)" %AlignmentMerging_i_round)
 				_ = self.Make_HMMER_PPHMM_DB(	HMMER_PPHMMDir = HMMER_PPHMMDir,
-								HMMER_PPHMMDB = HMMER_PPHMMDBDir+"/HMMER_PPHMMDB_%s" %AlignmentMerging_i_round,
+								HMMER_PPHMMDb = HMMER_PPHMMDbDir+"/HMMER_PPHMMDb_%s" %AlignmentMerging_i_round,
 								ClustersDir = ClustersDir,
 								Cluster_MetaDataDict = Cluster_MetaDataDict)
 				
@@ -595,7 +591,7 @@ class PPHMMDBConstruction:
 		_ = subprocess.Popen(f"rm -rf {HHsuiteDir}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 
-	def Make_HMMER_PPHMM_DB(self, HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_MetaDataDict, VariableShelveFile):
+	def Make_HMMER_PPHMM_DB(self, HMMER_PPHMMDir, HMMER_PPHMMDb, ClustersDir, Cluster_MetaDataDict, VariableShelveFile):
 		'''10/10: Build HMMER DB of PPHMMs, create and save summary file'''
 		print("- Make HMMER PPHMMDB and its summary file")
 
@@ -669,14 +665,14 @@ class PPHMMDBConstruction:
 		clean_stdout()
 		
 		'''Make a HMMER HMM DB with hmmpress'''
-		_ = subprocess.Popen("find %s -name '*.hmm' -exec cat {} \; > %s" %(HMMER_PPHMMDir, HMMER_PPHMMDB), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		_ = subprocess.Popen("find %s -name '*.hmm' -exec cat {} \; > %s" %(HMMER_PPHMMDir, HMMER_PPHMMDb), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
-		_ = subprocess.Popen(f"hmmpress {HMMER_PPHMMDB}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		_ = subprocess.Popen(f"hmmpress {HMMER_PPHMMDb}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
 		'''Make a PPHMMDBSummary file'''
 		ClusterIDList = [f"Cluster_{Cluster_i}" for Cluster_i in range(N_PPHMMs)]
-		np.savetxt(fname = HMMER_PPHMMDB+"_Summary.txt",
+		np.savetxt(fname = HMMER_PPHMMDb+"_Summary.txt",
 				X = np.column_stack((	ClusterIDList,
 							ClusterDescList,
 							ClusterSizeList,
@@ -704,16 +700,11 @@ class PPHMMDBConstruction:
 
 		'''1/10: Build db dirs'''
 		BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile, \
-				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDBDir, \
-				HMMER_PPHMMDB, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB = self.mkdirs()		
+				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDbDir, \
+				HMMER_PPHMMDb, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB = self.mkdirs()		
 				
 		'''2/10: Retrieve Variables'''
-		if self.IncludeIncompleteGenomes == True:
-			VariableShelveFile = VariableShelveDir + "/ReadGenomeDescTable.AllGenomes.p"
-		elif self.IncludeIncompleteGenomes == False:
-			VariableShelveFile = VariableShelveDir + "/ReadGenomeDescTable.CompleteGenomes.p"
-
-		genomes =  self.retrieve_variables(VariableShelveFile)
+		genomes =  retrieve_variables(VariableShelveDir, self.IncludeIncompleteGenomes)
 
 		'''3/10: Get GenBank files if not exists'''
 		GenBankDict = self.get_genbank(genomes)
@@ -738,4 +729,4 @@ class PPHMMDBConstruction:
 			self.pphmm_and_merge_alignments()
 		
 		'''10/10: Make HMMER DB, save to persistent storage'''
-		self.Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDB, ClustersDir, Cluster_MetaDataDict, VariableShelveDir+"/PPHMMDBConstruction.p")
+		self.Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDb, ClustersDir, Cluster_MetaDataDict, VariableShelveDir+"/PPHMMDBConstruction.p")
