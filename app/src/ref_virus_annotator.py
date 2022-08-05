@@ -12,7 +12,6 @@ from app.utils.line_count import LineCount
 from app.utils.ordered_set import OrderedSet
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.gomdb_constructor import GOMDB_Constructor
-# from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.console_messages import section_header
 from app.utils.stdout_utils import clean_stdout, error_handler, progress_bar
@@ -37,6 +36,7 @@ class RefVirusAnnotator:
 				HHsuite_SubjectCoverage_Cutoff	= 75,
 				PPHMMClustering_MCLInflation	= 2,
 			):
+		'''Params'''
 		self.GenomeSeqFile = GenomeSeqFile
 		self.ShelveDir = ShelveDir
 		self.SeqLength_Cutoff = SeqLength_Cutoff
@@ -53,6 +53,10 @@ class RefVirusAnnotator:
 		self.HHsuite_QueryCoverage_Cutoff = HHsuite_QueryCoverage_Cutoff
 		self.HHsuite_SubjectCoverage_Cutoff = HHsuite_SubjectCoverage_Cutoff
 		self.PPHMMClustering_MCLInflation = PPHMMClustering_MCLInflation
+		'''Placehodler dirs & objects'''
+		self.VariableShelveDir = "placeholder"
+		self.genomes = {}
+		self.PPHMMSignatureTable = self.PPHMMLocationTable = []
 
 	def mkdirs(self):
 		'''Return all dirs for db storage and retrieval'''
@@ -78,11 +82,11 @@ class RefVirusAnnotator:
 			HHsuiteDir = HHsuite_PPHMMDir = HHsuite_PPHMMDB = "placeholder"
 			
 		HMMER_hmmscanDir = HMMERDir+"/hmmscan_"+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10));os.makedirs(HMMER_hmmscanDir)
-		VariableShelveDir 	= self.ShelveDir+"/Shelves"
+		self.VariableShelveDir 	= self.ShelveDir+"/Shelves"
 
-		return VariableShelveDir, HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir
+		return HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir
 
-	def PPHMMSignatureTable_Constructor(self, genomes, HMMER_hmmscanDir, HMMER_PPHMMDb):
+	def PPHMMSignatureTable_Constructor(self, HMMER_hmmscanDir, HMMER_PPHMMDb):
 		'''RM < DOCSTRING'''
 		print("- Generate PPHMM signature table and PPHMM location table")
 		'''Load GenBank record'''
@@ -93,7 +97,7 @@ class RefVirusAnnotator:
 			Records_dict = SeqIO.index(self.GenomeSeqFile, "genbank")
 		
 		Records_dict = {k.split(".")[0]:v for k,v in Records_dict.items()}
-		N_Seq 		 = len(genomes["SeqIDLists"])
+		N_Seq 		 = len(self.genomes["SeqIDLists"])
 		
 		'''Specify PPHMMQueryFile and PPHMMScanOutFile'''
 		PPHMMDB_Summary			= HMMER_PPHMMDb+"_Summary.txt"
@@ -101,11 +105,12 @@ class RefVirusAnnotator:
 		PPHMMQueryFile			= HMMER_hmmscanDir+"/QProtSeqs.fasta"
 		PPHMMScanOutFile		= HMMER_hmmscanDir+"/PPHMMScanOut.txt"
 		
+		# RM < Sig table init, modify and return to replace self var
 		PPHMMSignatureTable			= np.empty((0, N_PPHMMs))
 		PPHMMLocMiddleBestHitTable	= np.empty((0, N_PPHMMs))
 		
 		Seq_i = 1
-		for SeqIDList, TranslTable in zip(genomes["SeqIDLists"], genomes["TranslTableList"]):
+		for SeqIDList, TranslTable in zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"]):
 			GenBankSeqList, GenBankIDList, GenBankDescList	= [], [], []
 			for SeqID in SeqIDList:
 				GenBankRecord = Records_dict[SeqID]
@@ -222,25 +227,25 @@ class RefVirusAnnotator:
 
 		return PPHMMSignatureTable, PPHMMLocMiddleBestHitTable
 
-	def remove_singleton_pphmms(self, genomes, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, VariableShelveDir, PPHMMSignatureTable, PPHMMLocationTable):
+	def remove_singleton_pphmms(self, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb):
 		'''Remove singleton PPHMMs from the PPHMM databases'''
 		print("\tDetermining and removing PPHMMs ")
 
 		'''Identify and remove non informative singleton PPHMMs from the database'''
-		N_VirusesPerClass				= Counter(genomes["TaxoGroupingList"])
-		CandSingletonPPHMM_IndexList	= np.where(np.sum(PPHMMSignatureTable > 0, axis = 0) <= 1)[0]
-		InfoSingletonPPHMM_IndexList	= [PPHMM_i for PresentPPHMM_IndexList in [np.where(PPHMMSignature > 0)[0] for PPHMMSignature in PPHMMSignatureTable] if set(PresentPPHMM_IndexList).issubset(CandSingletonPPHMM_IndexList) for PPHMM_i in PresentPPHMM_IndexList]
+		N_VirusesPerClass				= Counter(self.genomes["TaxoGroupingList"])
+		CandSingletonPPHMM_IndexList	= np.where(np.sum(self.PPHMMSignatureTable > 0, axis = 0) <= 1)[0]
+		InfoSingletonPPHMM_IndexList	= [PPHMM_i for PresentPPHMM_IndexList in [np.where(PPHMMSignature > 0)[0] for PPHMMSignature in self.PPHMMSignatureTable] if set(PresentPPHMM_IndexList).issubset(CandSingletonPPHMM_IndexList) for PPHMM_i in PresentPPHMM_IndexList]
 		CandSingletonPPHMM_IndexList	= [PPHMM_i for PPHMM_i in CandSingletonPPHMM_IndexList if PPHMM_i not in InfoSingletonPPHMM_IndexList]
 		SingletonPPHMM_IndexList		= []
 		for PPHMM_i in CandSingletonPPHMM_IndexList:
-			VirusWithTheSingletonPPHMM_i = np.where(PPHMMSignatureTable[:, PPHMM_i] != 0)[0]
+			VirusWithTheSingletonPPHMM_i = np.where(self.PPHMMSignatureTable[:, PPHMM_i] != 0)[0]
 			if len(VirusWithTheSingletonPPHMM_i) == 0:
 				SingletonPPHMM_IndexList.append(PPHMM_i)
 			else:
-				if N_VirusesPerClass[genomes["TaxoGroupingList"][VirusWithTheSingletonPPHMM_i[0]]] > self.N_VirusesOfTheClassToIgnore:
+				if N_VirusesPerClass[self.genomes["TaxoGroupingList"][VirusWithTheSingletonPPHMM_i[0]]] > self.N_VirusesOfTheClassToIgnore:
 					SingletonPPHMM_IndexList.append(PPHMM_i)
 		
-		SelectedPPHMM_IndexList = np.array(list(range(PPHMMSignatureTable.shape[1])))
+		SelectedPPHMM_IndexList = np.array(list(range(self.PPHMMSignatureTable.shape[1])))
 		SelectedPPHMM_IndexList = np.delete(arr = SelectedPPHMM_IndexList, obj = SingletonPPHMM_IndexList)
 		
 		'''Add ".ToBeDeleted" tag to each alignment and PPHMM file'''
@@ -302,11 +307,12 @@ class RefVirusAnnotator:
 			HMMER_PPHMMDbSummary_txt.write(Contents)
 		
 		'''Remove singleton PPHMMs from PPHMMSignatureTable and PPHMMLocationTable'''
-		PPHMMSignatureTable	= np.delete(arr = PPHMMSignatureTable, obj = SingletonPPHMM_IndexList, axis = 1)
-		PPHMMLocationTable	= np.delete(arr = PPHMMLocationTable, obj = SingletonPPHMM_IndexList, axis = 1)
+		# RM < Modify Sig and Loc table inplace
+		self.PPHMMSignatureTable	= np.delete(arr = self.PPHMMSignatureTable, obj = SingletonPPHMM_IndexList, axis = 1)
+		self.PPHMMLocationTable		= np.delete(arr = self.PPHMMLocationTable, obj = SingletonPPHMM_IndexList, axis = 1)
 		
 		'''Reorganise the cluster meta data from PPHMMDBConstruction.p'''
-		VariableShelveFile = VariableShelveDir+"/PPHMMDBConstruction.p"
+		VariableShelveFile = self.VariableShelveDir+"/PPHMMDBConstruction.p"
 		parameters = pickle.load(open(VariableShelveFile, "rb"))
 
 		'''Remove singleton PPHMMs' associated meta data, overwrite PPHMDBConstruction.p'''
@@ -319,12 +325,12 @@ class RefVirusAnnotator:
 		updated_parameters["ClusterSizeByProtList"] = parameters["ClusterSizeByProtList"][SelectedPPHMM_IndexList]
 		pickle.dump(updated_parameters, open(VariableShelveFile, "wb"))
 
-	def sort_pphmm(self, genomes, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, VariableShelveDir, PPHMMSignatureTable, PPHMMLocationTable, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir):
+	def sort_pphmm(self, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir):
 		'''Sort PPHMMs by similarity order, via a-v-a comparison. Overwrite db.'''
 		print("Sorting PPHMMs")
 
 		'''Determine the PPHMM order by 'virus profile' similarity'''
-		TraitValueTable		= copy(PPHMMSignatureTable.transpose())
+		TraitValueTable		= copy(self.PPHMMSignatureTable.transpose())
 		N_PPHMMs			= len(TraitValueTable)
 		TaxoLabelList		= list(range(N_PPHMMs))
 		
@@ -347,7 +353,7 @@ class RefVirusAnnotator:
 		PPHMMOrder_ByTree = np.array([int(Clade.name) for Clade in TreeNewick_traits.get_terminals()])
 		
 		'''Cluster PPHMMs by PPHMM similiarty, make DB'''
-		N_PPHMMs = PPHMMSignatureTable.shape[1]
+		N_PPHMMs = self.PPHMMSignatureTable.shape[1]
 		for PPHMM_i in range(N_PPHMMs):
 			AlnClusterFile = ClustersDir+"/Cluster_{PPHMM_i}.fasta"
 			Aln	= AlignIO.read(AlnClusterFile, "fasta")
@@ -534,15 +540,15 @@ class RefVirusAnnotator:
 			HMMER_PPHMMDbSummary_txt.write(Contents)
 		
 		print("\tSort PPHMMSignatureTable and PPHMMLocationTable")
-		#-------------------------------------------------------------------------------
-		PPHMMSignatureTable	= PPHMMSignatureTable[:,PPHMMOrder]
-		PPHMMLocationTable 	= PPHMMLocationTable[:,PPHMMOrder]
+		# RM < MODIFY INPLACE ON SELF VARS
+		self.PPHMMSignatureTable	= self.PPHMMSignatureTable[:,PPHMMOrder]
+		self.PPHMMLocationTable 	= self.PPHMMLocationTable[:,PPHMMOrder]
 		
 		print("\tReorganise the cluster meta data from PPHMMDBConstruction.shelve")
 		#-------------------------------------------------------------------------------
 		#Load cluster meta data from PPHMMDBConstruction.shelve
 		#-------------------------------------------------------------------------------
-		VariableShelveFile = VariableShelveDir+"/PPHMMDBConstruction.p"
+		VariableShelveFile = self.VariableShelveDir+"/PPHMMDBConstruction.p"
 		parameters = pickle.load(open(VariableShelveFile, "rb"))
 		
 		'''Sort PPHMMs' associated meta data, overwrite PPHMMDBConstruction.p'''
@@ -555,6 +561,40 @@ class RefVirusAnnotator:
 		updated_parameters["ClusterSizeByProtList"]	= parameters["ClusterSizeByProtList"][PPHMMOrder]
 		pickle.dump(updated_parameters, open(VariableShelveFile, "wb"))
 
+	def save_sig_tables(self, GOMIDList, GOMSignatureTable, GOMDB):
+		'''8/8: Load in PPHMMDB, to extract cluster list...'''
+		VariableShelveFile = self.VariableShelveDir+"/PPHMMDBConstruction.p"
+		parameters = pickle.load(open(VariableShelveFile, "rb"))
+
+		'''Combine with original data from VMR'''
+		PPHMMDesc		= ["PPHMM|"+ClusterDesc for ClusterDesc in parameters["ClusterDescList"].astype("str")]
+		GOMDesc			= ["GOM|"+TaxoGrouping for TaxoGrouping in GOMIDList]
+		np.savetxt(	fname	= self.VariableShelveDir+"/PPHMMandGOMsignatures.txt",
+					X		= np.column_stack((self.genomes["VirusNameList"],
+								list(map(", ".join, self.genomes["SeqIDLists"])),
+								self.genomes["OrderList"],
+								self.genomes["FamilyList"],
+								self.genomes["SubFamList"],
+								self.genomes["GenusList"],
+								self.genomes["TaxoGroupingList"],
+								self.PPHMMSignatureTable,
+								GOMSignatureTable)),
+				fmt	= '%s',
+				delimiter= "\t",
+				header	= "Virus name\tSequnece identifier\tOrder\tFamily\tSubfamily\tGenus\tClass\t"+"\t".join(PPHMMDesc)+"\t".join(GOMDesc))
+		
+		'''Save'''
+		if self.IncludeIncompleteGenomes == True:
+			VariableShelveFile = self.VariableShelveDir+"/RefVirusAnnotator.AllGenomes.p"
+		elif self.IncludeIncompleteGenomes == False:
+			VariableShelveFile = self.VariableShelveDir+"/RefVirusAnnotator.CompleteGenomes.p"
+	
+		parameters["PPHMMSignatureTable_coo"] = coo_matrix(self.PPHMMSignatureTable)
+		parameters["PPHMMLocationTable_coo"] = coo_matrix(self.PPHMMLocationTable)
+		parameters["GOMDB_coo"] = {GOMID:coo_matrix(GOM) for GOMID, GOM in GOMDB.items()}
+		
+		pickle.dump(parameters, open(VariableShelveFile, "wb"))
+
 	def main(self):
 		'''
 		Generate PPHMM signature table, PPHMM location table, GOM database, and GOM signature table for 
@@ -565,90 +605,34 @@ class RefVirusAnnotator:
 		'''
 		section_header("Generate PPHMM signature & loc tables, GOM database & GOM sig table")
 
-		'''1/ : Make directories'''
-		VariableShelveDir, HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir = self.mkdirs()
+		'''1/8 : Make directories'''
+		HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir = self.mkdirs()
 
-		'''2/ : Retrieve variables'''
-		genomes = retrieve_variables(VariableShelveDir, self.IncludeIncompleteGenomes)
+		'''2/8 : Retrieve variables'''
+		self.genomes = retrieve_variables(self.VariableShelveDir, self.IncludeIncompleteGenomes)
 		
-		'''3/ : Generate PPHMMSignatureTable and PPHMMLocationTable'''
-		PPHMMSignatureTable, PPHMMLocationTable = self.PPHMMSignatureTable_Constructor(genomes, HMMER_hmmscanDir, HMMER_PPHMMDb)
+		'''3/8 : Generate PPHMMSignatureTable and PPHMMLocationTable'''
+		self.PPHMMSignatureTable, self.PPHMMLocationTable = self.PPHMMSignatureTable_Constructor(HMMER_hmmscanDir, HMMER_PPHMMDb)
 
 		if self.RemoveSingletonPPHMMs:
 			# RM < Test cases should include this
-			'''4/ : (OPT) Remove singleton PPHMMs'''
-			self.remove_singleton_pphmms(genomes, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, VariableShelveDir, PPHMMSignatureTable, PPHMMLocationTable)
+			'''4/8 : (OPT) Remove singleton PPHMMs'''
+			self.remove_singleton_pphmms(ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb)
 		
 		if self.PPHMMSorting == True:
 			# RM < Test cases should include this
-			'''5/ : (OPT) Sort PPHMMs'''
-			self.sort_pphmm(genomes, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, VariableShelveDir, PPHMMSignatureTable, PPHMMLocationTable, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir)
+			'''5/8 : (OPT) Sort PPHMMs'''
+			self.sort_pphmm(ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir)
 
-		
-		'''6/ : Make GOM database'''
-		GOMIDList = OrderedSet([TaxoGrouping for TaxoGrouping in genomes["TaxoGroupingList"].astype('str') if not TaxoGrouping.startswith(("_","*"))])
-		GOMDB = GOMDB_Constructor(["TaxoGroupingList"],	PPHMMLocationTable,	GOMIDList = GOMIDList)
-		
+		'''6/8 : Make GOM database'''
+		GOMIDList = OrderedSet([TaxoGrouping for TaxoGrouping in self.genomes["TaxoGroupingList"].astype('str') if not TaxoGrouping.startswith(("_","*"))])
+		GOMDB = GOMDB_Constructor(self.genomes["TaxoGroupingList"], self.PPHMMLocationTable, GOMIDList)
 		
 		print("- Generate GOM signature table")
-		'''7/ : Make GOM signature table'''
-		breakpoint()
-		GOMSignatureTable = GOMSignatureTable_Constructor(PPHMMLocationTable, GOMDB, GOMIDList)
+		'''7/8 : Make GOM signature table'''
+		GOMSignatureTable = GOMSignatureTable_Constructor(self.PPHMMLocationTable, GOMDB, GOMIDList)
 		
-		'''Save PPHMMSignatureTable and GOMSignatureTable'''
-		VariableShelveFile = VariableShelveDir+"/PPHMMDBConstruction.p"
-
-		breakpoint()
-		Parameters = shelve.open(VariableShelveFile)
-		for key in [	
-				"ClusterDescList",
-				]:
-			globals()[key] = Parameters[key]
-		Parameters.close()
-
-		PPHMMDesc		= ["PPHMM|"+ClusterDesc for ClusterDesc in ClusterDescList.astype("str")]
-		GOMDesc			= ["GOM|"+TaxoGrouping for TaxoGrouping in GOMIDList]
-		np.savetxt(	fname	= VariableShelveDir+"/PPHMMandGOMsignatures.txt",
-				X	= np.column_stack((	VirusNameList,
-								list(map(", ".join, SeqIDLists)),
-								OrderList,
-								FamilyList,
-								SubFamList,
-								GenusList,
-								TaxoGroupingList,
-								#NoteList,
-								PPHMMSignatureTable,
-								GOMSignatureTable)),
-				fmt	= '%s',
-				delimiter= "\t",
-				header	= "Virus name\tSequnece identifier\tOrder\tFamily\tSubfamily\tGenus\tClass\t"+"\t".join(PPHMMDesc)+"\t".join(GOMDesc))
-		
-		if self.IncludeIncompleteGenomes == True:
-			VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.AllGenomes.p"
-		elif self.IncludeIncompleteGenomes == False:
-			VariableShelveFile = VariableShelveDir+"/RefVirusAnnotator.CompleteGenomes.p"
-		
-		PPHMMSignatureTable_coo = coo_matrix(PPHMMSignatureTable)
-		PPHMMLocationTable_coo = coo_matrix(PPHMMLocationTable)
-		GOMDB_coo = {GOMID:coo_matrix(GOM) for GOMID,GOM in GOMDB.items()}
-		
-		Parameters = shelve.open(VariableShelveFile,"n")
-		for key in [	#"PPHMMSignatureTable",
-				#"PPHMMLocationTable",
-				"PPHMMSignatureTable_coo", ##
-				"PPHMMLocationTable_coo", ##
-				"GOMIDList",
-				#"GOMDB",
-				"GOMDB_coo", ##
-				"GOMSignatureTable", ##
-				]:
-			try:
-				Parameters[key] = locals()[key]
-				print("\t"+key)
-			except TypeError:
-				pass
-		th = dict(Parameters) # RM <<
-		pickle.dump(th, open(f"{VariableShelveDir}/RefVirusAnnotator.CompleteGenomes.p", "wb"))
-		Parameters.close()
+		'''8/8 : Save PPHMMSignatureTable and GOMSignatureTable'''
+		self.save_sig_tables(GOMIDList, GOMSignatureTable, GOMDB)
 
 
