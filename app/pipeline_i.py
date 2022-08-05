@@ -43,7 +43,7 @@ class Pipeline_I:
 			)
 		rgdt.entrypoint()
 		benchmark_end("ReadGenomeDescTable", start)	
-
+		breakpoint()
 		self.pphmmdb_construction()
 
 	def pphmmdb_construction(self):
@@ -71,7 +71,7 @@ class Pipeline_I:
 			HHsuite_QueryCoverage_Cutoff = self.options['HHsuite_QueryCoverage_Cutoff'],
 			HHsuite_SubjectCoverage_Cutoff = self.options['HHsuite_SubjectCoverage_Cutoff'],
 			PPHMMClustering_MCLInflation = self.options['PPHMMClustering_MCLInflation_ForAlnMerging'],	
-			HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = str2bool(self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']),
+			HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging = str2bool(self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']),
 			)
 		pph.main()
 		benchmark_end("PPHMMDBConstruction", start)	
@@ -82,7 +82,7 @@ class Pipeline_I:
 		'''III: Fire Reference Virus Annotator'''
 		[print(log_text) for log_text in self.logs[2]]
 		start = benchmark_start("RefVirusAnnotator")
-		RefVirusAnnotator (
+		rva = RefVirusAnnotator (
 			GenomeSeqFile = self.options['GenomeSeqFile'],
 			ShelveDir = self.options['ShelveDir'],
 			SeqLength_Cutoff = 0,
@@ -100,8 +100,9 @@ class Pipeline_I:
 			HHsuite_SubjectCoverage_Cutoff = self.options['HHsuite_SubjectCoverage_Cutoff'],
 			PPHMMClustering_MCLInflation = self.options['PPHMMClustering_MCLInflation_ForPPHMMSorting'],
 			)
+		rva.main()
 		benchmark_end("RefVirusAnnotator", start)	
-
+		breakpoint()
 		self.make_graphs()
 
 	def make_graphs(self):

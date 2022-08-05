@@ -5,6 +5,11 @@ class Log_Generator_Pl1:
         self.fpath = fpath
 
     def text_gen_start(self) -> list:
+        return ["GRAViTy V2 adaptation by Mayne, R., Aiewsakun, P., Simmonds., P. et al. (2022)",
+                "Based on original GRAViTy software https://github.com/PAiewsakun/GRAViTy",
+                "Aiewsakun, P., Simmonds, P. The genomic underpinnings of eukaryotic virus taxonomy: creating a sequence-based framework for family-level virus classification. Microbiome 6, 38 (2018). https://doi.org/10.1186/s40168-018-0422-7"]
+
+    def text_gen_pre_read(self) -> list:
         return ["Input for ReadGenomeDescTable:",
                     "="*100,
                     "Main input",
@@ -133,7 +138,9 @@ class Log_Generator_Pl1:
         ]
 
     def entrypoint(self) -> list:
+        print_title()
         logs = [self.text_gen_start()]
+        logs.append(self.text_gen_pre_read())
         logs.append(self.text_gen_pre_pphmdb())
         logs.append(self.text_gen_pre_refvirusannotator())
         logs.append(self.text_gen_pre_dendrogram())
@@ -152,6 +159,11 @@ class Log_Generator_Pl2:
         self.fpath = fpath
 
     def text_gen_start(self) -> list:
+        return ["GRAViTy V2 adaptation by Mayne, R., Aiewsakun, P., Simmonds., P. et al. (2022)",
+                "Based on original GRAViTy software https://github.com/PAiewsakun/GRAViTy",
+                "Aiewsakun, P., Simmonds, P. The genomic underpinnings of eukaryotic virus taxonomy: creating a sequence-based framework for family-level virus classification. Microbiome 6, 38 (2018). https://doi.org/10.1186/s40168-018-0422-7"]
+
+    def text_gen_pre_read(self) -> list:
         return ["Input for ReadGenomeDescTable:",
                 "="*100,
                 "Main input",
@@ -258,7 +270,9 @@ class Log_Generator_Pl2:
         ]
 
     def entrypoint(self) -> list:
+        print_title()
         logs = [self.text_gen_start()]
+        logs.append(self.text_gen_pre_read())
         logs.append(self.text_gen_pre_pphmdb())
         logs.append(self.text_gen_pre_ucfvirusannotator())
         logs.append(self.text_gen_pre_classifier())
@@ -268,3 +282,15 @@ class Log_Generator_Pl2:
                 [f.write(f"{item}\n") for item in list_type]
                 
         return logs
+
+def print_title():
+    print('''
+   _____ _____       __      ___ _______     __      _____  
+  / ____|  __ \     /\ \    / (_)__   __|    \ \    / /__ \ 
+ | |  __| |__) |   /  \ \  / / _   | |_   _   \ \  / /   ) |
+ | | |_ |  _  /   / /\ \ \/ / | |  | | | | |   \ \/ /   / / 
+ | |__| | | \ \  / ____ \  /  | |  | | |_| |    \  /   / /_ 
+  \_____|_|  \_\/_/    \_\/   |_|  |_|\__, |     \/   |____|
+                                       __/ |                
+                                      |___/                 
+									  		''')

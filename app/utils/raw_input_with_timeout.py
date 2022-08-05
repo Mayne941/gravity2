@@ -1,5 +1,7 @@
 import signal
-
+'''
+DEPRECATED FROM V1.0
+'''
 def timeout_handler(signum, frame):
 	raise Exception("No input detected. Continue the program.")
 

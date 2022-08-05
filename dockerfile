@@ -9,6 +9,7 @@ RUN mkdir logs etc
 
 RUN apt install hmmer
 RUN apt install mcl
+# RM < Automate BLAST install
 # RM < Automate muscle install https://drive5.com/muscle5/manual/install.html
 RUN apt-get update
 RUN apt-get install --upgrade pip
