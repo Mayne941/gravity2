@@ -178,7 +178,8 @@ class PPHMMDBConstruction:
 					if j == "*":
 						StopCodonList.append(CodonList[i])		
 
-				GenBankSeq, SeqLength, ORF_i = GenBankRecord.seq, len(GenBankSeq), 0
+				GenBankSeq = GenBankRecord.seq
+				SeqLength, ORF_i = len(GenBankSeq), 0
 				for _, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
 					'''Split into multople of 3, get in-frame nucleotide seq, split sequence into codons'''
 					for frame in range(3):

@@ -47,7 +47,7 @@ class Pipeline_II:
 		if str2bool(self.options['UseUcfVirusPPHMMs']) == True:
 			[print(log_text) for log_text in self.logs[1]]				
 			start = benchmark_start("PPHMMDBConstruction")
-			PPHMMDBConstruction (
+			pc = PPHMMDBConstruction (
 				GenomeSeqFile = self.options['GenomeSeqFile_UcfVirus'],
 				ShelveDir = self.options['ShelveDir_UcfVirus'],
 				ProteinLength_Cutoff = self.options['ProteinLength_Cutoff'],
@@ -70,6 +70,7 @@ class Pipeline_II:
 				PPHMMClustering_MCLInflation = self.options['PPHMMClustering_MCLInflation_ForAlnMerging'],
 				HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = str2bool(self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']),
 				)
+			pc.main()
 			benchmark_end("PPHMMDBConstruction", start)
 
 		self.ucf_virus_annotator()

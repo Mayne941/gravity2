@@ -43,7 +43,7 @@ class Pipeline_I:
 			)
 		rgdt.entrypoint()
 		benchmark_end("ReadGenomeDescTable", start)	
-
+		breakpoint()
 		self.pphmmdb_construction()
 
 	def pphmmdb_construction(self):
