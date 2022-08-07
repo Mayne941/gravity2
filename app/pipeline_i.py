@@ -43,7 +43,6 @@ class Pipeline_I:
 			)
 		rgdt.entrypoint()
 		benchmark_end("ReadGenomeDescTable", start)	
-		breakpoint()
 		self.pphmmdb_construction()
 
 	def pphmmdb_construction(self):
@@ -75,7 +74,6 @@ class Pipeline_I:
 			)
 		pph.main()
 		benchmark_end("PPHMMDBConstruction", start)	
-		breakpoint()
 		self.ref_virus_annotator()
 
 	def ref_virus_annotator(self):
