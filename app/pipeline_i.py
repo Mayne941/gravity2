@@ -107,7 +107,7 @@ class Pipeline_I:
 		'''IV: Fire Heatmap and Dendrogram Constructors'''
 		[print(log_text) for log_text in self.logs[3]]
 		start = benchmark_start("GRAViTyDendrogramAndHeatmapConstruction")
-		GRAViTyDendrogramAndHeatmapConstruction (
+		ghm = GRAViTyDendrogramAndHeatmapConstruction (
 			ShelveDir = self.options['ShelveDir'],
 			IncludeIncompleteGenomes = str2bool(self.options['AnnotateIncompleteGenomes']),
 			SimilarityMeasurementScheme = self.options['SimilarityMeasurementScheme'],
@@ -125,6 +125,7 @@ class Pipeline_I:
 			Heatmap_DendrogramSupport_Cutoff = self.options['Heatmap_DendrogramSupport_Cutoff'],
 			VirusGrouping = str2bool(self.options['VirusGrouping']),
 			)
+		ghm.main()
 		benchmark_end("GRAViTyDendrogramAndHeatmapConstruction", start)	
 
 		self.mutual_info_calculator()

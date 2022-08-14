@@ -4,10 +4,11 @@ from .dcor import dcor
 from app.utils.stdout_utils import progress_bar, clean_stdout
 
 def GOMSignatureTable_Constructor (PPHMMLocationTable, GOMDB, GOMIDList):
-	N_Viruses		= len(PPHMMLocationTable)
-	N_GOMs			= len(GOMIDList)
+	'''Generate organisational model signature table, for annotations, graphing and description functions'''
+	N_Viruses			= len(PPHMMLocationTable)
+	N_GOMs				= len(GOMIDList)
 	GOMSignatureTable	= np.empty((N_Viruses,0))
-	GOM_i			= 1
+	GOM_i				= 1
 	for GOM in GOMIDList:
 		GOMSignatureList, Virus_i = [], 1
 		for PPHMMLocation in PPHMMLocationTable:
@@ -16,8 +17,8 @@ def GOMSignatureTable_Constructor (PPHMMLocationTable, GOMDB, GOMIDList):
 
 			progress_bar(f"\033[K GOM construction {GOM} ({GOM_i}/{N_GOMs}): [{'='*int(float(Virus_i)/N_Viruses*20)}] {Virus_i}/{N_Viruses} GOMs \r")
 			Virus_i += 1
-		
 		clean_stdout()
+
 		GOMSignatureTable = np.column_stack((GOMSignatureTable, GOMSignatureList))
 		GOM_i = GOM_i+1
 	

@@ -15,7 +15,7 @@ from app.utils.gomdb_constructor import GOMDB_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.console_messages import section_header
 from app.utils.stdout_utils import clean_stdout, error_handler, progress_bar
-from app.utils.retrieve_pickle import retrieve_variables
+from app.utils.retrieve_pickle import retrieve_genome_vars
 
 class RefVirusAnnotator:
 	def __init__(self,
@@ -618,7 +618,7 @@ class RefVirusAnnotator:
 		HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir = self.mkdirs()
 
 		'''2/8 : Retrieve variables'''
-		self.genomes = retrieve_variables(self.VariableShelveDir, self.IncludeIncompleteGenomes)
+		self.genomes = retrieve_genome_vars(self.VariableShelveDir, self.IncludeIncompleteGenomes)
 		
 		'''3/8 : Generate PPHMMSignatureTable and PPHMMLocationTable'''
 		self.PPHMMSignatureTable, self.PPHMMLocationTable = self.PPHMMSignatureTable_Constructor(HMMER_hmmscanDir, HMMER_PPHMMDb)
