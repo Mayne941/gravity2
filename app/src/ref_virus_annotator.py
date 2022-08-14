@@ -262,11 +262,11 @@ class RefVirusAnnotator:
 		for PPHMM_i in SelectedPPHMM_IndexList:
 			ClusterFile_i = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta.ToBeDeleted"
 			ClusterFile_j = f"{ClustersDir}/Cluster_{PPHMM_j}.fasta"
-			_ = subprocess.call("mv %s %s" %(ClusterFile_i, ClusterFile_j), shell = True)
+			subprocess.call(f"mv {ClusterFile_i} {ClusterFile_j}", shell = True)
 			
-			HMMER_PPHMMFile_i = HMMER_PPHMMDir+"/PPHMM_%s.hmm.ToBeDeleted"%PPHMM_i
-			HMMER_PPHMMFile_j = HMMER_PPHMMDir+"/PPHMM_%s.hmm"%PPHMM_j
-			_ = subprocess.call("mv %s %s" %(HMMER_PPHMMFile_i, HMMER_PPHMMFile_j), shell = True)
+			HMMER_PPHMMFile_i = f"{HMMER_PPHMMDir}/PPHMM_{PPHMM_i}.hmm.ToBeDeleted"
+			HMMER_PPHMMFile_j = f"{HMMER_PPHMMDir}/PPHMM_{PPHMM_j}.hmm"
+			subprocess.call(f"mv {HMMER_PPHMMFile_i} {HMMER_PPHMMFile_j}", shell = True)
 			
 			'''Change the PPHMM name annotation'''
 			with open(HMMER_PPHMMFile_j, "r+") as HMMER_PPHMM_txt:
