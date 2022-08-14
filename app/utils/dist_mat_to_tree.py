@@ -16,4 +16,3 @@ def DistMat2Tree (DistMat, LeafList, Dendrogram_LinkageMethod):
 									leaf_names	= LeafList,
 					)
 	return TreeNewick
-

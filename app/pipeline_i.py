@@ -127,7 +127,7 @@ class Pipeline_I:
 			)
 		ghm.main()
 		benchmark_end("GRAViTyDendrogramAndHeatmapConstruction", start)	
-
+		breakpoint()
 		self.mutual_info_calculator()
 
 	def mutual_info_calculator(self):

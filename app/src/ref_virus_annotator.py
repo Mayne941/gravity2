@@ -598,10 +598,14 @@ class RefVirusAnnotator:
 		elif self.IncludeIncompleteGenomes == False:
 			VariableShelveFile = f"{self.VariableShelveDir}/RefVirusAnnotator.CompleteGenomes.p"
 	
+		parameters["PPHMMSignatureTable"] = self.PPHMMSignatureTable
+		parameters["GOMSignatureTable"]   = GOMSignatureTable
+		parameters["PPHMMLocationTable"]  = self.PPHMMLocationTable
+		parameters["GOMIDList"] 		  = GOMIDList
 		parameters["PPHMMSignatureTable_coo"] = coo_matrix(self.PPHMMSignatureTable)
 		parameters["PPHMMLocationTable_coo"] = coo_matrix(self.PPHMMLocationTable)
 		parameters["GOMDB_coo"] = {GOMID:coo_matrix(GOM) for GOMID, GOM in GOMDB.items()}
-		
+
 		pickle.dump(parameters, open(VariableShelveFile, "wb"))
 
 	def main(self):
