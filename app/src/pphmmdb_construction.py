@@ -12,7 +12,7 @@ from app.utils.download_genbank_file import DownloadGenBankFile
 from app.utils.console_messages import section_header
 from app.utils.orf_identifier import get_orf_trasl_table, no_orf_match
 from app.utils.stdout_utils import clean_stdout, progress_bar, error_handler
-from app.utils.retrieve_pickle import retrieve_variables
+from app.utils.retrieve_pickle import retrieve_genome_vars
 
 class PPHMMDBConstruction:
 	def __init__(self,
@@ -704,7 +704,7 @@ class PPHMMDBConstruction:
 				HMMER_PPHMMDb, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB = self.mkdirs()		
 				
 		'''2/10: Retrieve Variables'''
-		genomes =  retrieve_variables(VariableShelveDir, self.IncludeIncompleteGenomes)
+		genomes =  retrieve_genome_vars(VariableShelveDir, self.IncludeIncompleteGenomes)
 
 		'''3/10: Get GenBank files if not exists'''
 		GenBankDict = self.get_genbank(genomes)

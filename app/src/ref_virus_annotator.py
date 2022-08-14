@@ -5,7 +5,7 @@ from collections import Counter
 from copy import copy
 from scipy.sparse import coo_matrix
 import numpy as np
-import subprocess, os, shelve, sys, string, random, glob
+import subprocess, os, re, string, random, glob
 import pickle
 
 from app.utils.line_count import LineCount
@@ -15,7 +15,7 @@ from app.utils.gomdb_constructor import GOMDB_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.console_messages import section_header
 from app.utils.stdout_utils import clean_stdout, error_handler, progress_bar
-from app.utils.retrieve_pickle import retrieve_variables
+from app.utils.retrieve_pickle import retrieve_genome_vars
 
 class RefVirusAnnotator:
 	def __init__(self,
@@ -59,7 +59,7 @@ class RefVirusAnnotator:
 		self.PPHMMSignatureTable = self.PPHMMLocationTable = []
 
 	def mkdirs(self):
-		'''Return all dirs for db storage and retrieval'''
+		'''1/8: Return all dirs for db storage and retrieval'''
 		HMMERDir			= self.ShelveDir+"/HMMER"
 		HMMER_PPHMMDir		= HMMERDir+"/HMMER_PPHMMs"
 		HMMER_PPHMMDbDir	= HMMERDir+"/HMMER_PPHMMDb"
@@ -87,7 +87,7 @@ class RefVirusAnnotator:
 		return HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir
 
 	def PPHMMSignatureTable_Constructor(self, HMMER_hmmscanDir, HMMER_PPHMMDb):
-		'''RM < DOCSTRING'''
+		'''2/8: Create PPHMM signature and location tables'''
 		print("- Generate PPHMM signature table and PPHMM location table")
 		'''Load GenBank record'''
 		_, file_extension = os.path.splitext(self.GenomeSeqFile)
@@ -110,6 +110,7 @@ class RefVirusAnnotator:
 		PPHMMLocMiddleBestHitTable	= np.empty((0, N_PPHMMs))
 		
 		Seq_i = 1
+		# RM < Assess whether this segment can be further optimised, or if hmmscan is bottleneck
 		for SeqIDList, TranslTable in zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"]):
 			GenBankSeqList, GenBankIDList, GenBankDescList	= [], [], []
 			for SeqID in SeqIDList:
@@ -225,6 +226,7 @@ class RefVirusAnnotator:
 		'''Delete HMMER_hmmscanDir'''
 		_ = subprocess.call(f"rm -rf {HMMER_hmmscanDir}", shell = True)
 
+		# RM < "LocMiddleBestHitTable" overwrites self.PPHMMLocationTable
 		return PPHMMSignatureTable, PPHMMLocMiddleBestHitTable
 
 	def remove_singleton_pphmms(self, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb):
@@ -258,13 +260,13 @@ class RefVirusAnnotator:
 		'''Rename and re-number informative alignment and PPHMM files'''
 		PPHMM_j = 0
 		for PPHMM_i in SelectedPPHMM_IndexList:
-			ClusterFile_i = ClustersDir+"/Cluster_%s.fasta.ToBeDeleted"%PPHMM_i
-			ClusterFile_j = ClustersDir+"/Cluster_%s.fasta"%PPHMM_j
-			_ = subprocess.call("mv %s %s" %(ClusterFile_i, ClusterFile_j), shell = True)
+			ClusterFile_i = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta.ToBeDeleted"
+			ClusterFile_j = f"{ClustersDir}/Cluster_{PPHMM_j}.fasta"
+			subprocess.call(f"mv {ClusterFile_i} {ClusterFile_j}", shell = True)
 			
-			HMMER_PPHMMFile_i = HMMER_PPHMMDir+"/PPHMM_%s.hmm.ToBeDeleted"%PPHMM_i
-			HMMER_PPHMMFile_j = HMMER_PPHMMDir+"/PPHMM_%s.hmm"%PPHMM_j
-			_ = subprocess.call("mv %s %s" %(HMMER_PPHMMFile_i, HMMER_PPHMMFile_j), shell = True)
+			HMMER_PPHMMFile_i = f"{HMMER_PPHMMDir}/PPHMM_{PPHMM_i}.hmm.ToBeDeleted"
+			HMMER_PPHMMFile_j = f"{HMMER_PPHMMDir}/PPHMM_{PPHMM_j}.hmm"
+			subprocess.call(f"mv {HMMER_PPHMMFile_i} {HMMER_PPHMMFile_j}", shell = True)
 			
 			'''Change the PPHMM name annotation'''
 			with open(HMMER_PPHMMFile_j, "r+") as HMMER_PPHMM_txt:
@@ -326,7 +328,7 @@ class RefVirusAnnotator:
 		pickle.dump(updated_parameters, open(VariableShelveFile, "wb"))
 
 	def sort_pphmm(self, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir):
-		'''Sort PPHMMs by similarity order, via a-v-a comparison. Overwrite db.'''
+		'''Sort PPHMMs by similarity order, via AVA comparison. Overwrite db.'''
 		print("Sorting PPHMMs")
 
 		'''Determine the PPHMM order by 'virus profile' similarity'''
@@ -352,89 +354,104 @@ class RefVirusAnnotator:
 		TreeNewick_traits.ladderize(reverse = True)
 		PPHMMOrder_ByTree = np.array([int(Clade.name) for Clade in TreeNewick_traits.get_terminals()])
 		
-		#####################################################
-		# RM < To here 0508
-		'''Cluster PPHMMs by PPHMM similiarty, make DB'''
+		'''Cluster PPHMMs by PPHMM similiarty, make dbs'''
 		N_PPHMMs = self.PPHMMSignatureTable.shape[1]
 		for PPHMM_i in range(N_PPHMMs):
 			AlnClusterFile = ClustersDir+f"/Cluster_{PPHMM_i}.fasta"
 			Aln	= AlignIO.read(AlnClusterFile, "fasta")
 			N_Seqs	= len(Aln)
 			L_Seqs	= Aln.get_alignment_length()
-			HHsuite_PPHMMFile = HHsuite_PPHMMDir+"/PPHMM_%s.hhm" %PPHMM_i
+			HHsuite_PPHMMFile = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hhm"
 			_ = subprocess.Popen(f"hhmake -i {AlnClusterFile} -o {HHsuite_PPHMMFile} -seq {N_Seqs+1} -name Cluster_{PPHMM_i} -id 100 -M 50 -v 0",
 														stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
-			error_handler(f"There is a problem with coverting cluster {PPHMM_i} into a hmm.")
+			error_handler(out, err, f"There is a problem with coverting cluster {PPHMM_i} into a hmm.")
 			progress_bar(f"\033[K Make HHsuite PPHMM: [{'='*int(float(PPHMM_i+1)/N_PPHMMs*20)}] {PPHMM_i+1}/{N_PPHMMs} PPHMMs \r")
 		clean_stdout()
 		
-		_ = subprocess.Popen("rm %s_hhm.ffdata %s_hhm.ffindex" %(HHsuite_PPHMMDB, HHsuite_PPHMMDB), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		'''Remove extant hhm DBs'''
+		_ = subprocess.Popen(f"rm {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
 		if list(set([f.split(".")[-1] for f in os.listdir(HHsuite_PPHMMDir)]))!=["hhm"]:
-			print("There are some other files/folders other than HHsuite PPHMMs in the folder %s. Remove them first." %HHsuite_PPHMMDir)
+			print(f"There are some other files/folders other than HHsuite PPHMMs in the folder {HHsuite_PPHMMDir}. Remove them first.")
+			raise SystemExit()
 		
-		_ = subprocess.Popen("ffindex_build -s %s_hhm.ffdata %s_hhm.ffindex %s" %(HHsuite_PPHMMDB, HHsuite_PPHMMDB, HHsuite_PPHMMDir), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		'''Build hhm DBs'''
+		_ = subprocess.Popen(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
-		
-		print("\t\tDetermine PPHMM-PPHMM similarity (ALL-VERSUS-ALL hhsearch)")
-		#-------------------------------------------------------------------------------
+
+		'''Build intermediate MSA DB'''
+		os.chdir(f"{ClustersDir}")
+		try:
+			_ = subprocess.call(f"ffindex_build -s ../../HHsuite/HHsuite_PPHMMDB/HHsuite_PPHMMDB_msa.ffdata ../../HHsuite/HHsuite_PPHMMDB/HHsuite_PPHMMDB_msa.ffindex .", shell=True)
+		except Exception as ex:
+			error_handler("No stdout" , ex, "Build of MSA DB.")
+		os.chdir(f"../../../../../../")
+
+		'''Build a3m DB (scalable annotated alignment)'''
+		try:
+			_ = subprocess.call(f"ffindex_apply {HHsuite_PPHMMDB}_msa.ffdata {HHsuite_PPHMMDB}_msa.ffindex -i {HHsuite_PPHMMDB}_a3m.ffindex -d {HHsuite_PPHMMDB}_a3m.ffdata -- hhconsensus -M 50 -i stdin -oa3m stdout -v 0", shell=True)
+		except Exception as ex:
+			error_handler("No stdout", ex, "Build of A3M DB.")
+
+		'''Build cs_219 DB (column context specific pseudocounts)'''
+		try:
+			_ = subprocess.call(f"cstranslate -f -x 0.3 -c 4 -I a3m -i {HHsuite_PPHMMDB}_a3m -o {HHsuite_PPHMMDB}_cs219", shell=True)
+		except Exception as ex:
+			error_handler("No stdout", ex, "Build of cs_219 DB.")
+
+		'''Determine PPHMM-PPHMM similarity (AVA hhsearch)'''
 		hhsearchDir		= HHsuiteDir+"/hhsearch_"+"".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)); os.makedirs(hhsearchDir)
 		hhsearchOutFile		= hhsearchDir+"/hhsearch.stdout.hhr"
-		N_PPHMMs		= LineCount("%s_hhm.ffindex"%HHsuite_PPHMMDB)
-		
-		SeenPair		= {}
-		SeenPair_i		= 0
-		PPHMMSimScoreCondensedMat= []
+		N_PPHMMs		= LineCount(f"{HHsuite_PPHMMDB}_hhm.ffindex")
+
+		SeenPair, SeenPair_i, PPHMMSimScoreCondensedMat	= {}, 0, []
+		hit_match = re.compile(r"[A-Z0-9]+\|[A-Z0-9]+.[0-9]{1}\s[a-zA-Z0-9_ ]{0,10}")
 		for PPHMM_i in range(0, N_PPHMMs):
-			HHsuite_PPHMMFile = HHsuite_PPHMMDir+"/PPHMM_%s.hhm" %PPHMM_i
-			_ = subprocess.Popen("hhsearch -i %s -d %s -o %s -e %s -E %s -z 1 -b 1 -id 100 -global -v 0 -cpu %s" %(	HHsuite_PPHMMFile,
-																HHsuite_PPHMMDB+"_hhm.ffdata",
-																hhsearchOutFile,
-																HHsuite_evalue_Cutoff,
-																HHsuite_evalue_Cutoff,
-																HHsuite_N_CPUs),
+			HHsuite_PPHMMFile = HHsuite_PPHMMDir+f"/PPHMM_{PPHMM_i}.hhm"
+			_ = subprocess.Popen(f"hhsearch -i {HHsuite_PPHMMFile} -d {f'{HHsuite_PPHMMDB}'} -o {hhsearchOutFile} -e {self.HHsuite_evalue_Cutoff} -E {self.HHsuite_evalue_Cutoff} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.HHsuite_N_CPUs}",
 																stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
-			error_handler(f"There is a problem with hhsearching PPHMM {PPHMM_i} againt the PPHMM database")
-			
+			error_handler(out, err, f"There is a problem with hhsearching PPHMM {PPHMM_i} against the PPHMM database")
+
+			'''Open output from hhsearch'''
 			with open(hhsearchOutFile, 'r') as hhsearchOut_txt:
 				Content		= hhsearchOut_txt.readlines()
 				QueryLength	= int(Content[1].split()[1])
+				'''Iterate over best hits and extract data line by line, append to sim score matrix'''
 				for Line in Content[9:]:
 					if Line == "\n":
 						break
 					else:
-						Line  		= Line.replace("("," ").replace(")"," ").split()
-						PPHMM_j		= int(Line[1].split("_")[1])
-						evalue		= float(Line[3])
-						pvalue		= float(Line[4])
-						PPHMMSimScore	= float(Line[5])
-						Col		= float(Line[7])
-						SubjectLength	= int(Line[10])
+						Line 	= re.sub(hit_match, "", Line) # Filter variable length Hit name
+						Line  	= Line.replace("("," ").replace(")"," ").split()
+						PPHMM_j     = int(Line[0])
+						evalue		= float(Line[2])
+						pvalue		= float(Line[3])
+						PPHMMSimScore	= float(Line[4]) # RM << Check we want Score and not SS col
+						Col			= float(Line[6])
+						SubjectLength	= int(Line[-1])
 						qcovs = Col/QueryLength*100
 						scovs = Col/SubjectLength*100
-						if (evalue <= HHsuite_evalue_Cutoff and pvalue <= HHsuite_pvalue_Cutoff and qcovs >= HHsuite_QueryCoverage_Cutoff and scovs >= HHsuite_SubjectCoverage_Cutoff):
+						if (evalue <= self.HHsuite_evalue_Cutoff and pvalue <= self.HHsuite_pvalue_Cutoff and qcovs >= self.HHsuite_QueryCoverage_Cutoff and scovs >= self.HHsuite_SubjectCoverage_Cutoff):
 							Pair	= ", ".join(sorted(map(str,[PPHMM_i, PPHMM_j])))
-							if Pair in SeenPair: #If the pair has already been seen...
-								if PPHMMSimScore > PPHMMSimScoreCondensedMat[SeenPair[Pair]][2]: #and if the new PPHMMSimScore is higher...
+							if Pair in SeenPair: 
+								'''If the pair has already been seen...'''
+								if PPHMMSimScore > PPHMMSimScoreCondensedMat[SeenPair[Pair]][2]: 
+									'''and if the new PPHMMSimScore is higher...'''
 									PPHMMSimScoreCondensedMat[SeenPair[Pair]][2] = PPHMMSimScore
 							else:
 								SeenPair[Pair] = SeenPair_i
 								PPHMMSimScoreCondensedMat.append([PPHMM_i, PPHMM_j, PPHMMSimScore])
-								SeenPair_i = SeenPair_i+1
+								SeenPair_i += 1
 			
-			_ = subprocess.Popen("rm %s" %hhsearchOutFile, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+			_ = subprocess.Popen(f"rm {hhsearchOutFile}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
-			
-			#Progress bar
-			sys.stdout.write("\033[K" + "hhsearch: [%-20s] %d/%d PPHMMs" % ('='*int(float(PPHMM_i+1)/N_PPHMMs*20), PPHMM_i+1, N_PPHMMs) + "\r")
-			sys.stdout.flush()
-		
-		sys.stdout.write("\033[K")
-		sys.stdout.flush()
-		
+			progress_bar(f"\033[K hhsearch: [{'='*int(float(PPHMM_i+1)/N_PPHMMs*20)}] {PPHMM_i+1}/{N_PPHMMs} PPHMMs \r")
+		clean_stdout()
+
+		'''Structure and make similarity score matrix'''
 		PPHMMSimScoreCondensedMat = np.array(PPHMMSimScoreCondensedMat)
 		PPHMMSimScoreCondensedMat = np.array([PPHMMSimScorePair for PPHMMSimScorePair in PPHMMSimScoreCondensedMat if PPHMMSimScorePair[0] < PPHMMSimScorePair[1]])
 		PPHMMSimScoreCondensedMatFile	= hhsearchDir+"/PPHMMSimScoreCondensedMat.txt"
@@ -444,10 +461,9 @@ class RefVirusAnnotator:
 				delimiter= "\t",
 				header	= "PPHMM_i\tPPHMM_j\tPPHMMSimScore")
 		
-		print("\t\tCluster PPHMMs based on hhsearch scores, using the MCL algorithm")
-		#-------------------------------------------------------------------------------
+		'''Cluster PPHMMs based on hhsearch scores, using the MCL algorithm'''
 		PPHMM_ClusterFile	= hhsearchDir+"/PPHMM_Clusters.txt"
-		_ = subprocess.Popen("mcl %s --abc -o %s -I %s" %(PPHMMSimScoreCondensedMatFile, PPHMM_ClusterFile, PPHMMClustering_MCLInflation), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		_ = subprocess.Popen(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMM_ClusterFile} -I {self.PPHMMClustering_MCLInflation}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		_, out = _.communicate()
 		
 		SeenPPHMMIDList = []
@@ -467,10 +483,8 @@ class RefVirusAnnotator:
 		_ = subprocess.Popen("rm -rf %s" %HHsuiteDir, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
-		print("\tDetermine the final PPHMM order")
-		#-------------------------------------------------------------------------------
-		PPHMMOrder = []
-		PPHMMClusterSeparation_IndexList = []
+		'''Determine the final PPHMM order'''
+		PPHMMOrder, PPHMMClusterSeparation_IndexList = [], []
 		PPHMMOrder_ByTree_tmp = copy(PPHMMOrder_ByTree)
 		PPHMMOrder_ByMCL_tmp = copy(PPHMMOrder_ByMCL)
 		while len(PPHMMOrder_ByTree_tmp) != 0:
@@ -482,49 +496,45 @@ class RefVirusAnnotator:
 			PPHMMClusterSeparation_IndexList.append(len(PPHMMOrder))
 			PPHMMOrder_ByTree_tmp = np.delete(PPHMMOrder_ByTree_tmp, i)
 		
-		print("\tReorganise the PPHMM database")
-		#-------------------------------------------------------------------------------
-		#Add ".tmp" tag to each alignment and PPHMM file
-		#-------------------------------------------------------------------------------
+		'''Reorganise the PPHMM database'''
+		'''Add ".tmp" tag to each alignment and PPHMM file'''
 		for f in glob.iglob(os.path.join(ClustersDir, '*.fasta')):
 			os.rename(f, f + '.tmp')
 		
 		for f in glob.iglob(os.path.join(HMMER_PPHMMDir, '*.hmm')):
 			os.rename(f, f + '.tmp')
 		
-		#Rename and re-number alignment and PPHMM files
-		#-------------------------------------------------------------------------------
+		'''Rename and re-number alignment and PPHMM files'''
 		PPHMM_j = 0
 		for PPHMM_i in PPHMMOrder:
-			ClusterFile_i = ClustersDir+"/Cluster_%s.fasta.tmp"%PPHMM_i
-			ClusterFile_j = ClustersDir+"/Cluster_%s.fasta"%PPHMM_j
-			_ = subprocess.call("mv %s %s" %(ClusterFile_i, ClusterFile_j), shell = True)
+			ClusterFile_i = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta.tmp"
+			ClusterFile_j = f"{ClustersDir}/Cluster_{PPHMM_j}.fasta"
+			_ = subprocess.call(f"mv {ClusterFile_i} {ClusterFile_j}", shell = True)
 			
-			HMMER_PPHMMFile_i = HMMER_PPHMMDir+"/PPHMM_%s.hmm.tmp"%PPHMM_i
-			HMMER_PPHMMFile_j = HMMER_PPHMMDir+"/PPHMM_%s.hmm"%PPHMM_j
-			_ = subprocess.call("mv %s %s" %(HMMER_PPHMMFile_i, HMMER_PPHMMFile_j), shell = True)
+			HMMER_PPHMMFile_i = f"{HMMER_PPHMMDir}/PPHMM_{PPHMM_i}.hmm.tmp"
+			HMMER_PPHMMFile_j = f"{HMMER_PPHMMDir}/PPHMM_{PPHMM_j}.hmm"
+			_ = subprocess.call(f"mv {HMMER_PPHMMFile_i} {HMMER_PPHMMFile_j}", shell = True)
 			
-			#Change the PPHMM name annotation
+			'''Change the PPHMM name annotation'''
 			with open(HMMER_PPHMMFile_j, "r+") as HMMER_PPHMM_txt:
 				Contents = HMMER_PPHMM_txt.readlines()
-				Contents[1] = "NAME  Cluster_%s\n" %PPHMM_j
+				Contents[1] = f"NAME  Cluster_{PPHMM_j}\n"
 				Contents = "".join(Contents)
-				HMMER_PPHMM_txt.seek(0)			#Put cursor at the beginning of the file
+				HMMER_PPHMM_txt.seek(0)				#Put cursor at the beginning of the file
 				HMMER_PPHMM_txt.write(Contents)		#Write the contents
-				HMMER_PPHMM_txt.truncate()		#Delete everything after the cursor
+				HMMER_PPHMM_txt.truncate()			#Delete everything after the cursor
 			
-			PPHMM_j = PPHMM_j + 1
+			PPHMM_j += 1
 		
-		#Make a new (ordered) PPHMM database"
-		#-------------------------------------------------------------------------------
+		'''Make a new (ordered) PPHMM database'''
+		print("Building ordered PPHMM DB")
 		_ = subprocess.Popen("find %s -name '*.hmm' -exec cat {} \; > %s" %(HMMER_PPHMMDir, HMMER_PPHMMDb), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
-		_ = subprocess.Popen("hmmpress -f %s" %HMMER_PPHMMDb, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		_ = subprocess.Popen(f"hmmpress -f {HMMER_PPHMMDb}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
-		#Remake the summary file of the new PPHMM database
-		#-------------------------------------------------------------------------------
-		HMMER_PPHMMDbSummaryFile = HMMER_PPHMMDb+"_Summary.txt"
+		'''Remake the summary file of the new PPHMM database'''
+		HMMER_PPHMMDbSummaryFile = f"{HMMER_PPHMMDb}_Summary.txt"
 		with open(HMMER_PPHMMDbSummaryFile, "r") as HMMER_PPHMMDbSummary_txt:
 			Contents = HMMER_PPHMMDbSummary_txt.readlines()
 			Header = Contents.pop(0)[2:]
@@ -532,15 +542,14 @@ class RefVirusAnnotator:
 			PPHMM_i = 0
 			for Content in Contents:
 				Content = Content.split("\t")
-				Content[0] = "Cluster_%s" %PPHMM_i
+				Content[0] = f"Cluster_{PPHMM_i}"
 				Contents[PPHMM_i] = "\t".join(Content)
-				PPHMM_i = PPHMM_i + 1
+				PPHMM_i += 1
 			Contents = [Header] + Contents
 		
 		Contents = "".join(Contents)
 		with open(HMMER_PPHMMDbSummaryFile, "w") as HMMER_PPHMMDbSummary_txt:
 			HMMER_PPHMMDbSummary_txt.write(Contents)
-		################################################################################
 
 		print("\tSort PPHMMSignatureTable and PPHMMLocationTable")
 		# RM < MODIFY INPLACE ON SELF VARS
@@ -548,12 +557,12 @@ class RefVirusAnnotator:
 		self.PPHMMLocationTable 	= self.PPHMMLocationTable[:,PPHMMOrder]
 		
 		'''Load cluster meta data from PPHMMDBConstruction.shelve, reorganise'''
-		VariableShelveFile = self.VariableShelveDir+"/PPHMMDBConstruction.p"
+		VariableShelveFile = f"{self.VariableShelveDir}/PPHMMDBConstruction.p"
 		parameters = pickle.load(open(VariableShelveFile, "rb"))
 		
 		'''Sort PPHMMs' associated meta data, overwrite PPHMMDBConstruction.p'''
 		updated_parameters = {}
-		updated_parameters["ClusterIDList"]			= ["Cluster_%s"%Cluster_i for Cluster_i in range(len(PPHMMOrder))]
+		updated_parameters["ClusterIDList"]			= [f"Cluster_{Cluster_i}" for Cluster_i in range(len(PPHMMOrder))]
 		updated_parameters["ClusterDescList"]		= parameters["ClusterDescList"][PPHMMOrder]
 		updated_parameters["ClusterSizeList"]		= parameters["ClusterSizeList"][PPHMMOrder]
 		updated_parameters["ClusterProtSeqIDList"]	= parameters["ClusterProtSeqIDList"][PPHMMOrder]
@@ -563,13 +572,13 @@ class RefVirusAnnotator:
 
 	def save_sig_tables(self, GOMIDList, GOMSignatureTable, GOMDB):
 		'''8/8: Load in PPHMMDB, to extract cluster list...'''
-		VariableShelveFile = self.VariableShelveDir+"/PPHMMDBConstruction.p"
+		VariableShelveFile = f"{self.VariableShelveDir}/PPHMMDBConstruction.p"
 		parameters = pickle.load(open(VariableShelveFile, "rb"))
 
 		'''Combine with original data from VMR'''
-		PPHMMDesc		= ["PPHMM|"+ClusterDesc for ClusterDesc in parameters["ClusterDescList"].astype("str")]
-		GOMDesc			= ["GOM|"+TaxoGrouping for TaxoGrouping in GOMIDList]
-		np.savetxt(	fname	= self.VariableShelveDir+"/PPHMMandGOMsignatures.txt",
+		PPHMMDesc		= [f"PPHMM|{ClusterDesc}" for ClusterDesc in parameters["ClusterDescList"].astype("str")]
+		GOMDesc			= [f"GOM|{TaxoGrouping}" for TaxoGrouping in GOMIDList]
+		np.savetxt(	fname	= f"{self.VariableShelveDir}/PPHMMandGOMsignatures.txt",
 					X		= np.column_stack((self.genomes["VirusNameList"],
 								list(map(", ".join, self.genomes["SeqIDLists"])),
 								self.genomes["OrderList"],
@@ -585,23 +594,27 @@ class RefVirusAnnotator:
 		
 		'''Save'''
 		if self.IncludeIncompleteGenomes == True:
-			VariableShelveFile = self.VariableShelveDir+"/RefVirusAnnotator.AllGenomes.p"
+			VariableShelveFile = f"{self.VariableShelveDir}/RefVirusAnnotator.AllGenomes.p"
 		elif self.IncludeIncompleteGenomes == False:
-			VariableShelveFile = self.VariableShelveDir+"/RefVirusAnnotator.CompleteGenomes.p"
+			VariableShelveFile = f"{self.VariableShelveDir}/RefVirusAnnotator.CompleteGenomes.p"
 	
+		parameters["PPHMMSignatureTable"] = self.PPHMMSignatureTable
+		parameters["GOMSignatureTable"]   = GOMSignatureTable
+		parameters["PPHMMLocationTable"]  = self.PPHMMLocationTable
+		parameters["GOMIDList"] 		  = GOMIDList
 		parameters["PPHMMSignatureTable_coo"] = coo_matrix(self.PPHMMSignatureTable)
 		parameters["PPHMMLocationTable_coo"] = coo_matrix(self.PPHMMLocationTable)
 		parameters["GOMDB_coo"] = {GOMID:coo_matrix(GOM) for GOMID, GOM in GOMDB.items()}
-		
+
 		pickle.dump(parameters, open(VariableShelveFile, "wb"))
 
 	def main(self):
 		'''
 		Generate PPHMM signature table, PPHMM location table, GOM database, and GOM signature table for 
-		reference viruses, using their own PPHMM database
-		When RemoveSingletonPPHMMs == TRUE, singleton PPHMMs will be removed if the virus that has it
-		belongs to a group that contains more than "N_VirusesOfTheClassToIgnore" members;
-		i.e. groups with less than 'N_VirusesOfTheClassToIgnore' members will be ignored
+		reference viruses, using their own PPHMM database. When RemoveSingletonPPHMMs == TRUE, singleton 
+		PPHMMs will be removed if the virus that has it belongs to a group that contains more than 
+		"N_VirusesOfTheClassToIgnore" members; i.e. groups with less than 'N_VirusesOfTheClassToIgnore' 
+		members will be ignored.
 		'''
 		section_header("Generate PPHMM signature & loc tables, GOM database & GOM sig table")
 
@@ -609,18 +622,16 @@ class RefVirusAnnotator:
 		HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir = self.mkdirs()
 
 		'''2/8 : Retrieve variables'''
-		self.genomes = retrieve_variables(self.VariableShelveDir, self.IncludeIncompleteGenomes)
+		self.genomes = retrieve_genome_vars(self.VariableShelveDir, self.IncludeIncompleteGenomes)
 		
 		'''3/8 : Generate PPHMMSignatureTable and PPHMMLocationTable'''
 		self.PPHMMSignatureTable, self.PPHMMLocationTable = self.PPHMMSignatureTable_Constructor(HMMER_hmmscanDir, HMMER_PPHMMDb)
 
 		if self.RemoveSingletonPPHMMs:
-			# RM < Test cases should include this
 			'''4/8 : (OPT) Remove singleton PPHMMs'''
 			self.remove_singleton_pphmms(ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb)
 		
 		if self.PPHMMSorting == True:
-			# RM < Test cases should include this
 			'''5/8 : (OPT) Sort PPHMMs'''
 			self.sort_pphmm(ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir)
 

@@ -1,4 +1,5 @@
 def GetNewick(node, newick, parentdist, leaf_names):
+	'''Calcuylate Newick tree, for graphing and description functions. Doens't mix well with f stringing'''
 	if node.is_leaf():
 		return "%s:%f%s" % (leaf_names[node.id], parentdist - node.dist, newick)
 	else:
