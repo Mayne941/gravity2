@@ -5,7 +5,7 @@ from collections import Counter
 from copy import copy
 from scipy.sparse import coo_matrix
 import numpy as np
-import subprocess, os, shelve, sys, string, random, glob
+import subprocess, os, re, string, random, glob
 import pickle
 
 from app.utils.line_count import LineCount
@@ -354,7 +354,7 @@ class RefVirusAnnotator:
 		TreeNewick_traits.ladderize(reverse = True)
 		PPHMMOrder_ByTree = np.array([int(Clade.name) for Clade in TreeNewick_traits.get_terminals()])
 		
-		'''Cluster PPHMMs by PPHMM similiarty, make DB'''
+		'''Cluster PPHMMs by PPHMM similiarty, make dbs'''
 		N_PPHMMs = self.PPHMMSignatureTable.shape[1]
 		for PPHMM_i in range(N_PPHMMs):
 			AlnClusterFile = ClustersDir+f"/Cluster_{PPHMM_i}.fasta"
@@ -369,6 +369,7 @@ class RefVirusAnnotator:
 			progress_bar(f"\033[K Make HHsuite PPHMM: [{'='*int(float(PPHMM_i+1)/N_PPHMMs*20)}] {PPHMM_i+1}/{N_PPHMMs} PPHMMs \r")
 		clean_stdout()
 		
+		'''Remove extant hhm DBs'''
 		_ = subprocess.Popen(f"rm {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
@@ -376,51 +377,61 @@ class RefVirusAnnotator:
 			print(f"There are some other files/folders other than HHsuite PPHMMs in the folder {HHsuite_PPHMMDir}. Remove them first.")
 			raise SystemExit()
 		
+		'''Build hhm DBs'''
 		_ = subprocess.Popen(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
-		
+
+		'''Build intermediate MSA DB'''
+		os.chdir(f"{ClustersDir}")
+		try:
+			_ = subprocess.call(f"ffindex_build -s ../../HHsuite/HHsuite_PPHMMDB/HHsuite_PPHMMDB_msa.ffdata ../../HHsuite/HHsuite_PPHMMDB/HHsuite_PPHMMDB_msa.ffindex .", shell=True)
+		except Exception as ex:
+			error_handler("No stdout" , ex, "Build of MSA DB.")
+		os.chdir(f"../../../../../../")
+
+		'''Build a3m DB (scalable annotated alignment)'''
+		try:
+			_ = subprocess.call(f"ffindex_apply {HHsuite_PPHMMDB}_msa.ffdata {HHsuite_PPHMMDB}_msa.ffindex -i {HHsuite_PPHMMDB}_a3m.ffindex -d {HHsuite_PPHMMDB}_a3m.ffdata -- hhconsensus -M 50 -i stdin -oa3m stdout -v 0", shell=True)
+		except Exception as ex:
+			error_handler("No stdout", ex, "Build of A3M DB.")
+
+		'''Build cs_219 DB (column context specific pseudocounts)'''
+		try:
+			_ = subprocess.call(f"cstranslate -f -x 0.3 -c 4 -I a3m -i {HHsuite_PPHMMDB}_a3m -o {HHsuite_PPHMMDB}_cs219", shell=True)
+		except Exception as ex:
+			error_handler("No stdout", ex, "Build of cs_219 DB.")
+
 		'''Determine PPHMM-PPHMM similarity (AVA hhsearch)'''
 		hhsearchDir		= HHsuiteDir+"/hhsearch_"+"".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)); os.makedirs(hhsearchDir)
 		hhsearchOutFile		= hhsearchDir+"/hhsearch.stdout.hhr"
 		N_PPHMMs		= LineCount(f"{HHsuite_PPHMMDB}_hhm.ffindex")
-		
-
-		''' RM < THIS NEEDS AUTOMATING 
-		ffindex_build -s ../db_msa.ff{data,index} .
-
-		ffindex_apply db_msa.ffdata db_msa.ffindex -i db_a3m.ffindex -d db_a3m.ffdata -- hhconsensus -M 50 -i stdin -oa3m stdout -v 0
-
-		[MAKE HMM – COULDNT GET TO WORK WITH TUTORIAL BUT EXTANT CODE SEEMS FINE]
-
-		cstranslate -f -x 0.3 -c 4 -I a3m -i db_a3m -o db_cs219
-		'''
-
 
 		SeenPair, SeenPair_i, PPHMMSimScoreCondensedMat	= {}, 0, []
+		hit_match = re.compile(r"[A-Z0-9]+\|[A-Z0-9]+.[0-9]{1}\s[a-zA-Z0-9_ ]{0,10}")
 		for PPHMM_i in range(0, N_PPHMMs):
 			HHsuite_PPHMMFile = HHsuite_PPHMMDir+f"/PPHMM_{PPHMM_i}.hhm"
-			_ = subprocess.Popen(f"hhsearch -i {HHsuite_PPHMMFile} -d {f'{HHsuite_PPHMMDB}_hhm.ffdata'} -o {hhsearchOutFile} -e {self.HHsuite_evalue_Cutoff} -E {self.HHsuite_evalue_Cutoff} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.HHsuite_N_CPUs}",
+			_ = subprocess.Popen(f"hhsearch -i {HHsuite_PPHMMFile} -d {f'{HHsuite_PPHMMDB}'} -o {hhsearchOutFile} -e {self.HHsuite_evalue_Cutoff} -E {self.HHsuite_evalue_Cutoff} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.HHsuite_N_CPUs}",
 																stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
-			try:
-				error_handler(out, err, f"There is a problem with hhsearching PPHMM {PPHMM_i} against the PPHMM database")
-			except:
-				breakpoint()
+			error_handler(out, err, f"There is a problem with hhsearching PPHMM {PPHMM_i} against the PPHMM database")
 
+			'''Open output from hhsearch'''
 			with open(hhsearchOutFile, 'r') as hhsearchOut_txt:
 				Content		= hhsearchOut_txt.readlines()
 				QueryLength	= int(Content[1].split()[1])
+				'''Iterate over best hits and extract data line by line, append to sim score matrix'''
 				for Line in Content[9:]:
 					if Line == "\n":
 						break
 					else:
-						Line  		= Line.replace("("," ").replace(")"," ").split()
-						PPHMM_j		= int(Line[1].split("_")[1])
-						evalue		= float(Line[3])
-						pvalue		= float(Line[4])
-						PPHMMSimScore	= float(Line[5])
-						Col		= float(Line[7])
-						SubjectLength	= int(Line[10])
+						Line 	= re.sub(hit_match, "", Line) # Filter variable length Hit name
+						Line  	= Line.replace("("," ").replace(")"," ").split()
+						PPHMM_j     = int(Line[0])
+						evalue		= float(Line[2])
+						pvalue		= float(Line[3])
+						PPHMMSimScore	= float(Line[4]) # RM << Check we want Score and not SS col
+						Col			= float(Line[6])
+						SubjectLength	= int(Line[-1])
 						qcovs = Col/QueryLength*100
 						scovs = Col/SubjectLength*100
 						if (evalue <= self.HHsuite_evalue_Cutoff and pvalue <= self.HHsuite_pvalue_Cutoff and qcovs >= self.HHsuite_QueryCoverage_Cutoff and scovs >= self.HHsuite_SubjectCoverage_Cutoff):
@@ -433,7 +444,7 @@ class RefVirusAnnotator:
 							else:
 								SeenPair[Pair] = SeenPair_i
 								PPHMMSimScoreCondensedMat.append([PPHMM_i, PPHMM_j, PPHMMSimScore])
-								SeenPair_i = SeenPair_i+1
+								SeenPair_i += 1
 			
 			_ = subprocess.Popen(f"rm {hhsearchOutFile}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
@@ -496,12 +507,12 @@ class RefVirusAnnotator:
 		'''Rename and re-number alignment and PPHMM files'''
 		PPHMM_j = 0
 		for PPHMM_i in PPHMMOrder:
-			ClusterFile_i = ClustersDir+f"/Cluster_{PPHMM_i}.fasta.tmp"
-			ClusterFile_j = ClustersDir+"/Cluster_{PPHMM_j}.fasta"
+			ClusterFile_i = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta.tmp"
+			ClusterFile_j = f"{ClustersDir}/Cluster_{PPHMM_j}.fasta"
 			_ = subprocess.call(f"mv {ClusterFile_i} {ClusterFile_j}", shell = True)
 			
-			HMMER_PPHMMFile_i = HMMER_PPHMMDir+f"/PPHMM_{PPHMM_i}.hmm.tmp"
-			HMMER_PPHMMFile_j = HMMER_PPHMMDir+f"/PPHMM_{PPHMM_j}.hmm"
+			HMMER_PPHMMFile_i = f"{HMMER_PPHMMDir}/PPHMM_{PPHMM_i}.hmm.tmp"
+			HMMER_PPHMMFile_j = f"{HMMER_PPHMMDir}/PPHMM_{PPHMM_j}.hmm"
 			_ = subprocess.call(f"mv {HMMER_PPHMMFile_i} {HMMER_PPHMMFile_j}", shell = True)
 			
 			'''Change the PPHMM name annotation'''
