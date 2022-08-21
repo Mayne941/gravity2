@@ -635,7 +635,7 @@ class PPHMMDBConstruction:
 					ClusterTaxo = ClusterTaxo + [b"/".join(ClusterTaxo_UniqueTaxoLabel)]
 					break
 			
-			ClusterTaxoList.append(b"; ".join(ClusterTaxo))
+			ClusterTaxoList.append("; ".join(ClusterTaxo)) # RM <
 			ClusterProtSeqIDList.append(", ".join(Cluster))
 			
 			ClusterDescCount = sorted(list(Counter(DescList).items()), key = operator.itemgetter(1), reverse = True)

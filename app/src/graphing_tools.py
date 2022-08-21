@@ -439,6 +439,37 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 		'''Save fig'''
 		plt	.savefig(HeatmapWithDendrogramFile, format = "png")
 
+	def virus_grouping(self, DistMat, VirusGroupingFile):
+		'''7/7: (OPT) Group viruses via Thiels-U and other metrics; save as txt.'''
+		
+		(VirusGroupingList,
+		OptDistance_Cutoff,
+		CorrelationScore,
+		Theils_u_TaxoGroupingListGivenPred,
+		Theils_u_PredGivenTaxoGroupingList) = VirusGrouping_Estimator(DistMat, self.Dendrogram_LinkageMethod, self.genomes["TaxoGroupingList"])
+		np.savetxt(	fname = VirusGroupingFile,
+				X = np.column_stack((list(map(", ".join, self.genomes["SeqIDLists"])),
+														 self.genomes["FamilyList"],
+														 self.genomes["GenusList"],
+														 self.genomes["VirusNameList"],
+														 self.genomes["TaxoGroupingList"],
+														 VirusGroupingList,
+														)),
+				fmt = '%s',
+				delimiter = "\t",
+				header = "Sequence identifier\tFamily\tGenus\tVirus name\tClass\tGrouping")
+		
+		with open(VirusGroupingFile, "a") as VirusGrouping_txt:
+			VirusGrouping_txt.write(
+						f"\n"
+						f"Distance cut off: {OptDistance_Cutoff}\n"
+						f"Theil's uncertainty correlation for the reference assignments given the predicted grouping U(Ref|Pred): {Theils_u_TaxoGroupingListGivenPred}\n"
+						f"Theil's uncertainty correlation for the predicted grouping given the reference assignments U(Pred|Ref): {Theils_u_PredGivenTaxoGroupingList}\n"
+						f"Symmetrical Theil's uncertainty correlation between the reference assignments and the predicted grouping U(Ref, Pred): {CorrelationScore}\n"
+						f"U(X|Y) == 1 means that knowing Y implies a perfect knowledge of X, but not vice-versa\n"
+						f"U(X,Y) == 1 means that knowing Y implies a perfect knowledge of X and vice-versa\n"
+						)
+
 	def main(self):
 		'''Generate GRAViTy dendrogram and heat map	'''
 		section_header("#Generate GRAViTy dendrogram and heat map                                      #")
@@ -472,37 +503,6 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 		if self.VirusGrouping == True:
 			'''7/7: (OPT) Group viruses'''
 			self.virus_grouping(DistMat, VirusGroupingFile)
-	
-	def virus_grouping(self, DistMat, VirusGroupingFile):
-		'''7/7: (OPT) Group viruses via Thiels-U and other metrics; save as txt.'''
-		
-		(VirusGroupingList,
-		OptDistance_Cutoff,
-		CorrelationScore,
-		Theils_u_TaxoGroupingListGivenPred,
-		Theils_u_PredGivenTaxoGroupingList) = VirusGrouping_Estimator(DistMat, self.Dendrogram_LinkageMethod, self.genomes["TaxoGroupingList"])
-		np.savetxt(	fname = VirusGroupingFile,
-				X = np.column_stack((list(map(", ".join, self.genomes["SeqIDLists"])),
-														 self.genomes["FamilyList"],
-														 self.genomes["GenusList"],
-														 self.genomes["VirusNameList"],
-														 self.genomes["TaxoGroupingList"],
-														 VirusGroupingList,
-														)),
-				fmt = '%s',
-				delimiter = "\t",
-				header = "Sequence identifier\tFamily\tGenus\tVirus name\tClass\tGrouping")
-		
-		with open(VirusGroupingFile, "a") as VirusGrouping_txt:
-			VirusGrouping_txt.write(
-						f"\n"
-						f"Distance cut off: {OptDistance_Cutoff}\n"
-						f"Theil's uncertainty correlation for the reference assignments given the predicted grouping U(Ref|Pred): {Theils_u_TaxoGroupingListGivenPred}\n"
-						f"Theil's uncertainty correlation for the predicted grouping given the reference assignments U(Pred|Ref): {Theils_u_PredGivenTaxoGroupingList}\n"
-						f"Symmetrical Theil's uncertainty correlation between the reference assignments and the predicted grouping U(Ref, Pred): {CorrelationScore}\n"
-						f"U(X|Y) == 1 means that knowing Y implies a perfect knowledge of X, but not vice-versa\n"
-						f"U(X,Y) == 1 means that knowing Y implies a perfect knowledge of X and vice-versa\n"
-						)
 
 
 

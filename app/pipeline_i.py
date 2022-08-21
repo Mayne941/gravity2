@@ -134,7 +134,7 @@ class Pipeline_I:
 		'''V: Fire Mutal Info Calculator'''
 		[print(log_text) for log_text in self.logs[4]]
 		start = benchmark_start("MutualInformationCalculator")
-		MutualInformationCalculator (
+		mic = MutualInformationCalculator (
 			ShelveDir = self.options['ShelveDir'],
 			IncludeIncompleteGenomes = str2bool(self.options['AnnotateIncompleteGenomes']),
 			VirusGroupingFile = self.options['VirusGroupingFile'],
@@ -142,7 +142,9 @@ class Pipeline_I:
 			SamplingStrategy = self.options['SamplingStrategy'],
 			SampleSizePerGroup = self.options['SampleSizePerGroup'],
 			)
+		mic.main()
 		benchmark_end("MutualInformationCalculator", start)	
+		breakpoint()
 
 		total_elapsed = time.time() - self.actual_start
 		print("Time to complete: %s"%total_elapsed)
