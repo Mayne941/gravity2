@@ -6,21 +6,17 @@ import numpy as np
 from .line_count import LineCount
 from app.utils.stdout_utils import clean_stdout, progress_bar
 
-'''
-DEPRECATED SINCE V1.0
-'''
-
 def PPHMMSignatureTable_Constructor (
-	SeqIDLists,
-	GenBankFile,
-	TranslTableList,
-	HMMER_PPHMMDB,
-	HMMER_hmmscanDir,
-	HMMER_N_CPUs		= 7,
-	HMMER_C_EValue_Cutoff	= 1E-3,
-	HMMER_HitScore_Cutoff	= 0,
-	SeqLength_Cutoff	= 0,
-	):
+				SeqIDLists,
+				GenBankFile,
+				TranslTableList,
+				HMMER_PPHMMDB,
+				HMMER_hmmscanDir,
+				HMMER_N_CPUs		= 7,
+				HMMER_C_EValue_Cutoff	= 1E-3,
+				HMMER_HitScore_Cutoff	= 0,
+				SeqLength_Cutoff	= 0,
+			):
 	print("- Generate PPHMM signature table and PPHMM location table")
 	'''Load GenBank record'''
 	_, file_extension = os.path.splitext(GenBankFile)
@@ -37,8 +33,7 @@ def PPHMMSignatureTable_Constructor (
 	N_PPHMMs				= LineCount(PPHMMDB_Summary)-1
 	PPHMMQueryFile			= HMMER_hmmscanDir+"/QProtSeqs.fasta"
 	PPHMMScanOutFile		= HMMER_hmmscanDir+"/PPHMMScanOut.txt"
-	
-	PPHMMSignatureTable		= np.empty((0, N_PPHMMs))
+	PPHMMSignatureTable			= np.empty((0, N_PPHMMs))
 	PPHMMLocMiddleBestHitTable	= np.empty((0, N_PPHMMs))
 	
 	Seq_i = 1
@@ -51,7 +46,7 @@ def PPHMMSignatureTable_Constructor (
 			GenBankDescList.append(GenBankRecord.description)
 		
 		'''sort lists by sequence/segment lengths'''
-		(GenBankSeqLenList, GenBankSeqList,GenBankIDList, GenBankDescList) = list(zip(*sorted(zip(list(map(len, list(map(str, GenBankSeqList)))), GenBankSeqList, GenBankIDList, GenBankDescList), reverse = True)))
+		GenBankSeqLenList, GenBankSeqList,GenBankIDList, GenBankDescList = list(zip(*sorted(zip(list(map(len, list(map(str, GenBankSeqList)))), GenBankSeqList, GenBankIDList, GenBankDescList), reverse = True)))
 		GenBankSeq = ""
 		for seq in GenBankSeqList:
 			GenBankSeq = GenBankSeq+seq
@@ -142,8 +137,8 @@ def PPHMMSignatureTable_Constructor (
 									FeatureLocToBestHitList[-1]	= LocTo*3
 			
 			FeatureLocMiddleBestHitList				= np.zeros(N_PPHMMs)
-			FeatureLocMiddleBestHitList[PPHMMIDList]= np.mean(np.array([FeatureLocFromBestHitList,FeatureLocToBestHitList]),axis=0)*(np.array(FeatureFrameBestHitList)/abs(np.array(FeatureFrameBestHitList)))			#Absolute coordinate with orientation info encoded into it: +ve if the gene is present on the (+)strand, otherwise -ve
-			PPHMMLocMiddleBestHitTable				= np.vstack(np.array([FeatureLocFromBestHitList,FeatureLocToBestHitList]),axis=0)*(np.array(FeatureFrameBestHitList)/abs(np.array(FeatureFrameBestHitList)))			#Absolute coordinate with orientation info encoded into it: +ve if the gene is present on the (+)strand, otherwise -ve
+			'''Absolute coordinate with orientation info encoded into it: +ve if the gene is present on the (+)strand, otherwise -ve'''
+			FeatureLocMiddleBestHitList[PPHMMIDList]= np.mean(np.array([FeatureLocFromBestHitList,FeatureLocToBestHitList]),axis=0)*(np.array(FeatureFrameBestHitList)/abs(np.array(FeatureFrameBestHitList)))
 			PPHMMLocMiddleBestHitTable				= np.vstack((PPHMMLocMiddleBestHitTable,FeatureLocMiddleBestHitList))
 			FeatureValueList						= np.zeros(N_PPHMMs)
 			FeatureValueList[PPHMMIDList]			= PPHMMScoreList

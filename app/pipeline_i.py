@@ -100,7 +100,6 @@ class Pipeline_I:
 			)
 		rva.main()
 		benchmark_end("RefVirusAnnotator", start)	
-		breakpoint()
 		self.make_graphs()
 
 	def make_graphs(self):
@@ -127,7 +126,6 @@ class Pipeline_I:
 			)
 		ghm.main()
 		benchmark_end("GRAViTyDendrogramAndHeatmapConstruction", start)	
-		breakpoint()
 		self.mutual_info_calculator()
 
 	def mutual_info_calculator(self):
@@ -144,7 +142,6 @@ class Pipeline_I:
 			)
 		mic.main()
 		benchmark_end("MutualInformationCalculator", start)	
-		breakpoint()
 
 		total_elapsed = time.time() - self.actual_start
 		print("Time to complete: %s"%total_elapsed)

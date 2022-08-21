@@ -1,6 +1,6 @@
 from sklearn.feature_selection import mutual_info_classif
 import numpy as np
-import shelve, os, pickle
+import os, pickle
 
 from app.utils.ordered_set import OrderedSet
 from app.utils.console_messages import section_header
@@ -88,7 +88,7 @@ class MutualInformationCalculator:
 							reverse = True,
 							)
 						)][0]
-					)[0]) # RM < zip returns iterable, not list in Py3
+					)[0]) # RM < extra nesting as zip returns iterable, not list in Py3
 
 			ResultDict[VirusGroupingScheme]["AverageMutualInformationScoreList"] = [x for _, x in sorted(zip(PPHMMOrder, AverageMutualInformationScoreList))]
 			ResultDict[VirusGroupingScheme]["PPHMMDesc"] = [x for _, x in sorted(zip(PPHMMOrder, IngroupVirus_PPHMMDesc))]

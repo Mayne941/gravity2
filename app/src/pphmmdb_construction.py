@@ -441,7 +441,7 @@ class PPHMMDBConstruction:
 							SubjectLength	= int(Line[10])
 							qcovs		= Col/QueryLength*100
 							scovs		= Col/SubjectLength*100
-							if (evalue <= self.HHsuite_evalue_Cutoff and pvalue <= self.HHsuite_pvalue_Cutoff and qcovs >= self.HHsuite_QueryCoverage_Cutoff and scovs >= HHsuite_SubjectCoverage_Cutoff):
+							if (evalue <= self.HHsuite_evalue_Cutoff and pvalue <= self.HHsuite_pvalue_Cutoff and qcovs >= self.HHsuite_QueryCoverage_Cutoff and scovs >= self.HHsuite_SubjectCoverage_Cutoff):
 								Pair	= ", ".join(sorted(map(str,[PPHMM_i, PPHMM_j])))
 								if Pair in SeenPair: 
 									'''If the pair has already been seen...'''

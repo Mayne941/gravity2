@@ -79,7 +79,7 @@ class Pipeline_II:
 		'''III: Fire UCF Virus Annotator'''
 		[print(log_text) for log_text in self.logs[2]]
 		start = benchmark_start("UcfVirusAnnotator")
-		UcfVirusAnnotator (
+		ucf = UcfVirusAnnotator (
 			GenomeSeqFile_UcfVirus = self.options['GenomeSeqFile_UcfVirus'],
 			ShelveDir_UcfVirus = self.options['ShelveDir_UcfVirus'],
 			ShelveDirs_RefVirus = self.options['ShelveDirs_RefVirus'],
@@ -90,15 +90,16 @@ class Pipeline_II:
 			HMMER_C_EValue_Cutoff = self.options['HMMER_C_EValue_Cutoff'],
 			HMMER_HitScore_Cutoff = self.options['HMMER_HitScore_Cutoff'],
 			)
+		ucf.main()
 		benchmark_end("UcfVirusAnnotator", start)
-
+		breakpoint()
 		self.virus_classification()
 
 	def virus_classification(self):
 		'''IV: Fire Classifiers'''
 		[print(log_text) for log_text in self.logs[3]]
 		start = benchmark_start("VirusClassificationAndEvaluation")
-		VirusClassificationAndEvaluation (
+		vce = VirusClassificationAndEvaluation (
 			ShelveDir_UcfVirus = self.options['ShelveDir_UcfVirus'],
 			ShelveDirs_RefVirus = self.options['ShelveDirs_RefVirus'],
 			IncludeIncompleteGenomes_UcfVirus = str2bool(self.options['AnnotateIncompleteGenomes_UcfVirus']),
@@ -123,8 +124,9 @@ class Pipeline_II:
 			Bootstrap_N_CPUs = int(self.options['Bootstrap_N_CPUs']),
 			VirusGrouping = str2bool(self.options['VirusGrouping']),
 			)
+		vce.main()
 		benchmark_end("VirusClassificationAndEvaluation", start)	
-
+		breakpoint()
 		print(f"Time to complete: {time.time() - self.actual_start}")
 
 if __name__ == '__main__':
