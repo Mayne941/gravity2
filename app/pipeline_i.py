@@ -100,7 +100,6 @@ class Pipeline_I:
 			)
 		rva.main()
 		benchmark_end("RefVirusAnnotator", start)	
-		breakpoint()
 		self.make_graphs()
 
 	def make_graphs(self):
@@ -127,14 +126,13 @@ class Pipeline_I:
 			)
 		ghm.main()
 		benchmark_end("GRAViTyDendrogramAndHeatmapConstruction", start)	
-		breakpoint()
 		self.mutual_info_calculator()
 
 	def mutual_info_calculator(self):
 		'''V: Fire Mutal Info Calculator'''
 		[print(log_text) for log_text in self.logs[4]]
 		start = benchmark_start("MutualInformationCalculator")
-		MutualInformationCalculator (
+		mic = MutualInformationCalculator (
 			ShelveDir = self.options['ShelveDir'],
 			IncludeIncompleteGenomes = str2bool(self.options['AnnotateIncompleteGenomes']),
 			VirusGroupingFile = self.options['VirusGroupingFile'],
@@ -142,6 +140,7 @@ class Pipeline_I:
 			SamplingStrategy = self.options['SamplingStrategy'],
 			SampleSizePerGroup = self.options['SampleSizePerGroup'],
 			)
+		mic.main()
 		benchmark_end("MutualInformationCalculator", start)	
 
 		total_elapsed = time.time() - self.actual_start
