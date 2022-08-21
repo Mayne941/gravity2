@@ -21,3 +21,20 @@ def retrieve_ref_virus_vars(VariableShelveDir, IncludeIncompleteGenomes) -> dict
 def retrieve_pphmmdb_construction(VariableShelveDir) -> dict:
     '''Read pickle file to dict containing PPHMMDB'''
     return pickle.load(open(f"{VariableShelveDir}/PPHMMDBConstruction.p", "rb"))
+
+def retrieve_ucf_annots(fpath, IncludeIncompleteGenomes_UcfVirus, IncludeIncompleteGenomes_RefVirus) -> dict:
+    if IncludeIncompleteGenomes_UcfVirus == True:
+        if IncludeIncompleteGenomes_RefVirus == True:
+            VariableShelveFile_UcfVirus = f"{fpath}/UcfVirusAnnotator.AllUcfGenomes.AllRefGenomes.p"
+
+        elif IncludeIncompleteGenomes_RefVirus == False:
+            VariableShelveFile_UcfVirus = f"{fpath}/UcfVirusAnnotator.AllUcfGenomes.CompleteRefGenomes.p"
+
+    elif IncludeIncompleteGenomes_UcfVirus == False:
+        if IncludeIncompleteGenomes_RefVirus == True:
+            VariableShelveFile_UcfVirus = f"{fpath}/UcfVirusAnnotator.CompleteUcfGenomes.AllRefGenomes.p"
+
+        elif IncludeIncompleteGenomes_RefVirus == False:
+            VariableShelveFile_UcfVirus = f"{fpath}/UcfVirusAnnotator.CompleteUcfGenomes.CompleteRefGenomes.p"
+
+    return pickle.load(open(f"{VariableShelveFile_UcfVirus}", "rb"))
