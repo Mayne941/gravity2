@@ -73,15 +73,16 @@ class PPHMMDBConstruction:
 			_ = subprocess.call("rm -rf %s" %BLASTMainDir, shell = True)
 		os.makedirs(BLASTMainDir)
 
-		BLASTQueryFile		= BLASTMainDir+"/Query.fasta"
-		BLASTSubjectFile	= BLASTMainDir+"/Subjects.fasta"
-		BLASTOutputFile		= BLASTMainDir+"/BLASTOutput.txt"
-		BLASTBitScoreFile	= BLASTMainDir+"/BitScoreMat.txt"
-		BLASTProtClusterFile= BLASTMainDir+"/ProtClusters.txt"
-		ClustersDir			= BLASTMainDir+"/Clusters"; os.makedirs(ClustersDir)
+		BLASTQueryFile		= f"{BLASTMainDir}/Query.fasta"
+		BLASTSubjectFile	= f"{BLASTMainDir}/Subjects.fasta"
+		BLASTOutputFile		= f"{BLASTMainDir}/BLASTOutput.txt"
+		BLASTBitScoreFile	= f"{BLASTMainDir}/BitScoreMat.txt"
+		BLASTProtClusterFile= f"{BLASTMainDir}/ProtClusters.txt"
+		ClustersDir			= f"{BLASTMainDir}/Clusters"; os.makedirs(ClustersDir)
 		
 		'''HMMER dirs'''
-		HMMERDir			= self.ShelveDir+"/HMMER"
+		HMMERDir			= f"{self.ShelveDir}/HMMER"
+
 		'''Delete existing HMMER libraries'''
 		if os.path.exists(HMMERDir):
 			'''Clear previous results'''
@@ -91,17 +92,18 @@ class PPHMMDBConstruction:
 		HMMER_PPHMMDbDir	= f"{HMMERDir}/HMMER_PPHMMDb"; os.makedirs(HMMER_PPHMMDbDir)
 		HMMER_PPHMMDb		= f"{HMMER_PPHMMDbDir}/HMMER_PPHMMDb"
 
-		VariableShelveDir 	= self.ShelveDir+"/Shelves"
+		VariableShelveDir 	= f"{self.ShelveDir}/Shelves"
 
 		'''HHsuite dirs, regardless of if it's enabled'''
-		HHsuiteDir	= self.ShelveDir+"/HHsuite"
+		HHsuiteDir	= f"{self.ShelveDir}/HHsuite"
 		if os.path.exists(HHsuiteDir):
 			'''Clear previous results'''
-			_ = subprocess.call("rm -rf %s" %HHsuiteDir, shell = True)
+			_ = subprocess.call(f"rm -rf {HHsuiteDir}", shell = True)
 		os.makedirs(HHsuiteDir)
-		HHsuite_PPHMMDir  = HHsuiteDir + "/HHsuite_PPHMMs";os.makedirs(HHsuite_PPHMMDir)
-		HHsuite_PPHMMDBDir= HHsuiteDir +"/HHsuite_PPHMMDB";os.makedirs(HHsuite_PPHMMDBDir)
-		HHsuite_PPHMMDB	  = HHsuite_PPHMMDBDir+"/HHsuite_PPHMMDB"
+
+		HHsuite_PPHMMDir  = f"{HHsuiteDir}/HHsuite_PPHMMs";os.makedirs(HHsuite_PPHMMDir)
+		HHsuite_PPHMMDBDir= f"{HHsuiteDir}/HHsuite_PPHMMDB";os.makedirs(HHsuite_PPHMMDBDir)
+		HHsuite_PPHMMDB	  = f"{HHsuite_PPHMMDBDir}/HHsuite_PPHMMDB"
 			
 		return  BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile, \
 				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDbDir, \

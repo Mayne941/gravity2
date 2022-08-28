@@ -79,8 +79,8 @@ class VirusClassificationAndEvaluation:
 		'''Placeholder arrays'''
 		self.ucf_genomes, self.PairwiseSimilarityScore_Cutoff_Dict, self.VirusGroupingDict, self.final_results = {}, {}, {}, {}
 		self.TaxoLabelList_UcfVirus, self.N_UcfViruses, self.N_RefVirusGroups = [], [], []
-		self.final_results["self.MaxSimScoreTable"], self.final_results["self.TaxoOfMaxSimScoreTable"], self.final_results["self.TaxoAssignmentTable"], \
-			self.final_results["self.PhyloStatTable"] = np.zeros((1,0)), np.zeros((1,0)), np.zeros((1,0)), np.zeros((1,0))
+		self.final_results["MaxSimScoreTable"], self.final_results["TaxoOfMaxSimScoreTable"], self.final_results["TaxoAssignmentTable"], \
+			self.final_results["PhyloStatTable"] = np.zeros((1,0)), np.zeros((1,0)), np.zeros((1,0)), np.zeros((1,0))
 		self.PairwiseSimilarityScore_CutoffDist_Dict, self.MaxSimScoreDistTable, \
 			self.TaxoOfMaxSimScoreDistTable, self.TaxoAssignmentDistTable, self.PhyloStatDistTable = None, None, None, None, None
 		
@@ -97,12 +97,12 @@ class VirusClassificationAndEvaluation:
 		'''2/8: Return all dirs for db storage and retrieval'''
 		if self.UseUcfVirusPPHMMs == True:
 			self.HMMERDir_UcfVirus		= f"{self.ShelveDir_UcfVirus}/HMMER"
-			HMMER_PPHMMDBDir_UcfVirus	= f"{self.HMMERDir_UcfVirus}/HMMER_PPHMMDB"
-			self.HMMER_PPHMMDB_UcfVirus	= f"{HMMER_PPHMMDBDir_UcfVirus}/HMMER_PPHMMDB"
+			HMMER_PPHMMDBDir_UcfVirus	= f"{self.HMMERDir_UcfVirus}/HMMER_PPHMMDb"
+			self.HMMER_PPHMMDB_UcfVirus	= f"{HMMER_PPHMMDBDir_UcfVirus}/HMMER_PPHMMDb"
 			if not os.path.exists(self.HMMER_PPHMMDB_UcfVirus):
 				raise ValueError("Can't find HMMER PPHMM database of unclassified viruses")
 
-		ClassificationResultFile = self.VariableShelveDir_UcfVirus+"/ClassificationResults.txt"
+		ClassificationResultFile = f"{self.VariableShelveDir_UcfVirus}/ClassificationResults.txt"
 	
 		return ClassificationResultFile
 
@@ -138,8 +138,8 @@ class VirusClassificationAndEvaluation:
 						))))
 		
 		self.N_UcfViruses, self.N_RefVirusGroups = len(self.ucf_genomes["SeqIDLists"]), len(self.ShelveDirs_RefVirus)
-		self.final_results["self.MaxSimScoreTable"], self.final_results["self.TaxoOfMaxSimScoreTable"], self.final_results["self.TaxoAssignmentTable"], \
-			self.final_results["self.PhyloStatTable"] = np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0))
+		self.final_results["MaxSimScoreTable"], self.final_results["TaxoOfMaxSimScoreTable"], self.final_results["TaxoAssignmentTable"], \
+			self.final_results["PhyloStatTable"] = np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0))
 		if self.Bootstrap == True:
 			self.PairwiseSimilarityScore_CutoffDist_Dict = {Bootstrap_i:{} for Bootstrap_i in range(self.N_Bootstrap)}
 			self.MaxSimScoreDistTable, self.TaxoOfMaxSimScoreDistTable, self.TaxoAssignmentDistTable, self.PhyloStatDistTable, \
@@ -154,10 +154,8 @@ class VirusClassificationAndEvaluation:
 			print(f"Classify viruses using {RefVirusGroup} as reference ({RefVirusGroup_i}/{self.N_RefVirusGroups})")
 		
 			'''Load in genomes variables'''
-			VariableShelveDir_RefVirus = ShelveDir_RefVirus+"/Shelves"
-			Parameters 				   = retrieve_genome_vars(VariableShelveDir_RefVirus, self.IncludeIncompleteGenomes_RefVirus)		
-			ref_virus_genomes 		   = retrieve_ref_virus_vars(VariableShelveDir_RefVirus, self.IncludeIncompleteGenomes_RefVirus)
-			Parameters 				   = Parameters | ref_virus_genomes
+			VariableShelveDir_RefVirus = f"{ShelveDir_RefVirus}/Shelves"
+			Parameters 				   = {**retrieve_genome_vars(VariableShelveDir_RefVirus, self.IncludeIncompleteGenomes_RefVirus), **retrieve_ref_virus_vars(VariableShelveDir_RefVirus, self.IncludeIncompleteGenomes_RefVirus)}	
 			N_RefViruses			   = len(Parameters["SeqIDLists"])
 
 			if "PPHMMSignatureTable_coo" in Parameters.keys(): 	
@@ -184,7 +182,7 @@ class VirusClassificationAndEvaluation:
 																	HMMER_HitScore_Cutoff	= self.HMMER_HitScore_Cutoff)
 				
 				'''Delete HMMER_hmmscanDir'''
-				_ = subprocess.call("rm -rf %s" %HMMER_hmmscanDir_UcfVirus, shell = True)
+				_ = subprocess.call(f"rm -rf {HMMER_hmmscanDir_UcfVirus}", shell = True)
 
 				Parameters["PPHMMSignatureTable"]	= np.hstack((Parameters["PPHMMSignatureTable"], PPHMMSignatureTable_UcfVirusVSUcfDB))
 				Parameters["PPHMMLocationTable"]	= np.hstack((Parameters["PPHMMLocationTable"],  PPHMMLocationTable_UcfVirusVSUcfDB))				
@@ -201,8 +199,8 @@ class VirusClassificationAndEvaluation:
 			
 			'''Compute pairwise distances'''
 			PPHMMSignatureTable_AllVirus= np.vstack((Parameters["PPHMMSignatureTable"], self.ucf_annots["PPHMMSignatureTable_Dict"][RefVirusGroup]))
-			GOMSignatureTable_AllVirus	= np.vstack((Parameters["GOMSignatureTable"], self.ucf_annots["GOMSignatureTable_Dict"][RefVirusGroup]))
-			PPHMMLocationTable_AllVirus	= np.vstack((Parameters["PPHMMLocationTable"], self.ucf_annots["PPHMMLocationTable_Dict"][RefVirusGroup]))
+			GOMSignatureTable_AllVirus	= np.vstack((Parameters["GOMSignatureTable"],   self.ucf_annots["GOMSignatureTable_Dict"][RefVirusGroup]))
+			PPHMMLocationTable_AllVirus	= np.vstack((Parameters["PPHMMLocationTable"],  self.ucf_annots["PPHMMLocationTable_Dict"][RefVirusGroup]))
 			TaxoLabelList_AllVirus		= TaxoLabelList_RefVirus + self.TaxoLabelList_UcfVirus
 			SimMat = SimilarityMat_Constructor(PPHMMSignatureTable_AllVirus, GOMSignatureTable_AllVirus, PPHMMLocationTable_AllVirus, self.SimilarityMeasurementScheme, self.p)
 			DistMat				= 1 - SimMat
@@ -227,10 +225,10 @@ class VirusClassificationAndEvaluation:
 																		self.TaxoLabelList_UcfVirus,
 																		self.PairwiseSimilarityScore_Cutoff_Dict[RefVirusGroup])
 			
-			self.final_results["MaxSimScoreTable"]		= np.column_stack((self.final_results["self.MaxSimScoreTable"], MaxSimScoreList))
-			self.final_results["TaxoOfMaxSimScoreTable"]= np.column_stack((self.final_results["self.TaxoOfMaxSimScoreTable"], TaxoOfMaxSimScoreList))
-			self.final_results["TaxoAssignmentTable"]	= np.column_stack((self.final_results["self.TaxoAssignmentTable"], TaxoAssignmentList))
-			self.final_results["PhyloStatTable"]		= np.column_stack((self.final_results["self.PhyloStatTable"], PhyloStatList))
+			self.final_results["MaxSimScoreTable"]		= np.column_stack((self.final_results["MaxSimScoreTable"], MaxSimScoreList))
+			self.final_results["TaxoOfMaxSimScoreTable"]= np.column_stack((self.final_results["TaxoOfMaxSimScoreTable"], TaxoOfMaxSimScoreList))
+			self.final_results["TaxoAssignmentTable"]	= np.column_stack((self.final_results["TaxoAssignmentTable"], TaxoAssignmentList))
+			self.final_results["PhyloStatTable"]		= np.column_stack((self.final_results["PhyloStatTable"], PhyloStatList))
 			
 			if self.VirusGrouping == True:
 				'''(OPT) Virus grouping'''
@@ -242,7 +240,7 @@ class VirusClassificationAndEvaluation:
 
 			if self.Heatmap_WithDendrogram == True:
 				'''(OPT) Draw hm/dendro'''
-				self.heatmap_with_dendrogram(self.Bootstrap)
+				self.heatmap_with_dendrogram(Parameters, VirusDendrogramFile, TaxoLabelList_AllVirus, RefVirusGroup, DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList)
 
 	def do_virus_groupings(self, RefVirusGroup, DistMat, N_RefViruses, Parameters) -> None:
 		'''Accessory fn to CLASSIFY (6):  Group viruses with scipy fcluster/linkage, save results to txt'''
@@ -379,12 +377,16 @@ class VirusClassificationAndEvaluation:
 		OrderedDistMat	= DistMat[VirusOrder][:,VirusOrder]
 		
 		'''Remove clade support values that are < Heatmap_DendrogramSupport_Cutoff'''
+
 		N_InternalNodes = len(VirusDendrogram.get_nonterminals())
 		for InternalNode_i in range(N_InternalNodes):
-			if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence >= self.Heatmap_DendrogramSupport_Cutoff:
-				VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
-			else:
-				VirusDendrogram.get_nonterminals()[InternalNode_i].confidence=""
+			try:
+				if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.Heatmap_DendrogramSupport_Cutoff or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
+					VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = 0 # RM < Was ""
+				else:
+					VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
+			except:
+				VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = 0 # RM < First entry always NoneType
 		
 		'''Colour terminal branches: reference virus's branch is blue, unclassified virus's branch is red'''
 		N_Viruses = N_RefViruses + self.N_UcfViruses
@@ -606,11 +608,11 @@ class VirusClassificationAndEvaluation:
 
 	def group(self):
 		'''7/8 : Pool results from all classfiers, and finalise the taxonomic assignment (and virus grouping)'''
-		if VirusGrouping == True:
+		if self.VirusGrouping == True:
 			FinalisedTaxoAssignmentList, FinalisedVirusGroupingList, FinalisedVirusGroupingDict, FinalisedVirusGroupingIndexDict = [], [], {}, {}
 			for UcfVirus_i in range(self.N_UcfViruses):
-				MaxSimScore_i		= np.argmax(self.final_results["self.MaxSimScoreTable"][UcfVirus_i])
-				FinalisedTaxoAssignment	= self.final_results["self.TaxoAssignmentTable"][UcfVirus_i][MaxSimScore_i]
+				MaxSimScore_i		= np.argmax(self.final_results["MaxSimScoreTable"][UcfVirus_i])
+				FinalisedTaxoAssignment	= self.final_results["TaxoAssignmentTable"][UcfVirus_i][MaxSimScore_i]
 				RefVirusGroup		= self.ShelveDirs_RefVirus[MaxSimScore_i].split("/")[-1]
 				if RefVirusGroup not in FinalisedVirusGroupingDict: FinalisedVirusGroupingDict[RefVirusGroup] = {}
 				if RefVirusGroup not in FinalisedVirusGroupingIndexDict: FinalisedVirusGroupingIndexDict[RefVirusGroup] = 1
@@ -619,7 +621,7 @@ class VirusClassificationAndEvaluation:
 					FinalisedTaxoAssignmentList.append(f"{FinalisedTaxoAssignment} ({RefVirusGroup})")
 					FinalisedVirusGroupingList.append(f"{FinalisedTaxoAssignment} ({RefVirusGroup})")
 				else:
-					if self.final_results["self.MaxSimScoreTable"][UcfVirus_i][MaxSimScore_i] <= self.DatabaseAssignmentSimilarityScore_Cutoff:
+					if self.final_results["MaxSimScoreTable"][UcfVirus_i][MaxSimScore_i] <= self.DatabaseAssignmentSimilarityScore_Cutoff:
 						FinalisedTaxoAssignmentList.append("Unclassified (NA)")
 						FinalisedVirusGroupingList.append("Unclassified (NA)")
 					else:
@@ -635,13 +637,13 @@ class VirusClassificationAndEvaluation:
 		else:
 			FinalisedTaxoAssignmentList, FinalisedVirusGroupingList	= [], [""]*self.N_UcfViruses
 			for UcfVirus_i in range(self.N_UcfViruses):
-				MaxSimScore_i			= np.argmax(self.final_results["self.MaxSimScoreTable"][UcfVirus_i])
-				FinalisedTaxoAssignment	= self.final_results["self.TaxoAssignmentTable"][UcfVirus_i][MaxSimScore_i]
+				MaxSimScore_i			= np.argmax(self.final_results["MaxSimScoreTable"][UcfVirus_i])
+				FinalisedTaxoAssignment	= self.final_results["TaxoAssignmentTable"][UcfVirus_i][MaxSimScore_i]
 				RefVirusGroup			= self.ShelveDirs_RefVirus[MaxSimScore_i].split("/")[-1]
 				if FinalisedTaxoAssignment != "Unclassified":
 					FinalisedTaxoAssignmentList.append(f"{FinalisedTaxoAssignment} ({RefVirusGroup})")
 				else:
-					if self.final_results["self.MaxSimScoreTable"][UcfVirus_i][MaxSimScore_i] <= self.DatabaseAssignmentSimilarityScore_Cutoff:
+					if self.final_results["MaxSimScoreTable"][UcfVirus_i][MaxSimScore_i] <= self.DatabaseAssignmentSimilarityScore_Cutoff:
 						FinalisedTaxoAssignmentList.append("Unclassified (NA)")
 					else:
 						FinalisedTaxoAssignmentList.append(f"Unclassified ({RefVirusGroup})")
@@ -649,7 +651,7 @@ class VirusClassificationAndEvaluation:
 		self.final_results["FinalisedTaxoAssignmentList"] = FinalisedTaxoAssignmentList
 		self.final_results["FinalisedVirusGroupingList"]  = FinalisedVirusGroupingList
 
-		RemainedUcfVirus_IndexList 		= np.where(list(map(all, self.final_results["self.MaxSimScoreTable"] <= self.DatabaseAssignmentSimilarityScore_Cutoff)))[0]
+		RemainedUcfVirus_IndexList 		= np.where(list(map(all, self.final_results["MaxSimScoreTable"] <= self.DatabaseAssignmentSimilarityScore_Cutoff)))[0]
 
 		self.final_results["SeqIDLists_RemainedUcfVirus"] 	  = self.ucf_genomes["SeqIDLists"][RemainedUcfVirus_IndexList]
 		self.final_results["VirusNameList_RemainedUcfVirus"]  = self.ucf_genomes["VirusNameList"][RemainedUcfVirus_IndexList]

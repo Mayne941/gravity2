@@ -32,7 +32,7 @@ class UcfVirusAnnotator:
 		self.HMMER_N_CPUs = HMMER_N_CPUs
 		self.HMMER_C_EValue_Cutoff = HMMER_C_EValue_Cutoff
 		self.HMMER_HitScore_Cutoff = HMMER_HitScore_Cutoff
-		self.VariableShelveFile_UcfVirus, self.VariableShelveDir_RefVirus = {}
+		self.VariableShelveFile_UcfVirus, self.VariableShelveDir_RefVirus = {}, {}
 
 
 	def get_genbank(self) -> None:
