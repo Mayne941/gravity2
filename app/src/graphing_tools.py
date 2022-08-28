@@ -21,19 +21,19 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 				ShelveDir,
 				IncludeIncompleteGenomes	= False,
 				SimilarityMeasurementScheme	= "PG",
-				p					= 1,
-				Dendrogram			= True,
+				p							= 1,
+				Dendrogram					= True,
 				Dendrogram_LinkageMethod	= "average", #"single", "complete", "average", "weighted"
-				Bootstrap			= True,
-				N_Bootstrap			= 10,
-				Bootstrap_method	= "booster", #"booster", "sumtrees"
-				Bootstrap_N_CPUs	= 20,
-				Heatmap				= False,
+				Bootstrap					= True,
+				N_Bootstrap					= 10,
+				Bootstrap_method			= "booster", #"booster", "sumtrees"
+				Bootstrap_N_CPUs			= 20,
+				Heatmap						= False,
 				Heatmap_VirusOrderScheme	= None, #"Filename", 
 				Heatmap_WithDendrogram		= True,
 				Heatmap_DendrogramFile		= None,
 				Heatmap_DendrogramSupport_Cutoff= 0.75,
-				VirusGrouping		= True,
+				VirusGrouping				= True,
 			) -> None:
 		'''Parameters'''
 		self.IncludeIncompleteGenomes = IncludeIncompleteGenomes
@@ -56,11 +56,12 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 		self.VariableShelveDir = self.ShelveDir+"/Shelves"
 		self.VirusDendrogramFile = "placeholder"
 		'''Empties'''
-		self.genomes = self.ref_annotations = {}
+		self.genomes, self.ref_annotations = {}, {}
 
 	def mkdirs(self):
 		'''1/7: Return all dirs for db storage and retrieval'''
-		VirusDendrogramDistFile = BootstrappedVirusDendrogramFile = HeatmapFile = HeatmapWithDendrogramFile = VirusGroupingFile = "placeholder"
+		VirusDendrogramDistFile, BootstrappedVirusDendrogramFile, HeatmapFile, HeatmapWithDendrogramFile, \
+			VirusGroupingFile = "","","","",""
 
 		if self.Dendrogram == True:
 			'''Virus dendrogram'''
@@ -116,7 +117,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 		'''Make TaxoLabelList'''
 		TaxoLabelList = TaxoLabel_Constructor(SeqIDLists	= self.genomes["SeqIDLists"],
 											  FamilyList	= self.genomes["FamilyList"],
-											  GenusList	= self.genomes["GenusList"],
+											  GenusList		= self.genomes["GenusList"],
 											  VirusNameList	= self.genomes["VirusNameList"]
 											)
 		
@@ -225,35 +226,35 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 		ax_Heatmap_W	= Heatmap_width/Fig_width
 		ax_Heatmap_H	= Heatmap_height/Fig_height
 		
-		ax_CBar_L	= (Outer_margin + TaxoLable_space)/Fig_width
-		ax_CBar_B	= (Outer_margin + CBarLable_space)/Fig_height
-		ax_CBar_W	= CBar_width/Fig_width
-		ax_CBar_H	= CBar_height/Fig_height
+		ax_CBar_L		= (Outer_margin + TaxoLable_space)/Fig_width
+		ax_CBar_B		= (Outer_margin + CBarLable_space)/Fig_height
+		ax_CBar_W		= CBar_width/Fig_width
+		ax_CBar_H		= CBar_height/Fig_height
 		
 		'''Plot the heat map'''
 		fig	= plt.figure(figsize = (Fig_width, Fig_height), dpi = 300)
 		
-		ax_Heatmap	= fig.add_axes([ax_Heatmap_L, ax_Heatmap_B, ax_Heatmap_W, ax_Heatmap_H], frame_on = True, facecolor = "white")
+		ax_Heatmap		= fig.add_axes([ax_Heatmap_L, ax_Heatmap_B, ax_Heatmap_W, ax_Heatmap_H], frame_on = True, facecolor = "white")
 		Heatmap_Graphic	= ax_Heatmap.imshow(OrderedDistMat, cmap = 'magma', aspect = 'auto', vmin = 0, vmax = 1, interpolation = 'none')
 		for l in LineList:
 			ax_Heatmap.axvline(l, color = 'k', lw = 0.2)
 			ax_Heatmap.axhline(l, color = 'k', lw = 0.2)
 		
-		ax_Heatmap	.set_xticks(TickLocList)
-		ax_Heatmap	.set_xticklabels(ClassLabelList, rotation = 90, size = FontSize)
-		ax_Heatmap	.set_yticks(TickLocList)
-		ax_Heatmap	.set_yticklabels(ClassLabelList, rotation = 0, size = FontSize)
-		ax_Heatmap	.tick_params(	top = 'on',
-						bottom = 'off',
-						left = 'off',
-						right = 'on',
-						labeltop = 'on',
-						labelbottom = 'off',
-						labelleft = 'off',
-						labelright = 'on',
-						direction = 'out')
+		ax_Heatmap		.set_xticks(TickLocList)
+		ax_Heatmap		.set_xticklabels(ClassLabelList, rotation = 90, size = FontSize)
+		ax_Heatmap		.set_yticks(TickLocList)
+		ax_Heatmap		.set_yticklabels(ClassLabelList, rotation = 0, size = FontSize)
+		ax_Heatmap		.tick_params(top = 'on',
+							bottom = 'off',
+							left = 'off',
+							right = 'on',
+							labeltop = 'on',
+							labelbottom = 'off',
+							labelleft = 'off',
+							labelright = 'on',
+							direction = 'out')
 		
-		ax_CBar		= fig.add_axes([ax_CBar_L, ax_CBar_B, ax_CBar_W, ax_CBar_H], frame_on = True, facecolor = "white")
+		ax_CBar			= fig.add_axes([ax_CBar_L, ax_CBar_B, ax_CBar_W, ax_CBar_H], frame_on = True, facecolor = "white")
 		CBar_Graphic	= fig.colorbar(Heatmap_Graphic, cax = ax_CBar, orientation = "horizontal", ticks = [0, 0.25, 0.50, 0.75, 1])
 		CBar_Graphic	.ax.set_xticklabels(['0.00', '0.25', '0.50', '0.75', '1.00'], size = FontSize)
 		CBar_Graphic	.ax.set_xlabel('Distance', rotation = 0, size = FontSize+2)
@@ -323,8 +324,8 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 					break
 		
 		ClassLabelList	= np.array(ClassLabelList)
-		LineList	= np.array(LineList) + 0.5
-		TickLocList	= np.array(list(map(np.mean, list(zip(LineList[0:-1],LineList[1:])))))
+		LineList		= np.array(LineList) + 0.5
+		TickLocList		= np.array(list(map(np.mean, list(zip(LineList[0:-1],LineList[1:])))))
 		
 		'''Plot configuration'''
 		Heatmap_width		= float(12)
@@ -372,7 +373,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 		ax_CBar_H			= CBar_height/Fig_height
 		
 		'''Plot the heat map'''
-		fig			= plt.figure(figsize = (Fig_width, Fig_height), dpi = 300)
+		fig					= plt.figure(figsize = (Fig_width, Fig_height), dpi = 300)
 		
 		ax_Dendrogram		= fig.add_axes([ax_Dendrogram_L, ax_Dendrogram_B, ax_Dendrogram_W, ax_Dendrogram_H], frame_on = False, facecolor = "white")
 		Phylo.draw(VirusDendrogram, label_func = lambda x: "", do_show = False,  axes = ax_Dendrogram) 
@@ -387,42 +388,42 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 		for Tick in ScaleBarTicks:
 			ax_ScaleBar.plot([Tick, Tick],[-0.05, 0.05],'k-')
 		
-		ax_ScaleBar		.set_xlim([1, 0])
-		ax_ScaleBar		.set_xticks(ScaleBarTicks)
-		ax_ScaleBar		.set_xticklabels(list(map(str, ScaleBarTicks)), rotation = 0, size = FontSize)
-		ax_ScaleBar		.set_xlabel('Distance', rotation = 0, size = FontSize+2)
-		ax_ScaleBar		.xaxis.set_label_position('bottom')
-		ax_ScaleBar		.tick_params(	top = 'off',
-							bottom = 'off',
-							left = 'off',
-							right = 'off',
-							labeltop = 'off',
-							labelbottom = 'on',
-							labelleft = 'off',
-							labelright = 'off',
-							direction = 'out')
+		ax_ScaleBar			.set_xlim([1, 0])
+		ax_ScaleBar			.set_xticks(ScaleBarTicks)
+		ax_ScaleBar			.set_xticklabels(list(map(str, ScaleBarTicks)), rotation = 0, size = FontSize)
+		ax_ScaleBar			.set_xlabel('Distance', rotation = 0, size = FontSize+2)
+		ax_ScaleBar			.xaxis.set_label_position('bottom')
+		ax_ScaleBar			.tick_params(top = 'off',
+								bottom = 'off',
+								left = 'off',
+								right = 'off',
+								labeltop = 'off',
+								labelbottom = 'on',
+								labelleft = 'off',
+								labelright = 'off',
+								direction = 'out')
 		
-		ax_Heatmap		= fig.add_axes([ax_Heatmap_L, ax_Heatmap_B, ax_Heatmap_W, ax_Heatmap_H], frame_on = True, facecolor = "white")
+		ax_Heatmap			= fig.add_axes([ax_Heatmap_L, ax_Heatmap_B, ax_Heatmap_W, ax_Heatmap_H], frame_on = True, facecolor = "white")
 		Heatmap_Graphic		= ax_Heatmap.imshow(OrderedDistMat, cmap = 'magma', aspect = 'auto', vmin = 0, vmax = 1, interpolation = 'none')
 		for l in LineList:
 			ax_Heatmap.axvline(l, color = 'k', lw = 0.2)
 			ax_Heatmap.axhline(l, color = 'k', lw = 0.2)
 		
-		ax_Heatmap		.set_xticks(TickLocList)
-		ax_Heatmap		.set_xticklabels(ClassLabelList, rotation = 90, size = FontSize)
-		ax_Heatmap		.set_yticks(TickLocList)
-		ax_Heatmap		.set_yticklabels(ClassLabelList, rotation = 0, size = FontSize)
-		ax_Heatmap		.tick_params(	top = 'on',
-							bottom = 'off',
-							left = 'off',
-							right = 'on',
-							labeltop = 'on',
-							labelbottom = 'off',
-							labelleft = 'off',
-							labelright = 'on',
-							direction = 'out')
+		ax_Heatmap			.set_xticks(TickLocList)
+		ax_Heatmap			.set_xticklabels(ClassLabelList, rotation = 90, size = FontSize)
+		ax_Heatmap			.set_yticks(TickLocList)
+		ax_Heatmap			.set_yticklabels(ClassLabelList, rotation = 0, size = FontSize)
+		ax_Heatmap			.tick_params(top = 'on',
+								bottom = 'off',
+								left = 'off',
+								right = 'on',
+								labeltop = 'on',
+								labelbottom = 'off',
+								labelleft = 'off',
+								labelright = 'on',
+								direction = 'out')
 		
-		ax_CBar			= fig.add_axes([ax_CBar_L, ax_CBar_B, ax_CBar_W, ax_CBar_H], frame_on = True, facecolor = "white")
+		ax_CBar				= fig.add_axes([ax_CBar_L, ax_CBar_B, ax_CBar_W, ax_CBar_H], frame_on = True, facecolor = "white")
 		CBar_Graphic		= fig.colorbar(Heatmap_Graphic, cax = ax_CBar, orientation = "horizontal", ticks = [0, 0.25, 0.50, 0.75, 1])
 		CBar_Graphic		.ax.set_xticklabels(['0', '0.25', '0.50', '0.75', '1'], rotation = 0, size = FontSize)
 		CBar_Graphic		.ax.set_xlabel('Distance', rotation = 0, size = FontSize+2)
@@ -442,12 +443,9 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 	def virus_grouping(self, DistMat, VirusGroupingFile):
 		'''7/7: (OPT) Group viruses via Thiels-U and other metrics; save as txt.'''
 		
-		(VirusGroupingList,
-		OptDistance_Cutoff,
-		CorrelationScore,
-		Theils_u_TaxoGroupingListGivenPred,
-		Theils_u_PredGivenTaxoGroupingList) = VirusGrouping_Estimator(DistMat, self.Dendrogram_LinkageMethod, self.genomes["TaxoGroupingList"])
-		np.savetxt(	fname = VirusGroupingFile,
+		VirusGroupingList, OptDistance_Cutoff, CorrelationScore, Theils_u_TaxoGroupingListGivenPred, \
+			Theils_u_PredGivenTaxoGroupingList = VirusGrouping_Estimator(DistMat, self.Dendrogram_LinkageMethod, self.genomes["TaxoGroupingList"])
+		np.savetxt(fname = VirusGroupingFile,
 				X = np.column_stack((list(map(", ".join, self.genomes["SeqIDLists"])),
 														 self.genomes["FamilyList"],
 														 self.genomes["GenusList"],

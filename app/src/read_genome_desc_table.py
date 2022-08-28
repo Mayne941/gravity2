@@ -92,7 +92,7 @@ class ReadGenomeDescTable:
 				TaxoGrouping_i	= header.index("Family")
 			
 			for Virus_i, Line in enumerate(GenomeDescTable_txt):
-				Line = Line.split("\r\n")[0].split("\n")[0].split("\t")
+				Line 	  = Line.split("\r\n")[0].split("\n")[0].split("\t")
 				SeqIDList = re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}",Line[SeqID_i])
 
 				if SeqIDList != [] or Line[SeqID_i]!="":
@@ -124,24 +124,25 @@ class ReadGenomeDescTable:
 		'''Create dictionary in GRAViTy structure for saving to persistent storage'''
 		master_data = {}
 		if flag == "all_genomes":
-			IncludedGenomes_IndexList = np.where(self.DatabaseList==self.Database)[0]
+			IncludedGenomes_IndexList = np.where(self.DatabaseList == self.Database)[0]
 			master_data["DatabaseList"]    = self.DatabaseList[IncludedGenomes_IndexList]
 		else:
 			IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(self.SeqStatusList) if "Complete" in SeqStatus]
 			if self.Database != None: 
 				master_data["DatabaseList"] = self.DatabaseList[IncludedGenomes_IndexList]
 
-		self.BaltimoreList = master_data["BaltimoreList"]		= self.BaltimoreList[IncludedGenomes_IndexList]
-		self.OrderList 	   = master_data["OrderList"]			= self.OrderList[IncludedGenomes_IndexList]
-		self.FamilyList    = master_data["FamilyList"]			= self.FamilyList[IncludedGenomes_IndexList]
-		self.SubFamList    = master_data["SubFamList"]			= self.SubFamList[IncludedGenomes_IndexList]
-		self.GenusList 	   = master_data["GenusList"]			= self.GenusList[IncludedGenomes_IndexList]
-		self.VirusNameList = master_data["VirusNameList"]		= self.VirusNameList[IncludedGenomes_IndexList]		
-		self.SeqIDLists    = master_data["SeqIDLists"]			= self.SeqIDLists[IncludedGenomes_IndexList]
-		self.SeqStatusList = master_data["SeqStatusList"]		= self.SeqStatusList[IncludedGenomes_IndexList]
-		self.TranslTableList = master_data["TranslTableList"]		= self.TranslTableList[IncludedGenomes_IndexList]
-		self.TaxoGroupingList = master_data["TaxoGroupingList"]		= self.TaxoGroupingList[IncludedGenomes_IndexList]
-		self.DatabaseList  = master_data["DatabaseList"]			= self.DatabaseList
+		'''Create master data. Arrays are LINKED.'''
+		self.BaltimoreList   = master_data["BaltimoreList"]		= self.BaltimoreList[IncludedGenomes_IndexList]
+		self.OrderList 	     = master_data["OrderList"]			= self.OrderList[IncludedGenomes_IndexList]
+		self.FamilyList      = master_data["FamilyList"]		= self.FamilyList[IncludedGenomes_IndexList]
+		self.SubFamList      = master_data["SubFamList"]		= self.SubFamList[IncludedGenomes_IndexList]
+		self.GenusList 	     = master_data["GenusList"]			= self.GenusList[IncludedGenomes_IndexList]
+		self.VirusNameList   = master_data["VirusNameList"]		= self.VirusNameList[IncludedGenomes_IndexList]		
+		self.SeqIDLists      = master_data["SeqIDLists"]		= self.SeqIDLists[IncludedGenomes_IndexList]
+		self.SeqStatusList   = master_data["SeqStatusList"]		= self.SeqStatusList[IncludedGenomes_IndexList]
+		self.TranslTableList = master_data["TranslTableList"]	= self.TranslTableList[IncludedGenomes_IndexList]
+		self.TaxoGroupingList= master_data["TaxoGroupingList"]	= self.TaxoGroupingList[IncludedGenomes_IndexList]
+		self.DatabaseList    = master_data["DatabaseList"]		= self.DatabaseList
 		return master_data
 
 	def save_desc_table(self, table, fname):
@@ -175,7 +176,8 @@ class ReadGenomeDescTable:
 		self.GenusList		= all_desc_table["GenusList"] 		= np.array(self.GenusList)
 		self.VirusNameList	= all_desc_table["VirusNameList"]	= np.array(self.VirusNameList)
 		
-		self.SeqIDLists		.extend([[1],[1,2]])	#making sure that SeqIDLists will be a h list (and not a v list)
+		'''Ensure SeqIDLists will be a h list (and not a v list)'''
+		self.SeqIDLists		.extend([[1],[1,2]])
 		self.SeqIDLists		= np.array(self.SeqIDLists)
 		self.SeqIDLists		= self.SeqIDLists[:-2]
 		
@@ -187,8 +189,8 @@ class ReadGenomeDescTable:
 			print("\n".join([SeqID for SeqID, count in Counter(SeqIDFlatList).items() if count > 1]))
 			raise SystemExit("GRAViTy terminated.")
 
+		'''Update master data. Arrays are LINKED.'''
 		all_desc_table["SeqIDLists"] = self.SeqIDLists
-		
 		self.SeqStatusList	  = all_desc_table["SeqStatusList"]		 = np.array(self.SeqStatusList)
 		self.TaxoGroupingList = all_desc_table["TaxoGroupingList"] 	 = np.array(self.TaxoGroupingList)
 		self.TranslTableList  = all_desc_table["TranslTableList"]	 = np.array(self.TranslTableList)

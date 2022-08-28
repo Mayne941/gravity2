@@ -23,7 +23,7 @@ class MutualInformationCalculator:
 		self.N_Sampling = N_Sampling
 		self.SamplingStrategy = SamplingStrategy
 		self.SampleSizePerGroup = SampleSizePerGroup
-		self.genomes = self.ref_annotations = self.pphmmdb_construction = {}
+		self.genomes, self.ref_annotations, self.pphmmdb_construction = {}, {}, {}
 
 	def mkdirs(self) -> str:
 		'''1/3: Return all dirs for db storage and retrieval'''

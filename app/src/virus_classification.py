@@ -207,11 +207,11 @@ class VirusClassificationAndEvaluation:
 		self.Bootstrap_N_CPUs				= Bootstrap_N_CPUs
 		self.VirusGrouping					= VirusGrouping
 		'''Placeholder arrays'''
-		self.ucf_genomes = self.PairwiseSimilarityScore_Cutoff_Dict = self.VirusGroupingDict = {}
-		self.TaxoLabelList_UcfVirus = self.N_UcfViruses = self.N_RefVirusGroups = [] 
-		self.MaxSimScoreTable = self.TaxoOfMaxSimScoreTable = self.TaxoAssignmentTable = self.PhyloStatTable = np.zeros((1,0))
-		self.PairwiseSimilarityScore_CutoffDist_Dict = self.MaxSimScoreDistTable = \
-			self.TaxoOfMaxSimScoreDistTable = self.TaxoAssignmentDistTable = self.PhyloStatDistTable = None
+		self.ucf_genomes, self.PairwiseSimilarityScore_Cutoff_Dict, self.VirusGroupingDict = {}, {}, {}
+		self.TaxoLabelList_UcfVirus, self.N_UcfViruses, self.N_RefVirusGroups = [], [], []
+		self.MaxSimScoreTable, self.TaxoOfMaxSimScoreTable, self.TaxoAssignmentTable, self.PhyloStatTable = np.zeros((1,0)), np.zeros((1,0)), np.zeros((1,0)), np.zeros((1,0))
+		self.PairwiseSimilarityScore_CutoffDist_Dict, self.MaxSimScoreDistTable, \
+			self.TaxoOfMaxSimScoreDistTable, self.TaxoAssignmentDistTable, self.PhyloStatDistTable = None, None, None, None, None
 		
 	def input_test(self):
 		'''1/ : Guide user to specify input PPHMM file'''
@@ -267,7 +267,8 @@ class VirusClassificationAndEvaluation:
 						))))
 		
 		self.N_UcfViruses, self.N_RefVirusGroups = len(self.ucf_genomes["SeqIDLists"]), len(self.ShelveDirs_RefVirus)
-		self.MaxSimScoreTable = self.TaxoOfMaxSimScoreTable = self.TaxoAssignmentTable = self.PhyloStatTable = np.zeros((self.N_UcfViruses, 0))
+		self.MaxSimScoreTable, self.TaxoOfMaxSimScoreTable, self.TaxoAssignmentTable, \
+			self.PhyloStatTable = np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0))
 		if self.Bootstrap == True:
 			self.PairwiseSimilarityScore_CutoffDist_Dict = {Bootstrap_i:{} for Bootstrap_i in range(self.N_Bootstrap)}
 			self.MaxSimScoreDistTable = self.TaxoOfMaxSimScoreDistTable	= self.TaxoAssignmentDistTable = self.PhyloStatDistTable \
@@ -384,7 +385,7 @@ class VirusClassificationAndEvaluation:
 		
 		'''Compute distance cutoff'''
 		_, OptDistance_Cutoff, CorrelationScore, Theils_u_TaxoGroupingListGivenPred, \
-		Theils_u_PredGivenTaxoGroupingList = VirusGrouping_Estimator(DistMat[:N_RefViruses][:,:N_RefViruses], self.Dendrogram_LinkageMethod, Parameters["TaxoGroupingList"])
+			Theils_u_PredGivenTaxoGroupingList = VirusGrouping_Estimator(DistMat[:N_RefViruses][:,:N_RefViruses], self.Dendrogram_LinkageMethod, Parameters["TaxoGroupingList"])
 		
 		'''Virus grouping'''	
 		VirusGroupingList = fcluster(linkage(DistMat[np.triu_indices_from(DistMat, k = 1)], self.Dendrogram_LinkageMethod), OptDistance_Cutoff, 'distance')
@@ -430,7 +431,8 @@ class VirusClassificationAndEvaluation:
 		if os.path.isfile(BootstrappedVirusDendrogramFile):
 			os.remove(BootstrappedVirusDendrogramFile)
 		
-		BootsrappedTaxoAssignmentTable = BootsrappedMaxSimScoreTable = BootsrappedTaxoOfMaxSimScoreTable =	BootsrappedPhyloStatTable = np.zeros((self.N_UcfViruses, 0))
+		BootsrappedTaxoAssignmentTable, BootsrappedMaxSimScoreTable, BootsrappedTaxoOfMaxSimScoreTable, \
+			BootsrappedPhyloStatTable = np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0))
 		N_PPHMMs					   = PPHMMSignatureTable_AllVirus.shape[1]
 		for Bootstrap_i in range(0, self.N_Bootstrap):
 			'''Bootstrap the data'''
@@ -447,7 +449,7 @@ class VirusClassificationAndEvaluation:
 				BootstrappedGOMSignatureTable = GOMSignatureTable_Constructor(BootstrappedPPHMMLocationTable, BootstrappedGOMDB,Parameters["GOMIDList"])
 			
 			'''Construct a dendrogram from the bootstrapped data'''
-			BootstrappedSimMat = SimilarityMat_Constructor(BootstrappedPPHMMSignatureTable, BootstrappedGOMSignatureTable, BootstrappedPPHMMLocationTable, self.SimilarityMeasurementScheme, self.p)
+			BootstrappedSimMat  = SimilarityMat_Constructor(BootstrappedPPHMMSignatureTable, BootstrappedGOMSignatureTable, BootstrappedPPHMMLocationTable, self.SimilarityMeasurementScheme, self.p)
 			BootstrappedDistMat = 1 - BootstrappedSimMat
 			BootstrappedDistMat[BootstrappedDistMat<0] = 0
 			BootstrappedVirusDendrogram = DistMat2Tree(BootstrappedDistMat, TaxoLabelList_AllVirus, self.Dendrogram_LinkageMethod)
@@ -534,8 +536,7 @@ class VirusClassificationAndEvaluation:
 		for Clade in ClassDendrogram.find_clades(terminal=True):
 			Clade.name = Taxo2ClassDict[Clade.name]
 		
-		ClassLabelList = []
-		LineList = [-1]
+		ClassLabelList, LineList = [], [-1]
 		TerminalNodeList = [TerminalNode for TerminalNode in ClassDendrogram.get_terminals()]
 		while len(TerminalNodeList)!=0:
 			FarLeftNode = TerminalNodeList[0]
@@ -549,8 +550,8 @@ class VirusClassificationAndEvaluation:
 					break
 		
 		ClassLabelList	= np.array(ClassLabelList)
-		LineList	= np.array(LineList) + 0.5
-		TickLocList	= np.array(list(map(np.mean, list(zip(LineList[0:-1],LineList[1:])))))
+		LineList		= np.array(LineList) + 0.5
+		TickLocList		= np.array(list(map(np.mean, list(zip(LineList[0:-1],LineList[1:])))))
 		
 		'''Heat map colour indicators'''
 		IndicatorMat_RefVirus	= np.tile([True]*N_RefViruses + [False]*self.N_UcfViruses, N_Viruses).reshape(N_Viruses,-1)
@@ -568,26 +569,26 @@ class VirusClassificationAndEvaluation:
 		
 		'''Colour map construction'''
 		BlueColour_Dict = {
-		'red'  :  ((0., 0., 0.), (1., 1., 1.)),
-		'green':  ((0., 0., 0.), (1., 1., 1.)),
-		'blue' :  ((0., 1., 1.), (1., 1., 1.))
-		}
+			'red'  :  ((0., 0., 0.), (1., 1., 1.)),
+			'green':  ((0., 0., 0.), (1., 1., 1.)),
+			'blue' :  ((0., 1., 1.), (1., 1., 1.))
+			}
 		
 		RedColour_Dict = {
-		'red'  :  ((0., 1., 1.), (1., 1., 1.)),
-		'green':  ((0., 0., 0.), (1., 1., 1.)),
-		'blue' :  ((0., 0., 0.), (1., 1., 1.))
-		}
+			'red'  :  ((0., 1., 1.), (1., 1., 1.)),
+			'green':  ((0., 0., 0.), (1., 1., 1.)),
+			'blue' :  ((0., 0., 0.), (1., 1., 1.))
+			}
 		
 		PurpleColour_Dict = {
-		'red'  :  ((0., 0.5, 0.5), (1., 1., 1.)),
-		'green':  ((0., 0., 0.), (1., 1., 1.)),
-		'blue' :  ((0., 1., 1.), (1., 1., 1.))
-		}
+			'red'  :  ((0., 0.5, 0.5), (1., 1., 1.)),
+			'green':  ((0., 0., 0.), (1., 1., 1.)),
+			'blue' :  ((0., 1., 1.), (1., 1., 1.))
+			}
 		
-		MyBlues	= LSC('MyBlues', BlueColour_Dict, 1024)
-		MyReds = LSC('MyReds', RedColour_Dict, 1024)
-		MyPurples = LSC('MyPurples', PurpleColour_Dict, 1024)
+		MyBlues		= LSC('MyBlues', BlueColour_Dict, 1024)
+		MyReds 		= LSC('MyReds', RedColour_Dict, 1024)
+		MyPurples 	= LSC('MyPurples', PurpleColour_Dict, 1024)
 		
 		'''Plot configuration'''
 		Heatmap_width		= float(12)
@@ -595,8 +596,8 @@ class VirusClassificationAndEvaluation:
 		TaxoLable_space		= 1.00
 
 		CBar_Heatmap_gap	= 0.05
-		CBar_width		= Heatmap_width
-		CBar_height		= 0.50
+		CBar_width			= Heatmap_width
+		CBar_height			= 0.50
 		CBarLable_space		= 0.25
 		
 		Dendrogram_width	= Heatmap_width/3
@@ -611,8 +612,8 @@ class VirusClassificationAndEvaluation:
 		Outer_margin		= 0.5
 		FontSize			= 6
 		
-		Fig_width		= Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap + Heatmap_width + TaxoLable_space + Outer_margin
-		Fig_height		= Outer_margin + CBarLable_space + CBar_height + CBar_Heatmap_gap + Heatmap_height + TaxoLable_space + Outer_margin
+		Fig_width			= Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap + Heatmap_width + TaxoLable_space + Outer_margin
+		Fig_height			= Outer_margin + CBarLable_space + CBar_height + CBar_Heatmap_gap + Heatmap_height + TaxoLable_space + Outer_margin
 		
 		ax_Dendrogram_L		= Outer_margin/Fig_width
 		ax_Dendrogram_B		= (Outer_margin + ScaleBarLable_space + ScaleBar_height + ScaleBar_Dendrogram_gap)/Fig_height
@@ -629,13 +630,13 @@ class VirusClassificationAndEvaluation:
 		ax_Heatmap_W		= Heatmap_width/Fig_width
 		ax_Heatmap_H		= Heatmap_height/Fig_height
 		
-		ax_CBar_L		= (Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap)/Fig_width
-		ax_CBar_B		= (Outer_margin + CBarLable_space)/Fig_height
-		ax_CBar_W		= CBar_width/Fig_width
-		ax_CBar_H		= CBar_height/Fig_height
+		ax_CBar_L			= (Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap)/Fig_width
+		ax_CBar_B			= (Outer_margin + CBarLable_space)/Fig_height
+		ax_CBar_W			= CBar_width/Fig_width
+		ax_CBar_H			= CBar_height/Fig_height
 		
 		'''Plot the heat map'''
-		fig			= plt.figure(figsize = (Fig_width, Fig_height), dpi = 300)
+		fig					= plt.figure(figsize = (Fig_width, Fig_height), dpi = 300)
 		
 		ax_Dendrogram		= fig.add_axes([ax_Dendrogram_L, ax_Dendrogram_B, ax_Dendrogram_W, ax_Dendrogram_H], frame_on = False, facecolor = "white")
 		Phylo				.draw(VirusDendrogram, label_func = lambda x: "", do_show = False,  axes = ax_Dendrogram)

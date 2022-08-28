@@ -41,7 +41,7 @@ class Pipeline_II:
 		benchmark_end("ReadGenomeDescTable", start)
 		
 		self.pphmmdb_construction()
-	
+
 	def pphmmdb_construction(self):
 		'''II: Fire PPHMDB Constructor'''
 		if str2bool(self.options['UseUcfVirusPPHMMs']) == True:
@@ -68,7 +68,7 @@ class Pipeline_II:
 				HHsuite_QueryCoverage_Cutoff = self.options['HHsuite_QueryCoverage_Cutoff'],
 				HHsuite_SubjectCoverage_Cutoff = self.options['HHsuite_SubjectCoverage_Cutoff'],
 				PPHMMClustering_MCLInflation = self.options['PPHMMClustering_MCLInflation_ForAlnMerging'],
-				HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging = str2bool(self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']),
+				HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging = str2bool(self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']),
 				)
 			pc.main()
 			benchmark_end("PPHMMDBConstruction", start)
