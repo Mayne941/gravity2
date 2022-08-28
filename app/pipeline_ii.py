@@ -92,7 +92,7 @@ class Pipeline_II:
 			)
 		ucf.main()
 		benchmark_end("UcfVirusAnnotator", start)
-		breakpoint()
+		
 		self.virus_classification()
 
 	def virus_classification(self):

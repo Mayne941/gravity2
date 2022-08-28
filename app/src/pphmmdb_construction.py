@@ -621,10 +621,10 @@ class PPHMMDBConstruction:
 					if ClusterTaxo_UniqueTaxoLabel[0] not in ["", "Unassigned", "unassigned"]:
 						ClusterTaxo = ClusterTaxo + ClusterTaxo_UniqueTaxoLabel
 				else:
-					ClusterTaxo = ClusterTaxo + [b"/".join(ClusterTaxo_UniqueTaxoLabel)]
+					ClusterTaxo = ClusterTaxo + ["/".join(ClusterTaxo_UniqueTaxoLabel)]
 					break
-			
-			ClusterTaxoList.append("; ".join(ClusterTaxo)) # RM <
+
+			ClusterTaxoList.append("; ".join(ClusterTaxo)) 
 			ClusterProtSeqIDList.append(", ".join(Cluster))
 			
 			ClusterDescCount = sorted(list(Counter(DescList).items()), key = operator.itemgetter(1), reverse = True)
