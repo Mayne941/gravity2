@@ -24,7 +24,7 @@ class IndentedHelpFormatterWithNL(optparse.IndentedHelpFormatter):
 	
 	def format_option(self, option):
 		result = []
-		opts = self.option_strings[option]
+		opts   = self.option_strings[option]
 		opt_width = self.help_position - self.current_indent - 2
 		if len(opts) > opt_width:
 			opts = "%*s%s\n" % (self.current_indent, "", opts)

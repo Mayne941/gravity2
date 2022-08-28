@@ -92,7 +92,7 @@ class Pipeline_II:
 			)
 		ucf.main()
 		benchmark_end("UcfVirusAnnotator", start)
-		
+
 		self.virus_classification()
 
 	def virus_classification(self):
@@ -126,7 +126,7 @@ class Pipeline_II:
 			)
 		vce.main()
 		benchmark_end("VirusClassificationAndEvaluation", start)	
-		breakpoint()
+
 		print(f"Time to complete: {time.time() - self.actual_start}")
 
 if __name__ == '__main__':
