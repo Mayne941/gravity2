@@ -26,6 +26,7 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
 			if "P" in SimilarityMeasurementScheme:
 				PPHMMSignature_i			= PPHMMSignatureTable[i]
 				PPHMMSignature_j			= PPHMMSignatureTable[j]
+				# May raise warnings when zero division is called
 				PPHMMSignature_GJMat[i,j]	= np.sum(np.minimum(PPHMMSignature_i, PPHMMSignature_j))/np.sum(np.maximum(PPHMMSignature_i, PPHMMSignature_j))
 				PPHMMSignature_GJMat[j,i]	= PPHMMSignature_GJMat[i,j]
 			

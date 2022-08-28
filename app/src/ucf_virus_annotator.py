@@ -25,14 +25,14 @@ class UcfVirusAnnotator:
 		self.GenomeSeqFile_UcfVirus = GenomeSeqFile_UcfVirus
 		self.ShelveDir_UcfVirus 	= ShelveDir_UcfVirus
 		self.ShelveDirs_RefVirus	= ShelveDirs_RefVirus.split(", ")
-		self.VariableShelveDir_UcfVirus			= f"{ShelveDir_UcfVirus}/Shelves"
+		self.VariableShelveDir_UcfVirus		   = f"{ShelveDir_UcfVirus}/Shelves"
 		self.IncludeIncompleteGenomes_UcfVirus = IncludeIncompleteGenomes_UcfVirus
 		self.IncludeIncompleteGenomes_RefVirus = IncludeIncompleteGenomes_RefVirus
 		self.SeqLength_Cutoff = SeqLength_Cutoff
 		self.HMMER_N_CPUs = HMMER_N_CPUs
 		self.HMMER_C_EValue_Cutoff = HMMER_C_EValue_Cutoff
 		self.HMMER_HitScore_Cutoff = HMMER_HitScore_Cutoff
-		self.VariableShelveFile_UcfVirus = self.VariableShelveDir_RefVirus = {}
+		self.VariableShelveFile_UcfVirus, self.VariableShelveDir_RefVirus = {}, {}
 
 
 	def get_genbank(self) -> None:
@@ -49,7 +49,7 @@ class UcfVirusAnnotator:
 
 	def annotate(self) -> None:
 		'''3/3: Annotate unclassified viruses via PPHMM and GOM, generate loc/sig tables for unclassified, save to pickle'''
-		PPHMMSignatureTable_Dict = PPHMMLocationTable_Dict = GOMSignatureTable_Dict = {}
+		PPHMMSignatureTable_Dict, PPHMMLocationTable_Dict, GOMSignatureTable_Dict = {}, {}, {}
 		N_RefVirusGroups, RefVirusGroup_i = len(self.ShelveDirs_RefVirus), 0
 		for ShelveDir_RefVirus in self.ShelveDirs_RefVirus:
 			RefVirusGroup_i = RefVirusGroup_i+1
@@ -82,7 +82,7 @@ class UcfVirusAnnotator:
 															)
 			
 			'''Delete HMMER_hmmscanDir'''
-			_ = subprocess.call("rm -rf %s" %HMMER_hmmscanDir_RefVirus, shell = True)	
+			_ = subprocess.call(f"rm -rf {HMMER_hmmscanDir_RefVirus}", shell = True)	
 			
 			GOMSignatureTable = GOMSignatureTable_Constructor(PPHMMLocationTable = PPHMMLocationTable,
 																GOMDB			 = Parameters["GOMDB"],

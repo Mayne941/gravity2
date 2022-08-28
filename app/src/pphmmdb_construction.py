@@ -62,7 +62,6 @@ class PPHMMDBConstruction:
 		self.orf_tranl_table = get_orf_trasl_table()
 		self.orf_no_match = no_orf_match()
 
-
 	def mkdirs(self):
 		'''1/10: Return all directories for db storage'''
 		print("Generating directories")
@@ -74,35 +73,37 @@ class PPHMMDBConstruction:
 			_ = subprocess.call("rm -rf %s" %BLASTMainDir, shell = True)
 		os.makedirs(BLASTMainDir)
 
-		BLASTQueryFile		= BLASTMainDir+"/Query.fasta"
-		BLASTSubjectFile	= BLASTMainDir+"/Subjects.fasta"
-		BLASTOutputFile		= BLASTMainDir+"/BLASTOutput.txt"
-		BLASTBitScoreFile	= BLASTMainDir+"/BitScoreMat.txt"
-		BLASTProtClusterFile= BLASTMainDir+"/ProtClusters.txt"
-		ClustersDir			= BLASTMainDir+"/Clusters"; os.makedirs(ClustersDir)
+		BLASTQueryFile		= f"{BLASTMainDir}/Query.fasta"
+		BLASTSubjectFile	= f"{BLASTMainDir}/Subjects.fasta"
+		BLASTOutputFile		= f"{BLASTMainDir}/BLASTOutput.txt"
+		BLASTBitScoreFile	= f"{BLASTMainDir}/BitScoreMat.txt"
+		BLASTProtClusterFile= f"{BLASTMainDir}/ProtClusters.txt"
+		ClustersDir			= f"{BLASTMainDir}/Clusters"; os.makedirs(ClustersDir)
 		
 		'''HMMER dirs'''
-		HMMERDir			= self.ShelveDir+"/HMMER"
+		HMMERDir			= f"{self.ShelveDir}/HMMER"
+
 		'''Delete existing HMMER libraries'''
 		if os.path.exists(HMMERDir):
 			'''Clear previous results'''
 			_ = subprocess.call("rm -rf %s" %HMMERDir, shell = True)
 		os.makedirs(HMMERDir)
-		HMMER_PPHMMDir		= HMMERDir+"/HMMER_PPHMMs"; os.makedirs(HMMER_PPHMMDir)
-		HMMER_PPHMMDbDir	= HMMERDir+"/HMMER_PPHMMDb"; os.makedirs(HMMER_PPHMMDbDir)
-		HMMER_PPHMMDb		= HMMER_PPHMMDbDir+"/HMMER_PPHMMDb"
+		HMMER_PPHMMDir		= f"{HMMERDir}/HMMER_PPHMMs"; os.makedirs(HMMER_PPHMMDir)
+		HMMER_PPHMMDbDir	= f"{HMMERDir}/HMMER_PPHMMDb"; os.makedirs(HMMER_PPHMMDbDir)
+		HMMER_PPHMMDb		= f"{HMMER_PPHMMDbDir}/HMMER_PPHMMDb"
 
-		VariableShelveDir 	= self.ShelveDir+"/Shelves"
+		VariableShelveDir 	= f"{self.ShelveDir}/Shelves"
 
 		'''HHsuite dirs, regardless of if it's enabled'''
-		HHsuiteDir	= self.ShelveDir+"/HHsuite"
+		HHsuiteDir	= f"{self.ShelveDir}/HHsuite"
 		if os.path.exists(HHsuiteDir):
 			'''Clear previous results'''
-			_ = subprocess.call("rm -rf %s" %HHsuiteDir, shell = True)
+			_ = subprocess.call(f"rm -rf {HHsuiteDir}", shell = True)
 		os.makedirs(HHsuiteDir)
-		HHsuite_PPHMMDir = HHsuiteDir + "/HHsuite_PPHMMs";os.makedirs(HHsuite_PPHMMDir)
-		HHsuite_PPHMMDBDir= HHsuiteDir +"/HHsuite_PPHMMDB";os.makedirs(HHsuite_PPHMMDBDir)
-		HHsuite_PPHMMDB	= HHsuite_PPHMMDBDir+"/HHsuite_PPHMMDB"
+
+		HHsuite_PPHMMDir  = f"{HHsuiteDir}/HHsuite_PPHMMs";os.makedirs(HHsuite_PPHMMDir)
+		HHsuite_PPHMMDBDir= f"{HHsuiteDir}/HHsuite_PPHMMDB";os.makedirs(HHsuite_PPHMMDBDir)
+		HHsuite_PPHMMDB	  = f"{HHsuite_PPHMMDBDir}/HHsuite_PPHMMDB"
 			
 		return  BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile, \
 				BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDbDir, \
@@ -125,9 +126,9 @@ class PPHMMDBConstruction:
 
 		for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"]):
 			assert len(SeqIDList) == 1 # RM < removed a for loop here as SeqIDList only ever seemed to be 1 long - was this just for de-nesting?
-			SeqID = SeqIDList[0] 
+			SeqID 			= SeqIDList[0] 
 			GenBankRecord	= GenBankDict[SeqID]
-			GenBankID	= GenBankRecord.name
+			GenBankID		= GenBankRecord.name
 			GenBankFeatures	= GenBankRecord.features
 
 			'''Extract protein sequences'''
@@ -270,7 +271,6 @@ class PPHMMDBConstruction:
 								SeenPair_i = SeenPair_i+1
 			
 			progress_bar(f"\033[K BLASTp: [{'='*int(float(ProtSeq_i+1)/N_ProtSeqs*20)}] {ProtSeq_i+1}/{N_ProtSeqs} proteins \r")
-		
 		clean_stdout()
 		
 		BitScoreMat = np.array(BitScoreMat)
@@ -302,15 +302,10 @@ class PPHMMDBConstruction:
 	def make_alignments(self, ProtList, ProtIDList, BLASTProtClusterFile, ClustersDir):
 		'''8/10: Do protein alignments with muscle align, make cluster alignment annotations'''
 		print("- Make protein alignments")
-		N_Clusters		= LineCount(BLASTProtClusterFile)+1 #Count the number of clusters
-		Cluster_i		= 0
-		Cluster_MetaDataDict	= {}
+		N_Clusters, Cluster_i, Cluster_MetaDataDict		= LineCount(BLASTProtClusterFile)+1, 0, {}
 		with open(BLASTProtClusterFile, 'r') as BLASTProtCluster_txt:
 			for Cluster in BLASTProtCluster_txt.readlines():
-				HitList		= []
-				TaxoLists	= []
-				DescList	= []
-				Cluster		= Cluster.split("\n")[0].split("\t")
+				HitList, TaxoLists, DescList, Cluster		= [], [], [], Cluster.split("\n")[0].split("\t")
 				for ProtID in Cluster:
 					HitList.append(ProtList[np.where(ProtIDList == ProtID)[0][0]])
 					TaxoLists.append(HitList[-1].annotations['taxonomy'])
@@ -343,8 +338,8 @@ class PPHMMDBConstruction:
 									}
 				Cluster_i += 1
 				progress_bar(f"\033[K Make protein alignments: [{'='*int(float(Cluster_i)/N_Clusters*20)}] {Cluster_i}/{N_Clusters} alignments \r")
-		
 		clean_stdout()
+		
 		return Cluster_MetaDataDict
 
 	def rebuild_hhsuite_db(self, HHsuite_PPHMMDB, HHsuite_PPHMMDir, hhsearchDir, AlignmentMerging_i_round):
@@ -381,8 +376,8 @@ class PPHMMDBConstruction:
 
 		'''Make HHsuite PPHMMs from protein alignments'''
 		for Cluster_i in range(len(Cluster_MetaDataDict)):
-			AlnClusterFile		= ClustersDir+"/Cluster_%s.fasta" %Cluster_i
-			HHsuite_PPHMMFile	= HHsuite_PPHMMDir+"/PPHMM_%s.hhm" %Cluster_i
+			AlnClusterFile		= f"{ClustersDir}/Cluster_{Cluster_i}.fasta"
+			HHsuite_PPHMMFile	= f"{HHsuite_PPHMMDir}/PPHMM_{Cluster_i}.hhm"
 			_ = subprocess.Popen(f"hhmake -i {AlnClusterFile} -o {HHsuite_PPHMMFile} -seq {len(Cluster_MetaDataDict[Cluster_i]['Cluster'])+1} -name Cluster_{Cluster_i} -id 100 -M 50 -v 0",
 															stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
@@ -402,11 +397,11 @@ class PPHMMDBConstruction:
 				break
 			
 			if self.HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging == True:
-				print("\t\tHMMER_PPHMMDb_ForEachRoundOfPPHMMMerging == True. Make a HMMER PPHMM DB. (Round %s)" %AlignmentMerging_i_round)
-				_ = self.Make_HMMER_PPHMM_DB(	HMMER_PPHMMDir = HMMER_PPHMMDir,
-								HMMER_PPHMMDb = HMMER_PPHMMDbDir+"/HMMER_PPHMMDb_%s" %AlignmentMerging_i_round,
-								ClustersDir = ClustersDir,
-								Cluster_MetaDataDict = Cluster_MetaDataDict)
+				print(f"HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging == True. Make a HMMER PPHMM DB. (Round {AlignmentMerging_i_round})")
+				_ = self.Make_HMMER_PPHMM_DB(HMMER_PPHMMDir = HMMER_PPHMMDir,
+									HMMER_PPHMMDb = f"{HMMER_PPHMMDbDir}/HMMER_PPHMMDb_{AlignmentMerging_i_round}",
+									ClustersDir = ClustersDir,
+									Cluster_MetaDataDict = Cluster_MetaDataDict)
 				
 				_ = subprocess.Popen(f"find {HMMER_PPHMMDir} -type f -name '*.hmm' -delete", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 				out, err = _.communicate()
@@ -414,8 +409,8 @@ class PPHMMDBConstruction:
 			'''Inter-PPHMM similarity scoring'''
 			print(f"\t\tRound {AlignmentMerging_i_round + 1}\n\t\t\tDetermine PPHMM-PPHMM similarity scores (ALL-VERSUS-ALL hhsearch)")
 			hhsearchDir		= HHsuiteDir+"/hhsearch_"+"".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)); os.makedirs(hhsearchDir)
-			hhsearchOutFile	= hhsearchDir+"/hhsearch.stdout.hhr"
-			N_PPHMMs		= LineCount("%s_hhm.ffindex"%HHsuite_PPHMMDB)
+			hhsearchOutFile	= f"{hhsearchDir}/hhsearch.stdout.hhr"
+			N_PPHMMs		= LineCount(f"{HHsuite_PPHMMDB}_hhm.ffindex")
 			
 			SeenPair, SeenPair_i, PPHMMSimScoreCondensedMat	= {}, 0, []
 			for PPHMM_i in range(0, N_PPHMMs):
@@ -432,15 +427,15 @@ class PPHMMDBConstruction:
 						if Line == "\n":
 							break
 						else:
-							Line  		= Line.replace("("," ").replace(")"," ").split()
-							PPHMM_j		= int(Line[1].split("_")[1])
-							evalue		= float(Line[3])
-							pvalue		= float(Line[4])
+							Line  			= Line.replace("("," ").replace(")"," ").split()
+							PPHMM_j			= int(Line[1].split("_")[1])
+							evalue			= float(Line[3])
+							pvalue			= float(Line[4])
 							PPHMMSimScore	= float(Line[5])
-							Col			= float(Line[7])
+							Col				= float(Line[7])
 							SubjectLength	= int(Line[10])
-							qcovs		= Col/QueryLength*100
-							scovs		= Col/SubjectLength*100
+							qcovs			= Col/QueryLength*100
+							scovs			= Col/SubjectLength*100
 							if (evalue <= self.HHsuite_evalue_Cutoff and pvalue <= self.HHsuite_pvalue_Cutoff and qcovs >= self.HHsuite_QueryCoverage_Cutoff and scovs >= self.HHsuite_SubjectCoverage_Cutoff):
 								Pair	= ", ".join(sorted(map(str,[PPHMM_i, PPHMM_j])))
 								if Pair in SeenPair: 
@@ -466,14 +461,14 @@ class PPHMMDBConstruction:
 			PPHMMSimScoreCondensedMat	= np.array([PPHMMSimScorePair for PPHMMSimScorePair in PPHMMSimScoreCondensedMat if PPHMMSimScorePair[0] < PPHMMSimScorePair[1]])
 			PPHMMSimScoreCondensedMatFile	= hhsearchDir+"/PPHMMSimScoreCondensedMat.txt"
 			np.savetxt(fname	= PPHMMSimScoreCondensedMatFile,
-					X	= PPHMMSimScoreCondensedMat,
-					fmt	= '%s',
-					delimiter= "\t",
-					header	= "PPHMM_i\tPPHMM_j\tPPHMMSimScore")
+						X	= PPHMMSimScoreCondensedMat,
+						fmt	= '%s',
+						delimiter= "\t",
+						header	= "PPHMM_i\tPPHMM_j\tPPHMMSimScore")
 			
 			'''Cluster PPHMMs using Muscle'''
 			print("\t\t\tCluster PPHMMs based on hhsearch scores, using the MCL algorithm")
-			PPHMMClustersFile	= hhsearchDir+"/PPHMMClusters.txt"
+			PPHMMClustersFile	= f"{hhsearchDir}/PPHMMClusters.txt"
 			_ = subprocess.Popen(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMMClustersFile} -I {self.PPHMMClustering_MCLInflation}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			_, out = _.communicate()
 			
@@ -563,13 +558,13 @@ class PPHMMDBConstruction:
 			for PPHMM_i in AfterMergingPPHMM_IndexList:
 				Cluster_MetaDataDict[AfterMergingPPHMM_i] = Cluster_MetaDataDict.pop(PPHMM_i)
 				
-				ClusterFile_i = ClustersDir+f"/Cluster_{PPHMM_i}.fasta"
-				ClusterFile_j = ClustersDir+f"/Cluster_{AfterMergingPPHMM_i}.fasta"
+				ClusterFile_i = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta"
+				ClusterFile_j = f"{ClustersDir}/Cluster_{AfterMergingPPHMM_i}.fasta"
 				_ = subprocess.Popen(f"mv {ClusterFile_i} {ClusterFile_j}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 				out, err = _.communicate()
 				
-				HHsuite_PPHMMFile_i = HHsuite_PPHMMDir+f"/PPHMM_{PPHMM_i}.hhm"
-				HHsuite_PPHMMFile_j = HHsuite_PPHMMDir+f"/PPHMM_{AfterMergingPPHMM_i}.hhm"
+				HHsuite_PPHMMFile_i = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hhm"
+				HHsuite_PPHMMFile_j = f"{HHsuite_PPHMMDir}/PPHMM_{AfterMergingPPHMM_i}.hhm"
 				_ = subprocess.Popen(f"mv {HHsuite_PPHMMFile_i} {HHsuite_PPHMMFile_j}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 				out, err = _.communicate()
 				
@@ -581,7 +576,7 @@ class PPHMMDBConstruction:
 					HHsuite_PPHMM_txt.write(contents)	#Write the contents
 					HHsuite_PPHMM_txt.truncate()		#Delete everything after the cursor
 				
-				AfterMergingPPHMM_i = AfterMergingPPHMM_i + 1
+				AfterMergingPPHMM_i += 1
 
 			'''Rebuild the HHsuite PPHMM database'''
 			AlignmentMerging_i_round = self.rebuild_hhsuite_db(HHsuite_PPHMMDB, HHsuite_PPHMMDir, hhsearchDir, AlignmentMerging_i_round)
@@ -618,13 +613,9 @@ class PPHMMDBConstruction:
 								)
 							)
 			
-			(ClusterTaxo_UniqueBaltimoreGroup,
-			ClusterTaxo_UniqueOrder,
-			ClusterTaxo_UniqueFamily,
-			ClusterTaxo_UniqueSubFam,
-			ClusterTaxo_UniqueGenus,
-			ClusterTaxo_UniqueVirusName,
-			ClusterTaxo_UniqueTaxoGroup) = [list(set(TaxoList)) for TaxoList in zip(*TaxoLists)]
+			ClusterTaxo_UniqueBaltimoreGroup, ClusterTaxo_UniqueOrder, ClusterTaxo_UniqueFamily, \
+			ClusterTaxo_UniqueSubFam, ClusterTaxo_UniqueGenus, ClusterTaxo_UniqueVirusName, \
+				ClusterTaxo_UniqueTaxoGroup = [list(set(TaxoList)) for TaxoList in zip(*TaxoLists)]
 			ClusterTaxo = []
 
 			for ClusterTaxo_UniqueTaxoLabel in [ClusterTaxo_UniqueBaltimoreGroup, ClusterTaxo_UniqueOrder, ClusterTaxo_UniqueFamily, ClusterTaxo_UniqueSubFam, ClusterTaxo_UniqueGenus]:
@@ -632,10 +623,10 @@ class PPHMMDBConstruction:
 					if ClusterTaxo_UniqueTaxoLabel[0] not in ["", "Unassigned", "unassigned"]:
 						ClusterTaxo = ClusterTaxo + ClusterTaxo_UniqueTaxoLabel
 				else:
-					ClusterTaxo = ClusterTaxo + [b"/".join(ClusterTaxo_UniqueTaxoLabel)]
+					ClusterTaxo = ClusterTaxo + ["/".join(ClusterTaxo_UniqueTaxoLabel)]
 					break
-			
-			ClusterTaxoList.append("; ".join(ClusterTaxo)) # RM <
+
+			ClusterTaxoList.append("; ".join(ClusterTaxo)) 
 			ClusterProtSeqIDList.append(", ".join(Cluster))
 			
 			ClusterDescCount = sorted(list(Counter(DescList).items()), key = operator.itemgetter(1), reverse = True)
@@ -647,8 +638,8 @@ class PPHMMDBConstruction:
 			ClusterDescList.append(f"{ClusterDesc}|{ClusterTaxoList[-1]}")
 			
 			'''Make a PPHMM using HMMER hmmbuild'''
-			AlnClusterFile = ClustersDir+f"/Cluster_{PPHMM_i}.fasta"
-			HMMER_PPHMMFile = HMMER_PPHMMDir+f"/PPHMM_{PPHMM_i}.hmm"
+			AlnClusterFile = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta"
+			HMMER_PPHMMFile = f"{HMMER_PPHMMDir}/PPHMM_{PPHMM_i}.hmm"
 			_ = subprocess.Popen(f"hmmbuild {HMMER_PPHMMFile} {AlnClusterFile}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
 			
@@ -665,7 +656,7 @@ class PPHMMDBConstruction:
 		clean_stdout()
 		
 		'''Make a HMMER HMM DB with hmmpress'''
-		_ = subprocess.Popen("find %s -name '*.hmm' -exec cat {} \; > %s" %(HMMER_PPHMMDir, HMMER_PPHMMDb), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		_ = subprocess.Popen(f"find {HMMER_PPHMMDir} -name '*.hmm' -exec cat {{}} \; > {HMMER_PPHMMDb}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		_ = subprocess.Popen(f"hmmpress {HMMER_PPHMMDb}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
@@ -673,7 +664,7 @@ class PPHMMDBConstruction:
 		'''Make a PPHMMDBSummary file'''
 		ClusterIDList = [f"Cluster_{Cluster_i}" for Cluster_i in range(N_PPHMMs)]
 		np.savetxt(fname = HMMER_PPHMMDb+"_Summary.txt",
-				X = np.column_stack((	ClusterIDList,
+				X = np.column_stack((ClusterIDList,
 							ClusterDescList,
 							ClusterSizeList,
 							ClusterProtSeqIDList,
@@ -726,7 +717,7 @@ class PPHMMDBConstruction:
 
 		'''9/10: Make PPHMMs, DB and Merge Alignments'''
 		if self.N_AlignmentMerging != 0:
-			self.pphmm_and_merge_alignments()
+			self.pphmm_and_merge_alignments(Cluster_MetaDataDict, ClustersDir, HHsuite_PPHMMDir, HMMER_PPHMMDir, HMMER_PPHMMDbDir, HHsuite_PPHMMDB, HHsuiteDir)
 		
 		'''10/10: Make HMMER DB, save to persistent storage'''
 		self.Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDb, ClustersDir, Cluster_MetaDataDict, VariableShelveDir+"/PPHMMDBConstruction.p")

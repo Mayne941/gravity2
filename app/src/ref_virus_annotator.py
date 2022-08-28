@@ -22,12 +22,12 @@ class RefVirusAnnotator:
 				GenomeSeqFile,
 				ShelveDir,
 				SeqLength_Cutoff		= 0,
-				IncludeIncompleteGenomes		= False,
+				IncludeIncompleteGenomes= False,
 				HMMER_N_CPUs			= 20,
 				HMMER_C_EValue_Cutoff	= 1E-3,
 				HMMER_HitScore_Cutoff	= 0,
 				RemoveSingletonPPHMMs	= False,
-				N_VirusesOfTheClassToIgnore		= 1,
+				N_VirusesOfTheClassToIgnore	= 1,
 				PPHMMSorting			= False,
 				HHsuite_evalue_Cutoff	= 1E-3,
 				HHsuite_pvalue_Cutoff	= 0.05,
@@ -54,35 +54,35 @@ class RefVirusAnnotator:
 		self.HHsuite_SubjectCoverage_Cutoff = HHsuite_SubjectCoverage_Cutoff
 		self.PPHMMClustering_MCLInflation = PPHMMClustering_MCLInflation
 		'''Placehodler dirs & objects'''
-		self.VariableShelveDir = "placeholder"
+		self.VariableShelveDir = ""
 		self.genomes = {}
-		self.PPHMMSignatureTable = self.PPHMMLocationTable = []
+		self.PPHMMSignatureTable, self.PPHMMLocationTable = [], []
 
 	def mkdirs(self):
 		'''1/8: Return all dirs for db storage and retrieval'''
-		HMMERDir			= self.ShelveDir+"/HMMER"
-		HMMER_PPHMMDir		= HMMERDir+"/HMMER_PPHMMs"
-		HMMER_PPHMMDbDir	= HMMERDir+"/HMMER_PPHMMDb"
-		HMMER_PPHMMDb		= HMMER_PPHMMDbDir+"/HMMER_PPHMMDb"
+		HMMERDir			= f"{self.ShelveDir}/HMMER"
+		HMMER_PPHMMDir		= f"{HMMERDir}/HMMER_PPHMMs"
+		HMMER_PPHMMDbDir	= f"{HMMERDir}/HMMER_PPHMMDb"
+		HMMER_PPHMMDb		= f"{HMMER_PPHMMDbDir}/HMMER_PPHMMDb"
 
 		if self.RemoveSingletonPPHMMs == True:
-			ClustersDir	= self.ShelveDir+"/BLAST/Clusters"
+			ClustersDir	= f"{self.ShelveDir}/BLAST/Clusters"
 		else:
-			ClustersDir = "placeholder"
+			ClustersDir = ""
 		
 		if self.PPHMMSorting == True:
-			ClustersDir	= self.ShelveDir+"/BLAST/Clusters"
-			HHsuiteDir	= self.ShelveDir+"/HHsuite"
+			ClustersDir	= f"{self.ShelveDir}/BLAST/Clusters"
+			HHsuiteDir	= f"{self.ShelveDir}/HHsuite"
 			if os.path.exists(HHsuiteDir):
 				_ = subprocess.call(f"rm -rf {HHsuiteDir}", shell = True); os.makedirs(HHsuiteDir)
-			HHsuite_PPHMMDir = HHsuiteDir + "/HHsuite_PPHMMs";os.makedirs(HHsuite_PPHMMDir)
-			HHsuite_PPHMMDBDir= HHsuiteDir +"/HHsuite_PPHMMDB";os.makedirs(HHsuite_PPHMMDBDir)
-			HHsuite_PPHMMDB	= HHsuite_PPHMMDBDir+"/HHsuite_PPHMMDB"
+			HHsuite_PPHMMDir  = f"{HHsuiteDir}/HHsuite_PPHMMs";os.makedirs(HHsuite_PPHMMDir)
+			HHsuite_PPHMMDBDir= f"{HHsuiteDir}/HHsuite_PPHMMDB";os.makedirs(HHsuite_PPHMMDBDir)
+			HHsuite_PPHMMDB	  = f"{HHsuite_PPHMMDBDir}/HHsuite_PPHMMDB"
 		else:
-			HHsuiteDir = HHsuite_PPHMMDir = HHsuite_PPHMMDB = "placeholder"
+			HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB = "", "", ""
 			
 		HMMER_hmmscanDir = HMMERDir+"/hmmscan_"+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10));os.makedirs(HMMER_hmmscanDir)
-		self.VariableShelveDir 	= self.ShelveDir+"/Shelves"
+		self.VariableShelveDir 	= f"{self.ShelveDir}/Shelves"
 
 		return HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir
 
@@ -100,10 +100,10 @@ class RefVirusAnnotator:
 		N_Seq 		 = len(self.genomes["SeqIDLists"])
 		
 		'''Specify PPHMMQueryFile and PPHMMScanOutFile'''
-		PPHMMDB_Summary			= HMMER_PPHMMDb+"_Summary.txt"
+		PPHMMDB_Summary			= f"{HMMER_PPHMMDb}_Summary.txt"
 		N_PPHMMs				= LineCount(PPHMMDB_Summary)-1
-		PPHMMQueryFile			= HMMER_hmmscanDir+"/QProtSeqs.fasta"
-		PPHMMScanOutFile		= HMMER_hmmscanDir+"/PPHMMScanOut.txt"
+		PPHMMQueryFile			= f"{HMMER_hmmscanDir}/QProtSeqs.fasta"
+		PPHMMScanOutFile		= f"{HMMER_hmmscanDir}/PPHMMScanOut.txt"
 		
 		# RM < Sig table init, modify and return to replace self var
 		PPHMMSignatureTable			= np.empty((0, N_PPHMMs))
@@ -120,7 +120,7 @@ class RefVirusAnnotator:
 				GenBankDescList.append(GenBankRecord.description)
 			
 			'''sort lists by sequence/segment lengths'''
-			(GenBankSeqLenList, GenBankSeqList,GenBankIDList, GenBankDescList) = list(zip(*sorted(zip(list(map(len, list(map(str, GenBankSeqList)))), GenBankSeqList, GenBankIDList, GenBankDescList), reverse = True)))
+			GenBankSeqLenList, GenBankSeqList,GenBankIDList, GenBankDescList = list(zip(*sorted(zip(list(map(len, list(map(str, GenBankSeqList)))), GenBankSeqList, GenBankIDList, GenBankDescList), reverse = True)))
 			GenBankSeq = ""
 			for seq in GenBankSeqList:
 				GenBankSeq = GenBankSeq+seq
@@ -206,10 +206,10 @@ class RefVirusAnnotator:
 
 								else:
 									if C_EValue < Best_C_EValue:
-										Best_C_EValue			= C_EValue
-										FeatureFrameBestHitList[-1]	= Frame
-										FeatureLocFromBestHitList[-1]	= LocFrom*3
-										FeatureLocToBestHitList[-1]	= LocTo*3
+										Best_C_EValue				 = C_EValue
+										FeatureFrameBestHitList[-1]	 = Frame
+										FeatureLocFromBestHitList[-1]= LocFrom*3
+										FeatureLocToBestHitList[-1]	 = LocTo*3
 				
 				'''Absolute coordinate with orientation info encoded into it: +ve if the gene is present on the (+)strand, otherwise -ve'''
 				FeatureLocMiddleBestHitList				= np.zeros(N_PPHMMs)
@@ -287,13 +287,13 @@ class RefVirusAnnotator:
 			os.remove(f)
 		
 		'''Make a database of the remaining PPHMMs'''
-		_ = subprocess.Popen("find %s -name '*.hmm' -exec cat {} \; > %s" %(HMMER_PPHMMDir, HMMER_PPHMMDb), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		_ = subprocess.Popen(f"find {HMMER_PPHMMDir} -name '*.hmm' -exec cat {{}} \; > {HMMER_PPHMMDb}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		_ = subprocess.Popen(f"hmmpress -f {HMMER_PPHMMDb}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
 		'Remake the summary file of the new PPHMM database'
-		HMMER_PPHMMDbSummaryFile = HMMER_PPHMMDb+"_Summary.txt"
+		HMMER_PPHMMDbSummaryFile = f"{HMMER_PPHMMDb}_Summary.txt"
 		Contents, PPHMM_i = [], 0 
 		with open(HMMER_PPHMMDbSummaryFile, "r") as HMMER_PPHMMDbSummary_txt:
 			Contents.append(next(HMMER_PPHMMDbSummary_txt))
@@ -314,7 +314,7 @@ class RefVirusAnnotator:
 		self.PPHMMLocationTable		= np.delete(arr = self.PPHMMLocationTable, obj = SingletonPPHMM_IndexList, axis = 1)
 		
 		'''Reorganise the cluster meta data from PPHMMDBConstruction.p'''
-		VariableShelveFile = self.VariableShelveDir+"/PPHMMDBConstruction.p"
+		VariableShelveFile = f"{self.VariableShelveDir}/PPHMMDBConstruction.p"
 		parameters = pickle.load(open(VariableShelveFile, "rb"))
 
 		'''Remove singleton PPHMMs' associated meta data, overwrite PPHMDBConstruction.p'''
@@ -345,7 +345,7 @@ class RefVirusAnnotator:
 		clean_stdout()
 		
 		'''Constructe a PPHMM dendrogram, and extract the PPHMM order'''
-		SimMat_traits = np.array(SimMat_traits)
+		SimMat_traits 	  = np.array(SimMat_traits)
 		TreeNewick_traits = DistMat2Tree(DistMat = 1 - SimMat_traits,
 							LeafList = TaxoLabelList,
 							Dendrogram_LinkageMethod = "average")
@@ -357,7 +357,7 @@ class RefVirusAnnotator:
 		'''Cluster PPHMMs by PPHMM similiarty, make dbs'''
 		N_PPHMMs = self.PPHMMSignatureTable.shape[1]
 		for PPHMM_i in range(N_PPHMMs):
-			AlnClusterFile = ClustersDir+f"/Cluster_{PPHMM_i}.fasta"
+			AlnClusterFile = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta"
 			Aln	= AlignIO.read(AlnClusterFile, "fasta")
 			N_Seqs	= len(Aln)
 			L_Seqs	= Aln.get_alignment_length()
@@ -403,13 +403,13 @@ class RefVirusAnnotator:
 
 		'''Determine PPHMM-PPHMM similarity (AVA hhsearch)'''
 		hhsearchDir		= HHsuiteDir+"/hhsearch_"+"".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)); os.makedirs(hhsearchDir)
-		hhsearchOutFile		= hhsearchDir+"/hhsearch.stdout.hhr"
+		hhsearchOutFile	= f"{hhsearchDir}/hhsearch.stdout.hhr"
 		N_PPHMMs		= LineCount(f"{HHsuite_PPHMMDB}_hhm.ffindex")
 
 		SeenPair, SeenPair_i, PPHMMSimScoreCondensedMat	= {}, 0, []
 		hit_match = re.compile(r"[A-Z0-9]+\|[A-Z0-9]+.[0-9]{1}\s[a-zA-Z0-9_ ]{0,10}")
 		for PPHMM_i in range(0, N_PPHMMs):
-			HHsuite_PPHMMFile = HHsuite_PPHMMDir+f"/PPHMM_{PPHMM_i}.hhm"
+			HHsuite_PPHMMFile = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hhm"
 			_ = subprocess.Popen(f"hhsearch -i {HHsuite_PPHMMFile} -d {f'{HHsuite_PPHMMDB}'} -o {hhsearchOutFile} -e {self.HHsuite_evalue_Cutoff} -E {self.HHsuite_evalue_Cutoff} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.HHsuite_N_CPUs}",
 																stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
@@ -424,8 +424,8 @@ class RefVirusAnnotator:
 					if Line == "\n":
 						break
 					else:
-						Line 	= re.sub(hit_match, "", Line) # Filter variable length Hit name
-						Line  	= Line.replace("("," ").replace(")"," ").split()
+						Line 		= re.sub(hit_match, "", Line) # Filter variable length Hit name
+						Line  		= Line.replace("("," ").replace(")"," ").split()
 						PPHMM_j     = int(Line[0])
 						evalue		= float(Line[2])
 						pvalue		= float(Line[3])
@@ -454,7 +454,7 @@ class RefVirusAnnotator:
 		'''Structure and make similarity score matrix'''
 		PPHMMSimScoreCondensedMat = np.array(PPHMMSimScoreCondensedMat)
 		PPHMMSimScoreCondensedMat = np.array([PPHMMSimScorePair for PPHMMSimScorePair in PPHMMSimScoreCondensedMat if PPHMMSimScorePair[0] < PPHMMSimScorePair[1]])
-		PPHMMSimScoreCondensedMatFile	= hhsearchDir+"/PPHMMSimScoreCondensedMat.txt"
+		PPHMMSimScoreCondensedMatFile	= f"{hhsearchDir}/PPHMMSimScoreCondensedMat.txt"
 		np.savetxt(	fname	= PPHMMSimScoreCondensedMatFile,
 				X	= PPHMMSimScoreCondensedMat,
 				fmt	= '%s',
@@ -462,7 +462,7 @@ class RefVirusAnnotator:
 				header	= "PPHMM_i\tPPHMM_j\tPPHMMSimScore")
 		
 		'''Cluster PPHMMs based on hhsearch scores, using the MCL algorithm'''
-		PPHMM_ClusterFile	= hhsearchDir+"/PPHMM_Clusters.txt"
+		PPHMM_ClusterFile	= f"{hhsearchDir}/PPHMM_Clusters.txt"
 		_ = subprocess.Popen(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMM_ClusterFile} -I {self.PPHMMClustering_MCLInflation}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		_, out = _.communicate()
 		
@@ -480,7 +480,7 @@ class RefVirusAnnotator:
 		PPHMMOrder_ByMCL = [list(map(int,list(map(float,Cluster.split("\n")[0].split("\t"))))) for Cluster in PPHMMOrder_ByMCL]
 		
 		'''Delete the hhsuite shelve directory and database'''
-		_ = subprocess.Popen("rm -rf %s" %HHsuiteDir, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		_ = subprocess.Popen(f"rm -rf {HHsuiteDir}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		
 		'''Determine the final PPHMM order'''
@@ -528,7 +528,7 @@ class RefVirusAnnotator:
 		
 		'''Make a new (ordered) PPHMM database'''
 		print("Building ordered PPHMM DB")
-		_ = subprocess.Popen("find %s -name '*.hmm' -exec cat {} \; > %s" %(HMMER_PPHMMDir, HMMER_PPHMMDb), stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+		_ = subprocess.Popen(f"find {HMMER_PPHMMDir} -name '*.hmm' -exec cat {{}} \; > {HMMER_PPHMMDb}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
 		_ = subprocess.Popen(f"hmmpress -f {HMMER_PPHMMDb}", stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 		out, err = _.communicate()
