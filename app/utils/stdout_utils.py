@@ -10,5 +10,4 @@ def clean_stdout():
 
 def error_handler(out, err, name):
     if err != b"":
-        print(f"Something went wrong with {name}: {out, err}")
-        raise SystemExit("GRAViTy terminated.")
+        raise SystemExit(f"Something went wrong with {name}: {out, err}")

@@ -3,11 +3,12 @@ from copy import copy
 from scipy.cluster.hierarchy import linkage, fcluster
 from collections import Counter
 import matplotlib
-matplotlib.use('agg')
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap as LSC
 import matplotlib.pyplot as plt
 import os, sys, random, string, subprocess, operator, pickle
+
+matplotlib.use('agg')
 sys.setrecursionlimit(10000)
 
 #Local functions
@@ -19,7 +20,7 @@ from app.utils.gomdb_constructor import GOMDB_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
 from app.utils.console_messages import section_header
-from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ucf_annots, retrieve_ref_virus_vars, retrieve_pphmmdb_construction
+from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ucf_annots, retrieve_ref_virus_vars
 from app.utils.highest_posterior_density import hpd
 from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
 
@@ -138,8 +139,6 @@ class VirusClassificationAndEvaluation:
 						))))
 		
 		self.N_UcfViruses, self.N_RefVirusGroups = len(self.ucf_genomes["SeqIDLists"]), len(self.ShelveDirs_RefVirus)
-		self.final_results["MaxSimScoreTable"], self.final_results["TaxoOfMaxSimScoreTable"], self.final_results["TaxoAssignmentTable"], \
-			self.final_results["PhyloStatTable"] = np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0))
 		if self.Bootstrap == True:
 			self.PairwiseSimilarityScore_CutoffDist_Dict = {Bootstrap_i:{} for Bootstrap_i in range(self.N_Bootstrap)}
 			self.MaxSimScoreDistTable, self.TaxoOfMaxSimScoreDistTable, self.TaxoAssignmentDistTable, self.PhyloStatDistTable, \
@@ -148,6 +147,9 @@ class VirusClassificationAndEvaluation:
 	def classify(self):
 		'''6/8 : RM << DOCSTRING'''
 		RefVirusGroup_i = 0
+		MaxSimScoreTable, TaxoOfMaxSimScoreTable, TaxoAssignmentTable, \
+			PhyloStatTable = np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0))
+
 		for ShelveDir_RefVirus, GenomeSeqFile_RefVirus in zip(self.ShelveDirs_RefVirus, self.GenomeSeqFiles_RefVirus):
 			RefVirusGroup_i += 1
 			RefVirusGroup = ShelveDir_RefVirus.split("/")[-1]
@@ -225,11 +227,11 @@ class VirusClassificationAndEvaluation:
 																		self.TaxoLabelList_UcfVirus,
 																		self.PairwiseSimilarityScore_Cutoff_Dict[RefVirusGroup])
 			
-			self.final_results["MaxSimScoreTable"]		= np.column_stack((self.final_results["MaxSimScoreTable"], MaxSimScoreList))
-			self.final_results["TaxoOfMaxSimScoreTable"]= np.column_stack((self.final_results["TaxoOfMaxSimScoreTable"], TaxoOfMaxSimScoreList))
-			self.final_results["TaxoAssignmentTable"]	= np.column_stack((self.final_results["TaxoAssignmentTable"], TaxoAssignmentList))
-			self.final_results["PhyloStatTable"]		= np.column_stack((self.final_results["PhyloStatTable"], PhyloStatList))
-			
+			self.MaxSimScoreTable		= np.column_stack((MaxSimScoreTable, MaxSimScoreList))
+			self.TaxoOfMaxSimScoreTable	= np.column_stack((TaxoOfMaxSimScoreTable, TaxoOfMaxSimScoreList))
+			self.TaxoAssignmentTable	= np.column_stack((TaxoAssignmentTable, TaxoAssignmentList))
+			self.PhyloStatTable			= np.column_stack((PhyloStatTable, PhyloStatList))
+
 			if self.VirusGrouping == True:
 				'''(OPT) Virus grouping'''
 				self.do_virus_groupings(RefVirusGroup, DistMat, N_RefViruses, Parameters)
@@ -241,6 +243,12 @@ class VirusClassificationAndEvaluation:
 			if self.Heatmap_WithDendrogram == True:
 				'''(OPT) Draw hm/dendro'''
 				self.heatmap_with_dendrogram(Parameters, VirusDendrogramFile, TaxoLabelList_AllVirus, RefVirusGroup, DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList)
+
+		'''Update output data with iteratively updated table vers'''
+		self.final_results["MaxSimScoreTable"] 		 = self.MaxSimScoreTable
+		self.final_results["TaxoOfMaxSimScoreTable"] = self.TaxoOfMaxSimScoreTable
+		self.final_results["TaxoAssignmentTable"] 	 = self.TaxoAssignmentTable
+		self.final_results["PhyloStatTable"] 		 = self.PhyloStatTable
 
 	def do_virus_groupings(self, RefVirusGroup, DistMat, N_RefViruses, Parameters) -> None:
 		'''Accessory fn to CLASSIFY (6):  Group viruses with scipy fcluster/linkage, save results to txt'''
@@ -322,7 +330,7 @@ class VirusClassificationAndEvaluation:
 				VirusDendrogramDist_txt.write(BootstrappedVirusDendrogram+"\n")
 			
 			'''Compute similarity cut off for each taxonomic class based on the bootstrapped data'''
-			self.PairwiseSimilarityScore_CutoffDist_Dict[Bootstrap_i][RefVirusGroup] = PairwiseSimilarityScore_Cutoff_Dict_Constructor (BootstrappedSimMat[:N_RefViruses][:,:N_RefViruses],
+			self.PairwiseSimilarityScore_CutoffDist_Dict[Bootstrap_i][RefVirusGroup] = PairwiseSimilarityScore_Cutoff_Dict_Constructor(BootstrappedSimMat[:N_RefViruses][:,:N_RefViruses],
 																						Parameters["TaxoGroupingList"],
 																						self.N_PairwiseSimilarityScores)
 			
@@ -340,14 +348,15 @@ class VirusClassificationAndEvaluation:
 			BootsrappedTaxoAssignmentTable		= np.column_stack((BootsrappedTaxoAssignmentTable, BootsrappedTaxoAssignmentList))
 			BootsrappedPhyloStatTable			= np.column_stack((BootsrappedPhyloStatTable, BootsrappedPhyloStatList))
 		
-		self.final_results["MaxSimScoreDistTable"]		= np.append(self.MaxSimScoreDistTable, BootsrappedMaxSimScoreTable.T[...,None],	axis = 2)
-		self.final_results["TaxoOfMaxSimScoreDistTable"]= np.append(self.TaxoOfMaxSimScoreDistTable, BootsrappedTaxoOfMaxSimScoreTable.T[...,None],	axis = 2)
-		self.final_results["TaxoAssignmentDistTable"]	= np.append(self.TaxoAssignmentDistTable, BootsrappedTaxoAssignmentTable.T[...,None],	axis = 2)
-		self.final_results["PhyloStatDistTable"]		= np.append(self.PhyloStatDistTable, BootsrappedPhyloStatTable.T[...,None],		axis = 2)
-		
+		self.MaxSimScoreDistTable		= np.append(self.MaxSimScoreDistTable, BootsrappedMaxSimScoreTable.T[...,None],	axis = 2)
+		self.TaxoOfMaxSimScoreDistTable = np.append(self.TaxoOfMaxSimScoreDistTable, BootsrappedTaxoOfMaxSimScoreTable.T[...,None],	axis = 2)
+		self.TaxoAssignmentDistTable	= np.append(self.TaxoAssignmentDistTable, BootsrappedTaxoAssignmentTable.T[...,None],	axis = 2)
+		self.PhyloStatDistTable			= np.append(self.PhyloStatDistTable, BootsrappedPhyloStatTable.T[...,None],		axis = 2)
+
 		'''Create a bootstrapped dendrogram'''
 		if self.Bootstrap_method == "booster":
-			_ = subprocess.Popen(f"booster -i {VirusDendrogramFile} -b {VirusDendrogramDistFile} -o {BootstrappedVirusDendrogramFile} -@ {self.Bootstrap_N_CPUs} ",
+			'''Can't call error handler here as tool writes to stderr'''
+			_ = subprocess.Popen(f"./booster_linux64 -i {VirusDendrogramFile} -b {VirusDendrogramDistFile} -o {BootstrappedVirusDendrogramFile} -@ {self.Bootstrap_N_CPUs} ",
 										stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 			out, err = _.communicate()
 
@@ -666,20 +675,26 @@ class VirusClassificationAndEvaluation:
 				TaxoAssignmentRangeTable = np.zeros((self.N_UcfViruses, 0)),np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0))
 
 			for RefVirusGroup_i in range(self.N_RefVirusGroups):
+				# RM < N_RefVirusGroups = list of databases e.g. VI and VII = 0, 2
 				TaxoOfMaxSimScoreRangeList, MaxSimScoreRangeList, PhyloStatRangeList, TaxoAssignmentRangeList = [], [], [], []
 				for UcfVirus_i in range(self.N_UcfViruses):
 					TaxoOfMaxSimScoreDist_Counter = sorted(list(Counter(self.TaxoOfMaxSimScoreDistTable[:, UcfVirus_i, RefVirusGroup_i]).items()), key = operator.itemgetter(1), reverse = True)
-					# RM << .2f prec, 2nd var
 					TaxoOfMaxSimScoreRangeList.append(", ".join([f"{Taxo}: {round(Count/float(self.N_Bootstrap))}" for Taxo, Count in TaxoOfMaxSimScoreDist_Counter]))
-					MaxSimScoreRangeList.append(", ".join(["%s: %s"%(Taxo, "-".join(map(str,np.around(hpd(x = self.MaxSimScoreDistTable[np.where(self.TaxoOfMaxSimScoreDistTable[:, UcfVirus_i, RefVirusGroup_i]==Taxo)[0], UcfVirus_i, RefVirusGroup_i], alpha = 0.05),3)))) for Taxo in zip(*TaxoOfMaxSimScoreDist_Counter)[0]]))
-					PhyloStatRangeList.append(", ".join(["%s: %s"%(Taxo, ",".join(["p(%s): %s"%(x[0], x[1]/float(self.N_Bootstrap)) for x in sorted(list(Counter(self.PhyloStatDistTable[np.where(self.TaxoOfMaxSimScoreDistTable[:, UcfVirus_i, RefVirusGroup_i]==Taxo)[0], UcfVirus_i, RefVirusGroup_i]).items()), key = operator.itemgetter(1), reverse = True)])) for Taxo in zip(*TaxoOfMaxSimScoreDist_Counter)[0]]))
+					MaxSimScoreRangeList.append(", ".join(["%s: %s"%(Taxo, "-".join(map(str,np.around(hpd(x = self.MaxSimScoreDistTable[np.where(self.TaxoOfMaxSimScoreDistTable[:, UcfVirus_i, RefVirusGroup_i]==Taxo)[0], UcfVirus_i, RefVirusGroup_i], alpha = 0.05),3)))) for Taxo in list(zip(*TaxoOfMaxSimScoreDist_Counter))[0]]))
+					PhyloStatRangeList.append(", ".join(["%s: %s"%(Taxo, ",".join(["p(%s): %s"%(x[0], x[1]/float(self.N_Bootstrap)) for x in sorted(list(Counter(self.PhyloStatDistTable[np.where(self.TaxoOfMaxSimScoreDistTable[:, UcfVirus_i, RefVirusGroup_i]==Taxo)[0], UcfVirus_i, RefVirusGroup_i]).items()), key = operator.itemgetter(1), reverse = True)])) for Taxo in list(zip(*TaxoOfMaxSimScoreDist_Counter))[0]]))
 					TaxoAssignmentRangeList.append(", ".join(["%s: %.2f"%(Taxo, Count/float(self.N_Bootstrap)) for Taxo, Count in sorted(list(Counter(self.TaxoAssignmentDistTable[:, UcfVirus_i, RefVirusGroup_i]).items()), key = operator.itemgetter(1), reverse = True)]))
-				
-				self.final_results["TaxoOfMaxSimScoreRangeTable"] = np.column_stack((TaxoOfMaxSimScoreRangeTable, TaxoOfMaxSimScoreRangeList))
-				self.final_results["MaxSimScoreRangeTable"] 	  = np.column_stack((MaxSimScoreRangeTable, MaxSimScoreRangeList))
-				self.final_results["PhyloStatRangeTable"]	 	  = np.column_stack((PhyloStatRangeTable, PhyloStatRangeList))
-				self.final_results["TaxoAssignmentRangeTable"]	  = np.column_stack((TaxoAssignmentRangeTable, TaxoAssignmentRangeList))
+
+				TaxoOfMaxSimScoreRangeTable = np.column_stack((TaxoOfMaxSimScoreRangeTable, TaxoOfMaxSimScoreRangeList))
+				MaxSimScoreRangeTable       = np.column_stack((MaxSimScoreRangeTable, MaxSimScoreRangeList))
+				PhyloStatRangeTable    		= np.column_stack((PhyloStatRangeTable, PhyloStatRangeList))
+				TaxoAssignmentRangeTable    = np.column_stack((TaxoAssignmentRangeTable, TaxoAssignmentRangeList))
 			
+			'''Save final results from iteratively updated tables'''
+			self.final_results["TaxoOfMaxSimScoreRangeTable"] = TaxoOfMaxSimScoreRangeTable
+			self.final_results["MaxSimScoreRangeTable"] 	  = MaxSimScoreRangeTable
+			self.final_results["PhyloStatRangeTable"]	 	  = PhyloStatRangeTable
+			self.final_results["TaxoAssignmentRangeTable"]	  = TaxoAssignmentRangeTable
+
 			FinalisedTaxoAssignmentRangeList = []
 			for UcfVirus_i in range(self.N_UcfViruses):
 				BootstrappedFinalisedTaxoAssignmentList	= []
@@ -696,8 +711,6 @@ class VirusClassificationAndEvaluation:
 
 				FinalisedTaxoAssignmentRangeList.append(", ".join(["%s: %.2f"%(Taxo, Count/float(self.N_Bootstrap)) for Taxo, Count in sorted(list(Counter(BootstrappedFinalisedTaxoAssignmentList).items()), key = operator.itemgetter(1), reverse = True)]))
 			
-			# RM << Was "BootstrappedFinalisedTaxoAssignmentList" , i.e. overwrite non-bootstrapped vals
-			self.final_results["FinalisedTaxoAssignmentList"] = BootstrappedFinalisedTaxoAssignmentList
 			self.final_results["FinalisedTaxoAssignmentRangeList"] = FinalisedTaxoAssignmentRangeList
 
 	def write(self, ClassificationResultFile):
@@ -718,7 +731,6 @@ class VirusClassificationAndEvaluation:
 					fmt = '%s',
 					delimiter = "\t",
 					header = "Sequence identifier\tSequence description\tCandidate class (class of the best match reference virus)\tSimilarity score*\tSupport from dendrogram**\tEvaluated taxonomic assignment\tThe best taxonomic assignment\tProvisional virus taxonomy")
-			
 			with open(ClassificationResultFile, "a") as ClassificationResult_txt:
 				ClassificationResult_txt.write(f"\n"
 								f"*Similarity score cutoff\n"
@@ -817,26 +829,3 @@ class VirusClassificationAndEvaluation:
 
 		'''8/8: Write results'''
 		self.write(ClassificationResultFile)
-
-		# RM -- CHECK THESE KEYS ARE IN FINAL DICT
-		'''
-				"TaxoAssignmentTable",
-				"MaxSimScoreTable",
-				"TaxoOfMaxSimScoreTable",
-				"PhyloStatTable",
-				"FinalisedTaxoAssignmentList",
-				"FinalisedVirusGroupingList",
-				"PairwiseSimilarityScore_Cutoff_Dict",
-				"SeqIDLists_RemainedUcfVirus",
-				"VirusNameList_RemainedUcfVirus",
-				"MaxSimScoreDistTable",
-				"TaxoOfMaxSimScoreDistTable",
-				"TaxoAssignmentDistTable",
-				"PhyloStatDistTable",
-				"PairwiseSimilarityScore_CutoffDist_Dict",
-				"TaxoOfMaxSimScoreRangeTable",
-				"MaxSimScoreRangeTable",
-				"PhyloStatRangeTable",
-				"TaxoAssignmentRangeTable",
-				"FinalisedTaxoAssignmentRangeList",
-		'''

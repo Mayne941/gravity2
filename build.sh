@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build -t GRAViTy2/${PWD##*/} .
+docker build -t mayneba/gravity2 .
