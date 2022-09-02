@@ -388,7 +388,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 		for Tick in ScaleBarTicks:
 			ax_ScaleBar.plot([Tick, Tick],[-0.05, 0.05],'k-')
 		
-		ax_ScaleBar			.set_xlim([1, 0])
+		ax_ScaleBar			.set_xlim([1, 0]) 
 		ax_ScaleBar			.set_xticks(ScaleBarTicks)
 		ax_ScaleBar			.set_xticklabels(list(map(str, ScaleBarTicks)), rotation = 0, size = FontSize)
 		ax_ScaleBar			.set_xlabel('Distance', rotation = 0, size = FontSize+2)
