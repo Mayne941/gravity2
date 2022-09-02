@@ -1,6 +1,7 @@
 from app.pipeline_i import Pipeline_I
 from app.pipeline_ii import Pipeline_II
-from app.utils.api_classes import Pipeline_i_data, Pipeline_ii_data
+from app.utils.api_classes import Pipeline_i_data, Pipeline_ii_data, ScrapeData
+from app.utils.scrape_vmr import scrape
 
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
@@ -18,6 +19,10 @@ tags_metadata = [
         "name": "Pipeline II",
         "description": "PL2 description & user info.",
     },
+    {
+        "name": "Scrape VMR",
+        "description": "Refresh Virus Metadata Resource (VMR) from ICTV."
+    }
 ]
 
 app = FastAPI(
@@ -166,3 +171,13 @@ async def pipeline_ii_from_virus_classification(payload: Pipeline_ii_data, backg
 def run_pipeline_ii_from_virus_classification(payload):
     pl = Pipeline_II(payload)
     pl.virus_classification()
+
+
+'''Utility entrypoints'''
+
+
+@app.post("/scrape_vmr/", tags=["Scrape VMR"])
+async def run_vmr_scrape(trigger: ScrapeData):
+    payload = jsonable_encoder(trigger)
+    status = scrape(payload)
+    return status
