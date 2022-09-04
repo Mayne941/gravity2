@@ -4,7 +4,7 @@ from app.src.ucf_virus_annotator import UcfVirusAnnotator
 from app.src.virus_classification import VirusClassificationAndEvaluation
 
 from app.utils.str_to_bool import str2bool
-from app.utils.benchmark import benchmark_start, benchmark_end
+from app.utils.timer import timing
 from app.utils.generate_logs import Log_Generator_Pl2
 
 import optparse
@@ -33,10 +33,10 @@ class Pipeline_II:
             if Proceed != "Y":
                 raise SystemExit("GRAViTy terminated.")
 
+    @timing
     def read_genome_desc_table(self):
         '''I: Fire Read Genom Desc Table'''
         [print(log_text) for log_text in self.logs[0]]
-        start = benchmark_start("ReadGenomeDescTable")
         rgdt = ReadGenomeDescTable(
             GenomeDescTableFile=self.options['GenomeDescTableFile_UcfVirus'],
             ShelveDir=self.options['ShelveDir_UcfVirus'],
@@ -44,15 +44,13 @@ class Pipeline_II:
             Database_Header=self.options['Database_Header'],
         )
         rgdt.entrypoint()
-        benchmark_end("ReadGenomeDescTable", start)
-
         self.pphmmdb_construction()
 
+    @timing
     def pphmmdb_construction(self):
         '''II: Fire PPHMDB Constructor'''
         if str2bool(self.options['UseUcfVirusPPHMMs']) == True:
             [print(log_text) for log_text in self.logs[1]]
-            start = benchmark_start("PPHMMDBConstruction")
             pc = PPHMMDBConstruction(
                 GenomeSeqFile=self.options['GenomeSeqFile_UcfVirus'],
                 ShelveDir=self.options['ShelveDir_UcfVirus'],
@@ -79,14 +77,13 @@ class Pipeline_II:
                     self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']),
             )
             pc.main()
-            benchmark_end("PPHMMDBConstruction", start)
 
         self.ucf_virus_annotator()
 
+    @timing
     def ucf_virus_annotator(self):
         '''III: Fire UCF Virus Annotator'''
         [print(log_text) for log_text in self.logs[2]]
-        start = benchmark_start("UcfVirusAnnotator")
         ucf = UcfVirusAnnotator(
             GenomeSeqFile_UcfVirus=self.options['GenomeSeqFile_UcfVirus'],
             ShelveDir_UcfVirus=self.options['ShelveDir_UcfVirus'],
@@ -101,14 +98,12 @@ class Pipeline_II:
             HMMER_HitScore_Cutoff=self.options['HMMER_HitScore_Cutoff'],
         )
         ucf.main()
-        benchmark_end("UcfVirusAnnotator", start)
-
         self.virus_classification()
 
+    @timing
     def virus_classification(self):
         '''IV: Fire Classifiers'''
         [print(log_text) for log_text in self.logs[3]]
-        start = benchmark_start("VirusClassificationAndEvaluation")
         vce = VirusClassificationAndEvaluation(
             ShelveDir_UcfVirus=self.options['ShelveDir_UcfVirus'],
             ShelveDirs_RefVirus=self.options['ShelveDirs_RefVirus'],
@@ -141,7 +136,6 @@ class Pipeline_II:
             VirusGrouping=str2bool(self.options['VirusGrouping']),
         )
         vce.main()
-        benchmark_end("VirusClassificationAndEvaluation", start)
 
         print(f"Time to complete: {time.time() - self.actual_start}")
 

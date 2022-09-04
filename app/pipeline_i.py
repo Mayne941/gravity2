@@ -5,8 +5,8 @@ from app.src.graphing_tools import GRAViTyDendrogramAndHeatmapConstruction
 from app.src.mutual_information_calculator import MutualInformationCalculator
 
 from app.utils.str_to_bool import str2bool
-from app.utils.benchmark import benchmark_start, benchmark_end
 from app.utils.generate_logs import Log_Generator_Pl1
+from app.utils.timer import timing
 
 import optparse
 import os
@@ -35,10 +35,10 @@ class Pipeline_I:
             if Proceed != "Y":
                 raise SystemExit("GRAViTy terminated.")
 
+    @timing
     def read_genome_desc_table(self):
         '''I: Fire Read Genom Desc Table'''
         [print(log_text) for log_text in self.logs[0]]
-        start = benchmark_start("ReadGenomeDescTable")
         rgdt = ReadGenomeDescTable(
             GenomeDescTableFile=self.options['GenomeDescTableFile'],
             ShelveDir=self.options['ShelveDir'],
@@ -48,21 +48,20 @@ class Pipeline_I:
             TaxoGroupingFile=self.options['TaxoGroupingFile'],
         )
         rgdt.entrypoint()
-        benchmark_end("ReadGenomeDescTable", start)
         # breakpoint()
         self.pphmmdb_construction()
 
+    @timing
     def pphmmdb_construction(self):
         '''II: Fire PPHMDB Constructor'''
         [print(log_text) for log_text in self.logs[1]]
-        start = benchmark_start("PPHMMDBConstruction")
         pph = PPHMMDBConstruction(
             GenomeSeqFile=self.options['GenomeSeqFile'],
             ShelveDir=self.options['ShelveDir'],
             ProteinLength_Cutoff=self.options['ProteinLength_Cutoff'],
             IncludeIncompleteGenomes=str2bool(
                 self.options['IncludeProteinsFromIncompleteGenomes']),
-            BLASTp_evalue_Cutoff=self.options['BLASTp_evalue_Cutoff'],
+            BLASTp_evalue_Cutoff=self.options['BLASTp_evalutotal_elapsede_Cutoff'],
             BLASTp_PercentageIden_Cutoff=self.options['BLASTp_PercentageIden_Cutoff'],
             BLASTp_QueryCoverage_Cutoff=self.options['BLASTp_QueryCoverage_Cutoff'],
             BLASTp_SubjectCoverage_Cutoff=self.options['BLASTp_SubjectCoverage_Cutoff'],
@@ -82,13 +81,12 @@ class Pipeline_I:
                 self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']),
         )
         pph.main()
-        benchmark_end("PPHMMDBConstruction", start)
         self.ref_virus_annotator()
 
+    @timing
     def ref_virus_annotator(self):
         '''III: Fire Reference Virus Annotator'''
         [print(log_text) for log_text in self.logs[2]]
-        start = benchmark_start("RefVirusAnnotator")
         rva = RefVirusAnnotator(
             GenomeSeqFile=self.options['GenomeSeqFile'],
             ShelveDir=self.options['ShelveDir'],
@@ -110,13 +108,12 @@ class Pipeline_I:
             PPHMMClustering_MCLInflation=self.options['PPHMMClustering_MCLInflation_ForPPHMMSorting'],
         )
         rva.main()
-        benchmark_end("RefVirusAnnotator", start)
         self.make_graphs()
 
+    @timing
     def make_graphs(self):
         '''IV: Fire Heatmap and Dendrogram Constructors'''
         [print(log_text) for log_text in self.logs[3]]
-        start = benchmark_start("GRAViTyDendrogramAndHeatmapConstruction")
         ghm = GRAViTyDendrogramAndHeatmapConstruction(
             ShelveDir=self.options['ShelveDir'],
             IncludeIncompleteGenomes=str2bool(
@@ -138,13 +135,12 @@ class Pipeline_I:
             VirusGrouping=str2bool(self.options['VirusGrouping']),
         )
         ghm.main()
-        benchmark_end("GRAViTyDendrogramAndHeatmapConstruction", start)
         self.mutual_info_calculator()
 
+    @timing
     def mutual_info_calculator(self):
         '''V: Fire Mutal Info Calculator'''
         [print(log_text) for log_text in self.logs[4]]
-        start = benchmark_start("MutualInformationCalculator")
         mic = MutualInformationCalculator(
             ShelveDir=self.options['ShelveDir'],
             IncludeIncompleteGenomes=str2bool(
@@ -155,10 +151,8 @@ class Pipeline_I:
             SampleSizePerGroup=self.options['SampleSizePerGroup'],
         )
         mic.main()
-        benchmark_end("MutualInformationCalculator", start)
 
-        total_elapsed = time.time() - self.actual_start
-        print("Time to complete: %s" % total_elapsed)
+        print(f"Time to complete: {time.time() - self.actual_start}")
 
 
 if __name__ == '__main__':
