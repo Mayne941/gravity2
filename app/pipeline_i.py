@@ -48,7 +48,6 @@ class Pipeline_I:
             TaxoGroupingFile=self.options['TaxoGroupingFile'],
         )
         rgdt.entrypoint()
-        # breakpoint()
         self.pphmmdb_construction()
 
     @timing
@@ -61,7 +60,7 @@ class Pipeline_I:
             ProteinLength_Cutoff=self.options['ProteinLength_Cutoff'],
             IncludeIncompleteGenomes=str2bool(
                 self.options['IncludeProteinsFromIncompleteGenomes']),
-            BLASTp_evalue_Cutoff=self.options['BLASTp_evalutotal_elapsede_Cutoff'],
+            BLASTp_evalue_Cutoff=self.options['BLASTp_evalue_Cutoff'],
             BLASTp_PercentageIden_Cutoff=self.options['BLASTp_PercentageIden_Cutoff'],
             BLASTp_QueryCoverage_Cutoff=self.options['BLASTp_QueryCoverage_Cutoff'],
             BLASTp_SubjectCoverage_Cutoff=self.options['BLASTp_SubjectCoverage_Cutoff'],

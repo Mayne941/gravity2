@@ -6,10 +6,12 @@ from pydantic import BaseModel, Field, FilePath, DirectoryPath
 class ScrapeData(BaseModel):
     save_path: DirectoryPath = Query('./data/',
                                      description="Path to save the Virus Metadata Resource (VMR).")
+    vmr_name: str = Query('latest_vmr.csv',
+                          description="Filename for new VMR.")
 
 
 class Pipeline_i_data(BaseModel):
-    GenomeDescTableFile: FilePath = Query('./data/VMR_Test_Ref.txt',
+    GenomeDescTableFile: FilePath = Query('./data/latest_vmr.csv',
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
     ShelveDir: str = Query('./output/Analysis/Ref/VII',
                            description="Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")

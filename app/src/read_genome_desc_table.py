@@ -41,7 +41,7 @@ class ReadGenomeDescTable:
             header = header_raw.replace("\n", "").replace(
                 "\r", "").replace("\t", "").split(",")
 
-            #header = header.split("\r\n")[0].split("\n")[0].split("\t")
+            # header = header.split("\r\n")[0].split("\n")[0].split("\t") # RM << Removed 2/9
 
             Baltimore_i = header.index("Baltimore Group")
             Order_i = header.index("Order")
@@ -64,9 +64,19 @@ class ReadGenomeDescTable:
                 TaxoGrouping_i = header.index("Family")
 
             for Virus_i, Line in enumerate(GenomeDescTable_txt):
-                Line = Line.split("\r\n")[0].split("\n")[0].split("\t")
-                SeqIDList = re.findall(
-                    r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", Line[SeqID_i])
+                # Line = Line.split("\r\n")[0].split("\n")[0].split("\t") # RM << Removed 4/9
+                Line = Line.replace("\n", "").replace(
+                    "\r", "").replace("\t", "").split(",")
+                try:
+                    SeqIDList = re.findall(
+                        r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", Line[SeqID_i])
+                except IndexError as ex:
+                    raise SystemExit(
+                        f"Error parsing VMR: exception {ex}"
+                        f"On line {Line}"
+                        f"This usually happens because the VMR is malformed - please check it manually."
+                        f"GRAViTy terminated."
+                    )
 
                 if SeqIDList != [] or Line[SeqID_i] != "":
                     '''Ignore record without sequences'''
@@ -156,7 +166,7 @@ class ReadGenomeDescTable:
         self.VirusNameList = all_desc_table["VirusNameList"] = np.array(
             self.VirusNameList)
 
-        '''Ensure SeqIDLists will be a h list (and not a v list)'''
+        '''Ensure SeqIDLists will be a h list (i.e. not a v list)'''
         self.SeqIDLists	.extend([[1], [1, 2]])
         self.SeqIDLists = np.array(self.SeqIDLists)
         self.SeqIDLists = self.SeqIDLists[:-2]
@@ -166,9 +176,13 @@ class ReadGenomeDescTable:
         if len(SeqIDFlatList) != len(set(SeqIDFlatList)):
             '''Check if there exist duplicated accession numbers, fail IF TRUE'''
             print("The following accession numbers appear more than once: ")
-            print("\n".join([SeqID for SeqID, count in Counter(
-                SeqIDFlatList).items() if count > 1]))
-            raise SystemExit("GRAViTy terminated.")
+            duplicates = [SeqID for SeqID, count in Counter(
+                SeqIDFlatList).items() if count > 1]
+            raise SystemExit(
+                f"Error parsing VMR."
+                f"The following accession numbers appear more than once: {duplicates}"
+                f"GRAViTy terminated."
+            )
 
         '''Update master data. Arrays are LINKED.'''
         all_desc_table["SeqIDLists"] = self.SeqIDLists
@@ -193,5 +207,6 @@ class ReadGenomeDescTable:
         '''Create ReadGenomeDescTable "complete genomes' db'''
         print("- Save variables to ReadGenomeDescTable.CompleteGenomes.shelve")
         complete_desc_table = self.update_desc_table("complete_genomes")
+
         self.save_desc_table(complete_desc_table,
                              "/ReadGenomeDescTable.CompleteGenomes.p")

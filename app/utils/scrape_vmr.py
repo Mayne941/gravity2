@@ -5,14 +5,17 @@ import struct
 import pandas as pd
 from bs4 import BeautifulSoup as bs
 
+from app.utils.timer import timing
+
 
 class Scraper:
     '''Get latest VMR from ICTV, structure to work with GRAViTy'''
 
-    def __init__(self, dir) -> None:
+    def __init__(self, payload) -> None:
         self.url = "https://ictv.global/vmr"
         self.url_stem = "https://ictv.global"
-        self.save_dir = dir
+        self.save_dir = payload["save_path"]
+        self.fname = payload["vmr_name"]
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
         self.baltimore_map = {
@@ -28,8 +31,7 @@ class Scraper:
             "ssDNA(-)": "II",
             "ssDNA(+/-)": "II",
             "ssRNA": "???",
-            "ssRNA(+/-)": "???",
-
+            "ssRNA(+/-)": "???"
         }
 
     def scrape(self) -> pd.DataFrame:
@@ -41,25 +43,39 @@ class Scraper:
         latest_url = f"{self.url_stem}{url_rows[0]}"
         return pd.read_excel(latest_url)
 
-    def get_baltimore(self, row):
-        '''Make new column for roman numeral notation Baltimore classification.'''
+    def get_baltimore_and_code_table(self, row):
+        '''Make new column for roman numeral notation Baltimore classification and genome coverage indicator.'''
         try:
-            return self.baltimore_map[row["Genome composition"]]
+            baltimore = self.baltimore_map[row["Genome composition"]]
         except KeyError:
             print(
                 f"VMR row with unknown genome composition detected ({row['Genome composition']}). Skipping row...")
-            return ""
+            baltimore = ""
+
+        if row["Genome coverage"] == "Complete genome":
+            # RM << IS THIS CORRECT USAGE?
+            code_table = 1
+        else:
+            code_table = 0
+
+        isolate_col = str(row["Virus isolate designation"]
+                          ).replace("\n", "").replace(" ", "")
+
+        return pd.Series([baltimore, code_table, isolate_col])
 
     def etl(self, df) -> pd.DataFrame:
         '''Extract, transform, load.'''
-        df["Baltimore Group"] = df.apply(
-            lambda x: self.get_baltimore(x), axis=1)
-        df["Genetic code table"] = ""  # RM < What should this be?
+        '''Get baltimore group and synthesise column for genome coverage'''
+        df[["Baltimore Group", "Genetic code table", "Virus isolate designation"]] = df.apply(
+            lambda x: self.get_baltimore_and_code_table(x), axis=1)
+        '''RM << Taxo grouping WAS done manually??'''
         df["Taxonomic grouping"] = ""  # RM < What should this be?
+        '''Remove all duplicates'''
+        df = df.drop_duplicates(subset="Virus GENBANK accession", keep=False)
         return df
 
     def save_csv(self, df) -> None:
-        df.to_csv(f"{self.save_dir}latest_vmr.csv")
+        df.to_csv(f"{self.save_dir}/{self.fname}")
 
     def main(self) -> str:
         '''Entrypoint'''
@@ -69,13 +85,15 @@ class Scraper:
         return self.save_dir
 
 
+@timing
 def scrape(payload):
-    s = Scraper(payload["save_path"])
+    print("VMR scrape started. This may take a short while.")
+    s = Scraper(payload)
     try:
         dir = s.main()
         return f"Success! VMR saved to {dir}"
-    except:
-        print("Whoops")
+    except Exception as ex:
+        print(f"Whoops: {ex}")
         return f"Scrape unsuccessful: possibly the VMR format and/or URL has changed.\n Please check url and table formatting in app/utils/scrape_vmr.py, or contact your administrator."
 
 

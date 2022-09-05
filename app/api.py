@@ -50,10 +50,6 @@ async def read_root():
     return {"response": "healthy"}
 
 
-@app.get("/refresh_vmr/")
-async def refresh_vmr():
-    return "Endpoint under construction"
-
 '''PL1 Entrypoints'''
 
 

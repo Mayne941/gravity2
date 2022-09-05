@@ -140,94 +140,103 @@ class PPHMMDBConstruction:
 
         for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"]):
             # RM < removed a for loop here as SeqIDList only ever seemed to be 1 long - was this just for de-nesting?
-            assert len(SeqIDList) == 1
-            SeqID = SeqIDList[0]
-            GenBankRecord = GenBankDict[SeqID]
-            GenBankID = GenBankRecord.name
-            GenBankFeatures = GenBankRecord.features
+            # assert len(SeqIDList) == 1
+            # SeqID = SeqIDList[0]
+            for SeqID in SeqIDList:
+                GenBankRecord = GenBankDict[SeqID]
+                GenBankID = GenBankRecord.name
+                GenBankFeatures = GenBankRecord.features
 
-            '''Extract protein sequences'''
-            ContainProtAnnotation = 0
-            for Feature in GenBankFeatures:
-                if(Feature.type == 'CDS' and "protein_id" in Feature.qualifiers and "translation" in Feature.qualifiers):
-                    ContainProtAnnotation = 1
-                    try:
-                        ProtName = Feature.qualifiers["product"][0]
-                    except KeyError:
+                '''Extract protein sequences'''
+                ContainProtAnnotation = 0
+                for Feature in GenBankFeatures:
+                    if(Feature.type == 'CDS' and "protein_id" in Feature.qualifiers and "translation" in Feature.qualifiers):
+                        ContainProtAnnotation = 1
                         try:
-                            ProtName = Feature.qualifiers["gene"][0]
+                            ProtName = Feature.qualifiers["product"][0]
                         except KeyError:
                             try:
-                                ProtName = Feature.qualifiers["note"][0]
+                                ProtName = Feature.qualifiers["gene"][0]
                             except KeyError:
-                                ProtName = "Hypothetical protein"
-                    ProtID = Feature.qualifiers["protein_id"][0]
-                    ProtSeq = Feature.qualifiers["translation"][0]
-                    if len(ProtSeq) >= self.ProteinLength_Cutoff:
-                        ProtRecord = SeqRecord(Seq(ProtSeq),
-                                               id=GenBankID+"|"+ProtID,
-                                               name=GenBankID+"|"+ProtID,
-                                               description=ProtName,
-                                               annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
-                        ProtList.append(ProtRecord)
-                        ProtIDList.append(GenBankID+"|"+ProtID)
+                                try:
+                                    ProtName = Feature.qualifiers["note"][0]
+                                except KeyError:
+                                    ProtName = "Hypothetical protein"
+                        ProtID = Feature.qualifiers["protein_id"][0]
+                        ProtSeq = Feature.qualifiers["translation"][0]
+                        if len(ProtSeq) >= self.ProteinLength_Cutoff:
+                            ProtRecord = SeqRecord(Seq(ProtSeq),
+                                                   id=GenBankID+"|"+ProtID,
+                                                   name=GenBankID+"|"+ProtID,
+                                                   description=ProtName,
+                                                   annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
+                            ProtList.append(ProtRecord)
+                            ProtIDList.append(GenBankID+"|"+ProtID)
 
-            '''If the genome isn't annotated with any ORFs'''
-            if ContainProtAnnotation == 0:
-                '''Identifying ORFs'''
-                try:
-                    Starts = self.orf_tranl_table[TranslTable]
-                except KeyError:
-                    '''No ORF found, use standard code'''
-                    Starts = self.orf_no_match
+                '''If the genome isn't annotated with any ORFs'''
+                if ContainProtAnnotation == 0:
+                    '''Identifying ORFs'''
+                    try:
+                        Starts = self.orf_tranl_table[TranslTable]
+                    except KeyError:
+                        '''No ORF found, use standard code'''
+                        Starts = self.orf_no_match
 
-                '''Generate start and stop codon lists'''
-                CodonList = [
-                    Base1+Base2+Base3 for Base1 in "TCAG" for Base2 in "TCAG" for Base3 in "TCAG"]
-                StartCodonList, StopCodonList = [], []
-                for i, j in enumerate(Starts):
-                    if j == "M":
-                        StartCodonList.append(CodonList[i])
-                    if j == "*":
-                        StopCodonList.append(CodonList[i])
+                    '''Generate start and stop codon lists'''
+                    CodonList = [
+                        Base1+Base2+Base3 for Base1 in "TCAG" for Base2 in "TCAG" for Base3 in "TCAG"]
+                    StartCodonList, StopCodonList = [], []
+                    for i, j in enumerate(Starts):
+                        if j == "M":
+                            StartCodonList.append(CodonList[i])
+                        if j == "*":
+                            StopCodonList.append(CodonList[i])
 
-                GenBankSeq = GenBankRecord.seq
-                SeqLength, ORF_i = len(GenBankSeq), 0
-                for _, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
-                    '''Split into multople of 3, get in-frame nucleotide seq, split sequence into codons'''
-                    for frame in range(3):
-                        length = 3 * ((SeqLength-frame) // 3)
-                        nuc_inframe = nuc[frame:(frame+length)]
-                        nuc_codonList = [str(nuc_inframe[i:i+3])
-                                         for i in range(0, length, 3)]
+                    GenBankSeq = GenBankRecord.seq
+                    SeqLength, ORF_i = len(GenBankSeq), 0
+                    for _, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
+                        '''Split into multople of 3, get in-frame nucleotide seq, split sequence into codons'''
+                        for frame in range(3):
+                            length = 3 * ((SeqLength-frame) // 3)
+                            nuc_inframe = nuc[frame:(frame+length)]
+                            nuc_codonList = [str(nuc_inframe[i:i+3])
+                                             for i in range(0, length, 3)]
 
-                        '''Find stop codons'''
-                        StopCodon_indices = [i for i, codon in enumerate(
-                            nuc_codonList) if codon in StopCodonList]
-                        Coding_Start_IndexList = np.array(
-                            [-1]+StopCodon_indices)+1
-                        Coding_End_IndexList = np.array(
-                            StopCodon_indices+[len(nuc_codonList)])
+                            '''Find stop codons'''
+                            StopCodon_indices = [i for i, codon in enumerate(
+                                nuc_codonList) if codon in StopCodonList]
+                            Coding_Start_IndexList = np.array(
+                                [-1]+StopCodon_indices)+1
+                            Coding_End_IndexList = np.array(
+                                StopCodon_indices+[len(nuc_codonList)])
 
-                        ProtSeqList = []
-                        for i, j in zip(Coding_Start_IndexList, Coding_End_IndexList):
-                            for k, codon in enumerate(nuc_codonList[i:j]):
-                                if codon in StartCodonList:
-                                    ProtSeqList.append(
-                                        Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
-                                    break
+                            ProtSeqList = []
+                            for i, j in zip(Coding_Start_IndexList, Coding_End_IndexList):
+                                for k, codon in enumerate(nuc_codonList[i:j]):
+                                    if codon in StartCodonList:
+                                        try:
+                                            ProtSeqList.append(
+                                                Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
+                                        except:
+                                            # RM <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                                            print(f"FUCK! - {SeqID}")
+                                            TranslTable = 1
+                                            ProtSeqList.append(
+                                                Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
+                                        break
 
-                        for ProtSeq in ProtSeqList:
-                            '''Exclude protein sequences with <'ProteinLength_Cutoff' aa'''
-                            if len(ProtSeq) >= self.ProteinLength_Cutoff:
-                                ProtRecord = SeqRecord(ProtSeq,
-                                                       id=GenBankID+"|ORF%s" % ORF_i,
-                                                       name=GenBankID+"|ORF%s" % ORF_i,
-                                                       description="Hypothetical protein",
-                                                       annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
-                                ProtList.append(ProtRecord)
-                                ProtIDList.append(GenBankID+"|ORF%s" % ORF_i)
-                                ORF_i = ORF_i + 1
+                            for ProtSeq in ProtSeqList:
+                                '''Exclude protein sequences with <'ProteinLength_Cutoff' aa'''
+                                if len(ProtSeq) >= self.ProteinLength_Cutoff:
+                                    ProtRecord = SeqRecord(ProtSeq,
+                                                           id=GenBankID+"|ORF%s" % ORF_i,
+                                                           name=GenBankID+"|ORF%s" % ORF_i,
+                                                           description="Hypothetical protein",
+                                                           annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
+                                    ProtList.append(ProtRecord)
+                                    ProtIDList.append(
+                                        GenBankID+"|ORF%s" % ORF_i)
+                                    ORF_i = ORF_i + 1
 
             progress_bar(
                 f"\033[K Extract protein sequences: [{'='*int(Virus_i/N_Viruses*20)}] {Virus_i}/{N_Viruses} viruses \r")
