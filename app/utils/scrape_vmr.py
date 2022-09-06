@@ -16,6 +16,7 @@ class Scraper:
         self.url_stem = "https://ictv.global"
         self.save_dir = payload["save_path"]
         self.fname = payload["vmr_name"]
+        self.first_pass_filter = payload["filter"]
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
         self.baltimore_map = {
@@ -52,8 +53,7 @@ class Scraper:
                 f"VMR row with unknown genome composition detected ({row['Genome composition']}). Skipping row...")
             baltimore = ""
 
-        if row["Genome coverage"] == "Complete genome":
-            # RM << IS THIS CORRECT USAGE?
+        if "complete" in str(row["Genome coverage"]).lower():
             code_table = 1
         else:
             code_table = 0
@@ -62,6 +62,10 @@ class Scraper:
                           ).replace("\n", "").replace(" ", "")
 
         return pd.Series([baltimore, code_table, isolate_col])
+
+    def filter_by_representative_members(self, df):
+        '''Experimental: drop all but 1 from a family/genus to refine initial search'''
+        return df.drop_duplicates(subset=self.first_pass_filter, keep="first")
 
     def etl(self, df) -> pd.DataFrame:
         '''Extract, transform, load.'''
@@ -72,6 +76,10 @@ class Scraper:
         df["Taxonomic grouping"] = ""  # RM < What should this be?
         '''Remove all duplicates'''
         df = df.drop_duplicates(subset="Virus GENBANK accession", keep=False)
+
+        if self.first_pass_filter != None:
+            df = self.filter_by_representative_members(df)
+            df["Taxonomic grouping"] = df[self.first_pass_filter]  # RM << TEST
         return df
 
     def save_csv(self, df) -> None:

@@ -122,14 +122,22 @@ class RefVirusAnnotator:
         PPHMMLocMiddleBestHitTable = np.empty((0, N_PPHMMs))
 
         Seq_i = 1
-        # RM < Assess whether this segment can be further optimised, or if hmmscan is bottleneck
         for SeqIDList, TranslTable in zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"]):
-            GenBankSeqList, GenBankIDList, GenBankDescList = [], [], []
+            GenBankSeqList, GenBankIDList, GenBankDescList, error_flag = [], [], [], False
             for SeqID in SeqIDList:
-                GenBankRecord = Records_dict[SeqID]
-                GenBankSeqList.append(GenBankRecord.seq)
-                GenBankIDList.append(GenBankRecord.id)
-                GenBankDescList.append(GenBankRecord.description)
+                try:
+                    '''If no records exist for this seq (e.g. if dead Acc ID), errors happen'''
+                    GenBankRecord = Records_dict[SeqID]
+                    GenBankSeqList.append(GenBankRecord.seq)
+                    GenBankIDList.append(GenBankRecord.id)
+                    GenBankDescList.append(GenBankRecord.description)
+                except:
+                    '''Error flag allows wider loop to exist gracefully before erroring'''
+                    error_flag = True
+                    continue
+
+            if error_flag:
+                continue
 
             '''sort lists by sequence/segment lengths'''
             GenBankSeqLenList, GenBankSeqList, GenBankIDList, GenBankDescList = list(zip(
@@ -142,8 +150,14 @@ class RefVirusAnnotator:
                 '''limit the sequence by length; 0=include sequences of all lengths'''
                 GenBankID = "/".join(GenBankIDList)
                 GenBankDesc = "/".join(GenBankDescList)
-                ProtSeq1 = SeqRecord(GenBankSeq[0:].translate(
-                    table=TranslTable), id=GenBankID+'_+1')
+                try:
+                    ProtSeq1 = SeqRecord(GenBankSeq[0:].translate(
+                        table=TranslTable), id=GenBankID+'_+1')
+                except:
+                    TranslTable = 1
+                    ProtSeq1 = SeqRecord(GenBankSeq[0:].translate(
+                        table=TranslTable), id=GenBankID+'_+1')
+                    print(f"ERROR - AccID {SeqID}. Setting TranslTable = 1")
                 ProtSeq2 = SeqRecord(GenBankSeq[1:].translate(
                     table=TranslTable), id=GenBankID+'_+2')
                 ProtSeq3 = SeqRecord(GenBankSeq[2:].translate(

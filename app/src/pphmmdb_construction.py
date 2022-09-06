@@ -139,11 +139,13 @@ class PPHMMDBConstruction:
         ], [], len(genomes["SeqIDLists"]), 1
 
         for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"]):
-            # RM < removed a for loop here as SeqIDList only ever seemed to be 1 long - was this just for de-nesting?
-            # assert len(SeqIDList) == 1
-            # SeqID = SeqIDList[0]
             for SeqID in SeqIDList:
-                GenBankRecord = GenBankDict[SeqID]
+                try:
+                    '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
+                    GenBankRecord = GenBankDict[SeqID]
+                except:
+                    ''')... skip if no match'''
+                    continue
                 GenBankID = GenBankRecord.name
                 GenBankFeatures = GenBankRecord.features
 
@@ -219,7 +221,8 @@ class PPHMMDBConstruction:
                                                 Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
                                         except:
                                             # RM <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                                            print(f"FUCK! - {SeqID}")
+                                            # RM < This is probably not needed when VMR cleaning stuff is done
+                                            print(f"Error - AccID {SeqID}")
                                             TranslTable = 1
                                             ProtSeqList.append(
                                                 Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
@@ -229,14 +232,14 @@ class PPHMMDBConstruction:
                                 '''Exclude protein sequences with <'ProteinLength_Cutoff' aa'''
                                 if len(ProtSeq) >= self.ProteinLength_Cutoff:
                                     ProtRecord = SeqRecord(ProtSeq,
-                                                           id=GenBankID+"|ORF%s" % ORF_i,
-                                                           name=GenBankID+"|ORF%s" % ORF_i,
+                                                           id=f"{GenBankID}|ORF{ORF_i}",
+                                                           name=f"{GenBankID}|ORF{ORF_i}",
                                                            description="Hypothetical protein",
                                                            annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
                                     ProtList.append(ProtRecord)
                                     ProtIDList.append(
-                                        GenBankID+"|ORF%s" % ORF_i)
-                                    ORF_i = ORF_i + 1
+                                        f"{GenBankID}|ORF{ORF_i}")
+                                    ORF_i += 1
 
             progress_bar(
                 f"\033[K Extract protein sequences: [{'='*int(Virus_i/N_Viruses*20)}] {Virus_i}/{N_Viruses} viruses \r")

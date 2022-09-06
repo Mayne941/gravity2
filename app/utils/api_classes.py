@@ -8,6 +8,8 @@ class ScrapeData(BaseModel):
                                      description="Path to save the Virus Metadata Resource (VMR).")
     vmr_name: str = Query('latest_vmr.csv',
                           description="Filename for new VMR.")
+    filter: Literal["Family", "Genus", "Class", "Species", None] = Query(None,
+                                                                         description="One may do a 'first pass filter' to reduce run time and get rough overview of taxonomies.")
 
 
 class Pipeline_i_data(BaseModel):

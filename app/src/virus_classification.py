@@ -216,7 +216,7 @@ class VirusClassificationAndEvaluation:
                 _ = subprocess.call(
                     f"rm -rf {HMMER_hmmscanDir_UcfVirus}", shell=True)
 
-                Parameters["PPHMMSignatureTable"] = np.hstack(
+                Parameters["PPHMMSignatureTable"] = np.hstack(  # RM < Failing here 0509 PM
                     (Parameters["PPHMMSignatureTable"], PPHMMSignatureTable_UcfVirusVSUcfDB))
                 Parameters["PPHMMLocationTable"] = np.hstack(
                     (Parameters["PPHMMLocationTable"],  PPHMMLocationTable_UcfVirusVSUcfDB))
@@ -257,6 +257,7 @@ class VirusClassificationAndEvaluation:
                 VirusDendrogram_txt.write(VirusDendrogram)
 
             '''Compute similarity cut off for each taxonomic class'''
+            # breakpoint()
             self.PairwiseSimilarityScore_Cutoff_Dict[RefVirusGroup] = PairwiseSimilarityScore_Cutoff_Dict_Constructor(
                 SimMat[:N_RefViruses][:, :N_RefViruses], Parameters["TaxoGroupingList"], self.N_PairwiseSimilarityScores)
 
