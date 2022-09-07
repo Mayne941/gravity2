@@ -5,14 +5,13 @@ EXPOSE 80
 COPY ./app /workspace/app 
 COPY ./data /workspace/data
 COPY ./ /workspace
-WORKDIR /workspace
 
-# RUN apt install hmmer
-# RUN apt install mcl
-# RM < Automate BLAST install
+WORKDIR /workspace
+RUN apt-get -y update
+RUN bash install-reqs.sh
 # RM < automate hhsuite https://github.com/soedinglab/hh-suite/wiki#installation-of-the-hhsuite-and-its-databases
 # RM < Automate muscle install https://drive5.com/muscle5/manual/install.html
-RUN apt update
+
 RUN python3 -m pip install --upgrade pip
 RUN pip install -r requirements.txt --prefer-binary
 
