@@ -31,9 +31,10 @@ class Scraper:
             "ssDNA(+)": "II",
             "ssDNA(-)": "II",
             "ssDNA(+/-)": "II",
-            "ssRNA": "???",
-            "ssRNA(+/-)": "???"
+            "ssRNA": "II, III",
+            "ssRNA(+/-)": "II, III"
         }
+        self.threshold = 50
 
     def scrape(self) -> pd.DataFrame:
         '''Scrape URL, extract links table, get latest link, parse as excel table'''
@@ -63,23 +64,35 @@ class Scraper:
 
         return pd.Series([baltimore, code_table, isolate_col])
 
-    def filter_by_representative_members(self, df):
-        '''Experimental: drop all but 1 from a family/genus to refine initial search'''
-        return df.drop_duplicates(subset=self.first_pass_filter, keep="first")
+    def construct_first_pass_set(self, row, df):
+        '''Construct first-pass grouping; ensure diversity is maintained in representative examples'''
+        if df[df["Family"] == row["Family"]].shape[0] >= self.threshold:
+            return row["Family"]
+        else:
+            if df[df["Genus"] == row["Genus"]].shape[0] >= self.threshold:
+                return row["Genus"]
+            else:
+                return row["Species"]
 
     def etl(self, df) -> pd.DataFrame:
-        '''Extract, transform, load.'''
-        '''Get baltimore group and synthesise column for genome coverage'''
+        '''Extract, transform, load. Get baltimore group and synthesise column for genome coverage'''
         df[["Baltimore Group", "Genetic code table", "Virus isolate designation"]] = df.apply(
             lambda x: self.get_baltimore_and_code_table(x), axis=1)
-        '''RM << Taxo grouping WAS done manually??'''
-        df["Taxonomic grouping"] = ""  # RM < What should this be?
-        '''Remove all duplicates'''
+        df["Taxonomic grouping"] = ""  # Not required for PL2
+
+        '''Find, print list of and remove duplicates or entries with no Acc ID'''
+        df[df["Virus GENBANK accession"].isin(df["Virus GENBANK accession"][df["Virus GENBANK accession"].duplicated(
+        )])]["Virus GENBANK accession"].to_csv(f"{self.save_dir}/bad_accession.csv")
         df = df.drop_duplicates(subset="Virus GENBANK accession", keep=False)
 
         if self.first_pass_filter != None:
-            df = self.filter_by_representative_members(df)
-            df["Taxonomic grouping"] = df[self.first_pass_filter]  # RM << TEST
+            df["Taxonomic grouping"] = df.apply(
+                lambda x: self.construct_first_pass_set(x), axis=1)
+            df = df.drop_duplicates(subset="Taxonomic grouping", keep="first")
+            print(
+                f"Value counts for first pass filter, by Baltimore: {df['Baltimore Group'].value_counts()}")
+        # RM < Need a 2nd pass option, possibly resolve taxo group to Species?
+
         return df
 
     def save_csv(self, df) -> None:
