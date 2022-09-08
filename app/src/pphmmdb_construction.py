@@ -222,6 +222,7 @@ class PPHMMDBConstruction:
                                         except:
                                             # RM <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                                             # RM < This is probably not needed when VMR cleaning stuff is done
+                                            # RM < E.g. amend array sizes so as to not fuck up consequent stuff
                                             print(f"Error - AccID {SeqID}")
                                             TranslTable = 1
                                             ProtSeqList.append(

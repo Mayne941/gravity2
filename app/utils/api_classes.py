@@ -8,8 +8,12 @@ class ScrapeData(BaseModel):
                                      description="Path to save the Virus Metadata Resource (VMR).")
     vmr_name: str = Query('latest_vmr.csv',
                           description="Filename for new VMR.")
-    filter: Literal["Family", "Genus", "Class", "Species", None] = Query(None,
-                                                                         description="One may do a 'first pass filter' to reduce run time and get rough overview of taxonomies.")
+    first_pass_filter: bool = Query(False,
+                                    description="One may do a 'first pass filter' to reduce run time and get rough overview of taxonomies.")
+    filter_threshold: int = Query(10,
+                                  description="If filter = true, how many members should be in each taxo grouping? If < threshold members in family, resolve at genus level, and likewise for species.")
+    second_pass_filter: bool = Query(False,
+                                     description="Second pass filter extracts all members of family x to build a more diverse, but targeted, database")
 
 
 class Pipeline_i_data(BaseModel):
@@ -130,8 +134,8 @@ class Pipeline_i_data(BaseModel):
 class Pipeline_ii_data(BaseModel):
     GenomeDescTableFile: FilePath = Query('data/VMR_test_Ucf.txt',
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint")
-    ShelveDir_UcfVirus: DirectoryPath = Query('output/Analysis/Ucf/Test_ucf_UseUcfPPHMMs',
-                                              description="Full path to the shelve directory of unclassified viruses, storing GRAViTy outputs.")
+    ShelveDir_UcfVirus: str = Query('output/Analysis/Ucf/Test_ucf_UseUcfPPHMMs',
+                                    description="Full path to the shelve directory of unclassified viruses, storing GRAViTy outputs.")
     ShelveDirs_RefVirus: str = Query('output/Analysis/Ref/VI, output/Analysis/Ref/VII',
                                      description="Full path(s) to the shelve director(y/ies) of reference virus(es). For example: 'path/to/shelve/ref1, path/to/shelve/ref2, ...'")
     GenomeDescTableFile_UcfVirus: FilePath = Query("data/VMR_test_Ucf.txt",
@@ -142,8 +146,8 @@ class Pipeline_ii_data(BaseModel):
     # RM < Switch database_header default to None
     Database_Header: Union[str, None] = Query(None,
                                               description="The header of the database column. Cannot be 'None' if DATABASE is specified.")
-    GenomeSeqFile_UcfVirus: FilePath = Query('output/GenomeSeqs.test_Ucf.gb',
-                                             description="Full path to the genome sequence GenBank file of unclassified viruses.")
+    GenomeSeqFile_UcfVirus: Union[str, None] = Query('output/GenomeSeqs.test_Ucf.gb',
+                                                     description="Full path to the genome sequence GenBank file of unclassified viruses.")
     GenomeSeqFiles_RefVirus: Union[str, None] = Query('output/GenomeSeqs.VI.gb, output/GenomeSeqs.VII.gb',
                                                       description="Full path(s) to the genome sequence GenBank file(s) of reference viruses. For example: 'path/to/GenBank/ref1, path/to/GenBank/ref2, ...' This cannot be 'None' if UseUcfVirusPPHMMs = True. ")
     UseUcfVirusPPHMMs: bool = Query(True,
