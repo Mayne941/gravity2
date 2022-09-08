@@ -215,8 +215,7 @@ class VirusClassificationAndEvaluation:
                 '''Delete HMMER_hmmscanDir'''
                 _ = subprocess.call(
                     f"rm -rf {HMMER_hmmscanDir_UcfVirus}", shell=True)
-
-                Parameters["PPHMMSignatureTable"] = np.hstack(
+                Parameters["PPHMMSignatureTable"] = np.hstack(  # RM < Failing here 0509 PM
                     (Parameters["PPHMMSignatureTable"], PPHMMSignatureTable_UcfVirusVSUcfDB))
                 Parameters["PPHMMLocationTable"] = np.hstack(
                     (Parameters["PPHMMLocationTable"],  PPHMMLocationTable_UcfVirusVSUcfDB))
@@ -269,17 +268,36 @@ class VirusClassificationAndEvaluation:
                                                                                             self.TaxoLabelList_UcfVirus,
                                                                                             self.PairwiseSimilarityScore_Cutoff_Dict[RefVirusGroup])
 
-            self.MaxSimScoreTable = np.column_stack(
-                (MaxSimScoreTable, MaxSimScoreList))
-            self.TaxoOfMaxSimScoreTable = np.column_stack(
-                (TaxoOfMaxSimScoreTable, TaxoOfMaxSimScoreList))
-            self.TaxoAssignmentTable = np.column_stack(
-                (TaxoAssignmentTable, TaxoAssignmentList))
-            self.PhyloStatTable = np.column_stack(
-                (PhyloStatTable, PhyloStatList))
+            try:
+
+                self.MaxSimScoreTable = np.column_stack(
+                    (MaxSimScoreTable, MaxSimScoreList))
+                self.TaxoOfMaxSimScoreTable = np.column_stack(
+                    (TaxoOfMaxSimScoreTable, TaxoOfMaxSimScoreList))
+                self.TaxoAssignmentTable = np.column_stack(
+                    (TaxoAssignmentTable, TaxoAssignmentList))
+                self.PhyloStatTable = np.column_stack(
+                    (PhyloStatTable, PhyloStatList))
+
+            except ValueError:
+                '''If rows omitted then change shape of array to fit'''
+                TaxoAssignmentTable = np.zeros((len(TaxoAssignmentList), 0))
+                PhyloStatTable = np.zeros((len(TaxoAssignmentList), 0))
+                MaxSimScoreTable = np.zeros((len(MaxSimScoreList), 0))
+                TaxoOfMaxSimScoreTable = np.zeros(
+                    (len(TaxoOfMaxSimScoreList), 0))
+                self.MaxSimScoreTable = np.column_stack(
+                    (MaxSimScoreTable, MaxSimScoreList))
+                self.TaxoOfMaxSimScoreTable = np.column_stack(
+                    (TaxoOfMaxSimScoreTable, TaxoOfMaxSimScoreList))
+                self.TaxoAssignmentTable = np.column_stack(
+                    (TaxoAssignmentTable, TaxoAssignmentList))
+                self.PhyloStatTable = np.column_stack(
+                    (PhyloStatTable, PhyloStatList))
 
             if self.VirusGrouping == True:
                 '''(OPT) Virus grouping'''
+                # RM < WILL BREAK DUE TO ARRAY SIZE MISMATCH AFTER ADDING ERROR HANDLING IN ACC ID SELECTION
                 self.do_virus_groupings(
                     RefVirusGroup, DistMat, N_RefViruses, Parameters)
 
@@ -461,7 +479,6 @@ class VirusClassificationAndEvaluation:
         OrderedDistMat = DistMat[VirusOrder][:, VirusOrder]
 
         '''Remove clade support values that are < Heatmap_DendrogramSupport_Cutoff'''
-
         N_InternalNodes = len(VirusDendrogram.get_nonterminals())
         for InternalNode_i in range(N_InternalNodes):
             try:

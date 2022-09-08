@@ -16,6 +16,9 @@ class Scraper:
         self.url_stem = "https://ictv.global"
         self.save_dir = payload["save_path"]
         self.fname = payload["vmr_name"]
+        self.threshold = payload["filter_threshold"]
+        self.first_pass_filter = payload["first_pass_filter"]
+        self.second_pass_filter = payload["second_pass_filter"]
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
         self.baltimore_map = {
@@ -26,12 +29,11 @@ class Scraper:
             "ssRNA(-)": "V",
             "ssRNA-RT": "VI",
             "dsDNA-RT": "VII",
-            # RM < Check the following are correct
             "ssDNA(+)": "II",
             "ssDNA(-)": "II",
             "ssDNA(+/-)": "II",
-            "ssRNA": "???",
-            "ssRNA(+/-)": "???"
+            "ssRNA": "II, III",
+            "ssRNA(+/-)": "II, III"
         }
 
     def scrape(self) -> pd.DataFrame:
@@ -52,8 +54,7 @@ class Scraper:
                 f"VMR row with unknown genome composition detected ({row['Genome composition']}). Skipping row...")
             baltimore = ""
 
-        if row["Genome coverage"] == "Complete genome":
-            # RM << IS THIS CORRECT USAGE?
+        if "complete" in str(row["Genome coverage"]).lower():
             code_table = 1
         else:
             code_table = 0
@@ -63,15 +64,42 @@ class Scraper:
 
         return pd.Series([baltimore, code_table, isolate_col])
 
+    def construct_first_pass_set(self, row, df):
+        '''Construct first-pass grouping; ensure diversity is maintained in representative examples'''
+        # RM < Vectorise this as it's slow
+        if df[df["Family"] == row["Family"]].shape[0] >= self.threshold:
+            return row["Family"]
+        else:
+            if df[df["Genus"] == row["Genus"]].shape[0] >= self.threshold:
+                return row["Genus"]
+            else:
+                return row["Species"]
+
     def etl(self, df) -> pd.DataFrame:
-        '''Extract, transform, load.'''
-        '''Get baltimore group and synthesise column for genome coverage'''
+        '''Extract, transform, load. Get baltimore group and synthesise column for genome coverage'''
         df[["Baltimore Group", "Genetic code table", "Virus isolate designation"]] = df.apply(
             lambda x: self.get_baltimore_and_code_table(x), axis=1)
-        '''RM << Taxo grouping WAS done manually??'''
-        df["Taxonomic grouping"] = ""  # RM < What should this be?
-        '''Remove all duplicates'''
+        # Not required for PL2 so default to blank
+        df["Taxonomic grouping"] = ""
+
+        '''Find, print list of and remove duplicates or entries with no Acc ID'''
+        df[df["Virus GENBANK accession"].isin(df["Virus GENBANK accession"][df["Virus GENBANK accession"].duplicated(
+        )])]["Virus GENBANK accession"].to_csv(f"{self.save_dir}/bad_accession.csv")
         df = df.drop_duplicates(subset="Virus GENBANK accession", keep=False)
+
+        '''Exclude partial genomes'''
+        df = df[df["Genetic code table"] == 1]
+
+        if self.first_pass_filter:
+            df["Taxonomic grouping"] = df.apply(
+                lambda x: self.construct_first_pass_set(x, df), axis=1)
+            df = df.drop_duplicates(subset="Taxonomic grouping", keep="first")
+            print(
+                f"Value counts for first pass filter, by Baltimore: {df['Baltimore Group'].value_counts()}")
+
+        if self.second_pass_filter:
+            ...
+
         return df
 
     def save_csv(self, df) -> None:

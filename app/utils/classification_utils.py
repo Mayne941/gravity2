@@ -81,70 +81,77 @@ def TaxonomicAssignmentProposerAndEvaluator(SimMat_UcfVirusesVSRefViruses, TaxoG
         if MaxSimScore > PairwiseSimilarityScore_Cutoff_Dict[CandidateTaxoAssignment]["CutOff"]:
             '''if pass the 1st criterion Prune the dendrogram so that it contains only reference sequences and the virus of interest (VoI)'''
             VirusDendrogram_tmp = VirusDendrogram.copy()
-            for q in np.delete(TaxoLabelList_UcfVirus, UcfVirus_i):
-                VirusDendrogram_tmp.get_leaves_by_name(q)[0].delete()
+            try:
+                for q in np.delete(TaxoLabelList_UcfVirus, UcfVirus_i):
+                    VirusDendrogram_tmp.get_leaves_by_name(q)[0].delete()
+            except Exception as ex:
+                print(
+                    f"Error on Taxonomic Assignment: could not find dendrogram node to delete: {ex}")
 
-            '''Get the leaf names (taxonomic assignments) of the sister clade of the unclassified virus'''
-            VoI = TaxoLabelList_UcfVirus[UcfVirus_i]
-            VoISisterClade = VirusDendrogram_tmp.search_nodes(name=VoI)[
-                0].get_sisters()[0]
-            VoISisterClade_Leafnames = OrderedSet(
-                VoISisterClade.get_leaf_names())
-            if VoISisterClade.is_leaf():
-                VoISisterClade_Leafnames1 = OrderedSet(
+            try:
+                '''Get the leaf names (taxonomic assignments) of the sister clade of the unclassified virus'''
+                VoI = TaxoLabelList_UcfVirus[UcfVirus_i]
+                VoISisterClade = VirusDendrogram_tmp.search_nodes(name=VoI)[
+                    0].get_sisters()[0]
+                VoISisterClade_Leafnames = OrderedSet(
                     VoISisterClade.get_leaf_names())
-                VoISisterClade_Leafnames2 = []
-            else:
-                VoISisterClade_Leafnames1 = OrderedSet(
-                    VoISisterClade.get_children()[0].get_leaf_names())
-                VoISisterClade_Leafnames2 = OrderedSet(
-                    VoISisterClade.get_children()[1].get_leaf_names())
-
-            '''Get the leaf names (taxonomic assignments) of the immediate out group of the unclassified virus'''
-            ImmediateAncestorNode = VirusDendrogram_tmp.search_nodes(name=VoI)[
-                0].up
-            if len(ImmediateAncestorNode.get_sisters()) != 0:
-                ImmediateOutCladeLeafnames = OrderedSet(
-                    ImmediateAncestorNode.get_sisters()[0].get_leaf_names())
-            else:
-                ImmediateOutCladeLeafnames = []
-
-            '''2nd criterion: see if the candidate taxonomic assignment is supported by the dendrogram...'''
-            if len(VoISisterClade_Leafnames) == 1 and [CandidateTaxoAssignment] == VoISisterClade_Leafnames:
-                '''If the sister clade consists entirely of the candidate class...'''
-                if VoISisterClade_Leafnames == ImmediateOutCladeLeafnames:
-                    '''and the out group is the same, then assign VoI to the candidate class'''
-                    TaxoAssignmentList.append(CandidateTaxoAssignment)
-                    '''Embedded within a clade of a single class '''
-                    PhyloStatList.append("1")
-
+                if VoISisterClade.is_leaf():
+                    VoISisterClade_Leafnames1 = OrderedSet(
+                        VoISisterClade.get_leaf_names())
+                    VoISisterClade_Leafnames2 = []
                 else:
-                    '''... but the out group isn't, having a sister relationship with the proposed class and they are similar enough (1st criterion)'''
-                    TaxoAssignmentList.append(CandidateTaxoAssignment)
-                    PhyloStatList.append("2")
+                    VoISisterClade_Leafnames1 = OrderedSet(
+                        VoISisterClade.get_children()[0].get_leaf_names())
+                    VoISisterClade_Leafnames2 = OrderedSet(
+                        VoISisterClade.get_children()[1].get_leaf_names())
 
-            elif len(ImmediateOutCladeLeafnames) == 1 and [CandidateTaxoAssignment] == ImmediateOutCladeLeafnames:
-                '''If the immediate outgroup consists entirely of the candidate class...'''
-                if(VoISisterClade_Leafnames1 == [CandidateTaxoAssignment] or VoISisterClade_Leafnames2 == [CandidateTaxoAssignment]):
-                    '''.. and the VoI is sandwished between 2 branches of the candidate class...'''
-                    TaxoAssignmentList.append(CandidateTaxoAssignment)
-                    '''Sandwiched between 2 branches of the candidate class'''
-                    PhyloStatList.append("3")
+                '''Get the leaf names (taxonomic assignments) of the immediate out group of the unclassified virus'''
+                ImmediateAncestorNode = VirusDendrogram_tmp.search_nodes(name=VoI)[
+                    0].up
+                if len(ImmediateAncestorNode.get_sisters()) != 0:
+                    ImmediateOutCladeLeafnames = OrderedSet(
+                        ImmediateAncestorNode.get_sisters()[0].get_leaf_names())
                 else:
-                    '''else the candidate class is accepted on the ground that it has a paraphyletic relationship with the candidate class (just inside)'''
-                    TaxoAssignmentList.append(CandidateTaxoAssignment)
-                    '''Having a paraphyletic relationship with the candidate class (just inside)'''
-                    PhyloStatList.append("4")
+                    ImmediateOutCladeLeafnames = []
 
-            elif (VoISisterClade_Leafnames1 == [CandidateTaxoAssignment] or VoISisterClade_Leafnames2 == [CandidateTaxoAssignment]):
-                '''If one of the two branches in the sister clade consists entirely of the candidate class...'''
-                TaxoAssignmentList.append(CandidateTaxoAssignment)
-                '''Having a paraphyletic relationship with the candidate class (just outside)'''
-                PhyloStatList.append("5")
-            else:
-                TaxoAssignmentList.append("Unclassified")
-                '''The candidate class is not supported by the dendrogram'''
-                PhyloStatList.append("6")
+                '''2nd criterion: see if the candidate taxonomic assignment is supported by the dendrogram...'''
+                if len(VoISisterClade_Leafnames) == 1 and [CandidateTaxoAssignment] == VoISisterClade_Leafnames:
+                    '''If the sister clade consists entirely of the candidate class...'''
+                    if VoISisterClade_Leafnames == ImmediateOutCladeLeafnames:
+                        '''and the out group is the same, then assign VoI to the candidate class'''
+                        TaxoAssignmentList.append(CandidateTaxoAssignment)
+                        '''Embedded within a clade of a single class '''
+                        PhyloStatList.append("1")
+
+                    else:
+                        '''... but the out group isn't, having a sister relationship with the proposed class and they are similar enough (1st criterion)'''
+                        TaxoAssignmentList.append(CandidateTaxoAssignment)
+                        PhyloStatList.append("2")
+
+                elif len(ImmediateOutCladeLeafnames) == 1 and [CandidateTaxoAssignment] == ImmediateOutCladeLeafnames:
+                    '''If the immediate outgroup consists entirely of the candidate class...'''
+                    if(VoISisterClade_Leafnames1 == [CandidateTaxoAssignment] or VoISisterClade_Leafnames2 == [CandidateTaxoAssignment]):
+                        '''.. and the VoI is sandwished between 2 branches of the candidate class...'''
+                        TaxoAssignmentList.append(CandidateTaxoAssignment)
+                        '''Sandwiched between 2 branches of the candidate class'''
+                        PhyloStatList.append("3")
+                    else:
+                        '''else the candidate class is accepted on the ground that it has a paraphyletic relationship with the candidate class (just inside)'''
+                        TaxoAssignmentList.append(CandidateTaxoAssignment)
+                        '''Having a paraphyletic relationship with the candidate class (just inside)'''
+                        PhyloStatList.append("4")
+
+                elif (VoISisterClade_Leafnames1 == [CandidateTaxoAssignment] or VoISisterClade_Leafnames2 == [CandidateTaxoAssignment]):
+                    '''If one of the two branches in the sister clade consists entirely of the candidate class...'''
+                    TaxoAssignmentList.append(CandidateTaxoAssignment)
+                    '''Having a paraphyletic relationship with the candidate class (just outside)'''
+                    PhyloStatList.append("5")
+                else:
+                    TaxoAssignmentList.append("Unclassified")
+                    '''The candidate class is not supported by the dendrogram'''
+                    PhyloStatList.append("6")
+            except:
+                continue
         else:
             '''The unclassified virus isn't similar enough to the members of the candidate class'''
             TaxoAssignmentList.append("Unclassified")
