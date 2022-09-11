@@ -8,7 +8,7 @@ COPY ./ /workspace
 
 WORKDIR /workspace
 RUN apt-get -y update
-RUN apt install g++
+RUN apt install -y g++ make cmake git wget
 RUN bash install-reqs.sh
 
 RUN python3 -m pip install --upgrade pip

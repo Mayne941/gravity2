@@ -140,12 +140,8 @@ class PPHMMDBConstruction:
 
         for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"]):
             for SeqID in SeqIDList:
-                try:
-                    '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
-                    GenBankRecord = GenBankDict[SeqID]
-                except:
-                    ''')... skip if no match'''
-                    continue
+                '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
+                GenBankRecord = GenBankDict[SeqID]
                 GenBankID = GenBankRecord.name
                 GenBankFeatures = GenBankRecord.features
 
@@ -216,17 +212,8 @@ class PPHMMDBConstruction:
                             for i, j in zip(Coding_Start_IndexList, Coding_End_IndexList):
                                 for k, codon in enumerate(nuc_codonList[i:j]):
                                     if codon in StartCodonList:
-                                        try:
-                                            ProtSeqList.append(
-                                                Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
-                                        except:
-                                            # RM <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                                            # RM < This is probably not needed when VMR cleaning stuff is done
-                                            # RM < E.g. amend array sizes so as to not fuck up consequent stuff
-                                            print(f"Error - AccID {SeqID}")
-                                            TranslTable = 1
-                                            ProtSeqList.append(
-                                                Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
+                                        ProtSeqList.append(
+                                            Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
                                         break
 
                             for ProtSeq in ProtSeqList:

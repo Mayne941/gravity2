@@ -7,10 +7,6 @@ apt-get install mcl -y
 apt-get install hmmer -y
 
 # blast installation. Assumes Linux x64 build!
-# apt-get install ncftp -y
-# ncftpget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/ncbi-blast-2.13.0+-x64-arm-linux.tar.gz
-# tar zxvpf ncbi-blast-2.13.0+-x64-arm-linux.tar.gz
-# export PATH=$PATH:$HOME/repo/ncbi-blast-2.13.0+/bin
 apt install ncbi-blast+
 
 # hhsuite installation
@@ -25,8 +21,8 @@ export PATH="$PATH:$HHLIB/bin:$HHLIB/scripts"
 # muscle installation. Assumes Linux x64 build!
 mkdir -p ~/programs/muscle && cd ~/programs/muscle
 wget https://github.com/rcedgar/muscle/releases/download/v5.1/muscle5.1.linux_intel64
-cd src/
-make
+mv muscle5.1.linux_intel64 muscle
+chmod 777 muscle
 
 # booster installation
 cd ~/workspace
