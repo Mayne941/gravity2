@@ -75,6 +75,12 @@ class Scraper:
             else:
                 return row["Species"]
 
+    def is_segmented(row):
+        if ":" in row["Virus GENBANK accession"] or ";" in row["Virus GENBANK accession"]:
+            return 1
+        else:
+            return 0
+
     def etl(self, df) -> pd.DataFrame:
         '''Extract, transform, load. Get baltimore group and synthesise column for genome coverage'''
         df[["Baltimore Group", "Genetic code table", "Virus isolate designation"]] = df.apply(
@@ -87,8 +93,10 @@ class Scraper:
         )])]["Virus GENBANK accession"].to_csv(f"{self.save_dir}/bad_accession.csv")
         df = df.drop_duplicates(subset="Virus GENBANK accession", keep=False)
 
-        '''Exclude partial genomes'''
+        '''Exclude partial & segmented genomes'''
         df = df[df["Genetic code table"] == 1]
+        df["is_segmented"] = df.apply(lambda x: self.is_segmented(x), axis=1)
+        df = df[df["is_segmented"] == 0]
 
         if self.first_pass_filter:
             df["Taxonomic grouping"] = df.apply(
