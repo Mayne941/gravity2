@@ -727,11 +727,9 @@ class RefVirusAnnotator:
         '''6/8 : Make GOM database'''
         GOMIDList = OrderedSet([TaxoGrouping for TaxoGrouping in self.genomes["TaxoGroupingList"].astype(
             'str') if not TaxoGrouping.startswith(("_", "*"))])
-        # try:
+
         GOMDB = GOMDB_Constructor(
             self.genomes["TaxoGroupingList"], self.PPHMMLocationTable, GOMIDList)
-        # except:
-        #     breakpoint()
 
         print("- Generate GOM signature table")
         '''7/8 : Make GOM signature table'''
