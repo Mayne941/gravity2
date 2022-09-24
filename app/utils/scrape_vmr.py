@@ -75,7 +75,7 @@ class Scraper:
             else:
                 return row["Species"]
 
-    def is_segmented(row):
+    def is_segmented(self, row):
         if ":" in row["Virus GENBANK accession"] or ";" in row["Virus GENBANK accession"]:
             return 1
         else:
