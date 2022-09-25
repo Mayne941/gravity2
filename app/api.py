@@ -42,6 +42,7 @@ app = FastAPI(
     openapi_tags=tags_metadata
 )
 
+
 '''Dev Endpoints'''
 
 
@@ -61,7 +62,6 @@ async def pipeline_i_full(payload: Pipeline_i_data, background_tasks: Background
 
 
 def run_pipeline_i_full(payload):
-    pl = Pipeline_I(payload)
     pl.read_genome_desc_table()
 
 

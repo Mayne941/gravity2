@@ -48,9 +48,8 @@ class Pipeline_i_data(BaseModel):
                                                description="Threshold for protein sequence similarity detection. A hit with a subject coverage < COVERAGE will be ignored.")
     BLASTp_num_alignments: int = Field(1000000, gt=0,
                                        description="Maximum number of sequences to be considered in a BLASTp search.")
-    # RM < Allow users to specify or always default to multiprocessing.cpu_count()? Reset default to sensible
-    BLASTp_N_CPUs: int = Field(24, gt=1,
-                               description="The number of threads (CPUs) to use in the BLASTp search.")
+    N_CPUs: int = Field(24, gt=1,
+                        description="The number of threads (CPUs) to use in the BLASTp, HMMER, HHSuite, Bootstrap searches.")
     MUSCLE_GapOpenCost: float = Field(-3.0, lt=0,
                                       description="MUSCLE gap opening panelty for aligning protein sequences.")
     MUSCLE_GapExtendCost: float = Field(-0.0, le=0,
@@ -68,18 +67,12 @@ class Pipeline_i_data(BaseModel):
                                          description="Threshold for PPHMM similarity detection. A hit with an E-value > E-VALUE will be ignored.")
     HHsuite_pvalue_Cutoff: float = Field(0.05, ge=0, le=1,
                                          description="Threshold for PPHMM similarity detection. A hit with a p-value > P-VALUE will be ignored.")
-    # RM < This should be same as BLASTp_N_CPUs
-    HHsuite_N_CPUs: int = Field(24, gt=1,
-                                description="Number of threads (CPUs) to use in the hhsearch search.")
     HHsuite_QueryCoverage_Cutoff: float = Field(85.0, ge=0, le=100,
                                                 description="Threshold for PPHMM similarity detection. A hit with a query coverage < COVERAGE will be ignored.")
     HHsuite_SubjectCoverage_Cutoff: float = Field(85.0, ge=0, le=100,
                                                   description="Threshold for PPHMM similarity detection. A hit with a subject coverage < COVERAGE will be ignored")
     AnnotateIncompleteGenomes: bool = Query(False,
                                             description="Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes.")
-    # RM < This should be same as BLASTp_N_CPUs
-    HMMER_N_CPUs: int = Field(24, gt=1,
-                              description="Number of threads (CPUs) to use in the hmmscan search.")
     HMMER_C_EValue_Cutoff: float = Field(0.001, gt=0,
                                          description="Threshold for HMM-protein similarity detection. A hit with an E-value > E-VALUE will be ignored.")
     HMMER_HitScore_Cutoff: int = Field(0, ge=0,
@@ -104,9 +97,6 @@ class Pipeline_i_data(BaseModel):
                              description="The number of pseudoreplicate datasets by resampling.")
     Bootstrap_method: Literal["booster", "sumtrees"] = Query('booster',
                                                              description="Two METHODs for tree summary construction are implemented in GRAViTy. If METHOD = 'sumtrees', SumTrees (Sukumaran, J & MT Holder, 2010, Bioinformatics; https://dendropy.org/programs/sumtrees.html) will be used to summarize non-parameteric bootstrap support for splits on the best estimated dendrogram. The calculation is based on the standard Felsenstein bootstrap method. If METHOD = 'booster', BOOSTER (Lemoine et al., 2018, Nature; https://booster.pasteur.fr/) will be used. With large trees and moderate phylogenetic signal, BOOSTER tends to be more informative than the standard Felsenstein bootstrap method.")
-    # RM < This should be same as BLASTp_N_CPUs
-    Bootstrap_N_CPUs: int = Field(24, gt=1,
-                                  description="Number of threads (CPUs) to use in tree summary. Only used when 'Bootstrap_method' == 'booster'")
     Heatmap: bool = Query(False,
                           description="GRAViTy can generate a heatmap (with the dendrogram) to represent the pairwise (dis)similarity matrix")
     Heatmap_VirusOrderScheme: Union[FilePath, None] = Query(None,
@@ -166,9 +156,8 @@ class Pipeline_ii_data(BaseModel):
                                                description="Threshold for protein sequence similarity detection. A hit with a subject coverage < COVERAGE will be ignored.")
     BLASTp_num_alignments: int = Field(1000000, gt=0,
                                        description="Maximum number of sequences to be considered in a BLASTp search.")
-    # RM < Allow users to specify or always default to multiprocessing.cpu_count()? Reset default to sensible
-    BLASTp_N_CPUs: int = Query(24, gt=1,
-                               description="The number of threads (CPUs) to use in the BLASTp search.")
+    N_CPUs: int = Query(24, gt=1,
+                        description="The number of threads (CPUs) to use in the BLASTp, HMMER, HHSuite, Bootstrap searches.")
     MUSCLE_GapOpenCost: float = Field(-3.0, lt=0,
                                       description="MUSCLE gap opening panelty for aligning protein sequences.")
     MUSCLE_GapExtendCost: float = Field(-0.0, le=0,
@@ -186,9 +175,6 @@ class Pipeline_ii_data(BaseModel):
                                          description="Threshold for PPHMM similarity detection. A hit with an E-value > E-VALUE will be ignored.")
     HHsuite_pvalue_Cutoff: float = Field(0.05, ge=0, le=1,
                                          description="Threshold for PPHMM similarity detection. A hit with a p-value > P-VALUE will be ignored.")
-    # RM < This should be same as BLASTp_N_CPUs
-    HHsuite_N_CPUs: int = Field(24, gt=1,
-                                description="Number of threads (CPUs) to use in the hhsearch search.")
     HHsuite_QueryCoverage_Cutoff: float = Field(85.0, ge=0, le=100,
                                                 description="Threshold for PPHMM similarity detection. A hit with a query coverage < COVERAGE will be ignored.")
     HHsuite_SubjectCoverage_Cutoff: float = Field(85.0, ge=0, le=100,
@@ -197,9 +183,6 @@ class Pipeline_ii_data(BaseModel):
                                                      description="Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes.")
     UsingDatabaseIncludingIncompleteRefViruses: bool = Query(False,
                                                              description="Annotate unclassified viruses using the PPHMM and GOM databases derived from all reference viruses if True, otherwise using those derived from complete reference genomes only.")
-    # RM < This should be same as BLASTp_N_CPUs
-    HMMER_N_CPUs: int = Field(24, gt=1,
-                              description="Number of threads (CPUs) to use in the hmmscan search.")
     HMMER_C_EValue_Cutoff: float = Field(0.001, gt=0,
                                          description="Threshold for HMM-protein similarity detection. A hit with an E-value > E-VALUE will be ignored.")
     HMMER_HitScore_Cutoff: int = Field(0, ge=0,
@@ -210,16 +193,12 @@ class Pipeline_ii_data(BaseModel):
                              description="Construct dendrogram if True.")
     Dendrogram_LinkageMethod: Literal["single", "complete", "average", "weighted", "centroid", "median", "ward"] = Query('average',
                                                                                                                          description="LINKAGE for dendrogram construction. If LINKAGE = 'single', the nearest point algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'complete', the farthest point algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'average', the UPGMA algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'weighted', the WPGMA algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'centroid', the UPGMC algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'median', the WPGMC algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'ward', the incremental algorithm is used to cluster viruses and compute cluster distances.")
-    # RM < Added this as seemed necessary
     Bootstrap: bool = Query(True,
                             description="Perform bootstrapping if True.")
     N_Bootstrap: int = Field(10, gt=0,
                              description="The number of pseudoreplicate datasets by resampling.")
     Bootstrap_method: Literal["booster", "sumtrees"] = Query('booster',
                                                              description="Two METHODs for tree summary construction are implemented in GRAViTy. If METHOD = 'sumtrees', SumTrees (Sukumaran, J & MT Holder, 2010, Bioinformatics; https://dendropy.org/programs/sumtrees.html) will be used to summarize non-parameteric bootstrap support for splits on the best estimated dendrogram. The calculation is based on the standard Felsenstein bootstrap method. If METHOD = 'booster', BOOSTER (Lemoine et al., 2018, Nature; https://booster.pasteur.fr/) will be used. With large trees and moderate phylogenetic signal, BOOSTER tends to be more informative than the standard Felsenstein bootstrap method.")
-    # RM < This should be same as BLASTp_N_CPUs
-    Bootstrap_N_CPUs: int = Field(24, gt=1,
-                                  description="Number of threads (CPUs) to use in tree summary. Only used when 'Bootstrap_method' == 'booster'")
     DatabaseAssignmentSimilarityScore_Cutoff: float = Field(0.01, gt=0,
                                                             description="Threshold to determine if the unclassified virus at least belongs to a particular database. For example, an unclassified virus is assigned to the family 'X' in the reference 'Baltimore group X' database, with the (greatest) similarity score of 0.1. This score might be too low to justify that the virus is a member of the family 'X', and fail the similarity threshold test. However, since the similarity score of 0.1 > %default, GRAViTy will make a guess that it might still be a virus of the 'Baltimore group X' database, under the default setting.")
     N_PairwiseSimilarityScores: int = Field(10000, gt=0,
