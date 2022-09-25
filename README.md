@@ -44,13 +44,15 @@ Where parameters appear in curly brackets, replace these with values that corres
 
 ## Run instructions
 xxxxxxxxXXXXXXXXXXXXXXXxxxxxxxxxxxxxxxXXXXXXXXXx
+. Instructions for navigating API.
 
 ## Troubleshooting
 The following information is designed to help troubleshoot common issues.
 1. *GRAViTyV2 can't find a VMR file*. Download an up-to-date VMR via the scrape_vmr endpoint, or construct your own and point to it with the API call parameter "GenomeDescTableFile".
 1. *GRAViTyV2 fails just after a subprocess.Popen() command, such as BLASTp*. Ensure that all command line tools (mcl, hmmer, ncbi-blast+, hhsuite, muscle, booster) are installed, can be called from the command line and are installed in the locations GRAViTyV2 expects (see paths in ./install-reqs.sh). Ensure versions installed are compatible with your operating system and architecture (in particular, your CPU instruction set if using a server).
 1. *Can't access GRAViTyV2 API in browser*. Ensure program is running in shell/Docker container. Ensure address (localhost/IP of Docker container) and port are correct; if deployed on a server, network or cloud resource, contact your administrator as complex infrastructure such as network loops and proxies are likely to be in place.
-1. *GRAViTyV2 is taking a very long time to compute and/or crashes with memory overflow errors*. The software is extremely resource-intensive and incorrect usage will lead to intractable compute jobs. Of particular note, ensure that database size << 1000 genomes and consider disabling optional steps which are extremely expensive (e.g. bootstrapping, mutual information calculation, use of unclassified virus PPHMMs.)
+1. *GRAViTyV2 is taking a very long time to compute and/or crashes with memory overflow errors*. The software is extremely resource-intensive and incorrect usage will lead to intractable compute jobs. Of particular note, ensure that database size << 1000 genomes and consider disabling optional steps which are extremely expensive (e.g. bootstrapping, mutual information calculation, use of unclassified virus PPHMMs). Ensure you have specified the maximum number of threads you have available for the ```N_CPUs``` parameter, which will ensure maximum efficiency on BLAST, HMMER, HHSuite and Bootstrap functions.
+1. *How do I specify "nothing" for a parameter in the API, e.g. I don't want to specify a ```Database``` parameter*. The API accepts JSON-like objects: to specify no input for these parameters, use ```null```.
 
 ## Guide for contributors
 Although forking is encouraged, we will only consider pull requests which address bugs and performance issues. Contributors will please configure pre-commit hooks to match ours, as detailed in the .pre-commit-config.yaml file.
