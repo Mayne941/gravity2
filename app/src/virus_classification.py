@@ -953,14 +953,14 @@ class VirusClassificationAndEvaluation:
 
         if self.IncludeIncompleteGenomes_UcfVirus == True:
             if self.IncludeIncompleteGenomes_RefVirus == True:
-                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/VirusClassificationAndEvaluation.AllUcfGenomes.AllRefGenomes.shelve"
+                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/VirusClassificationAndEvaluation.AllUcfGenomes.AllRefGenomes.p"
             elif self.IncludeIncompleteGenomes_RefVirus == False:
-                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/VirusClassificationAndEvaluation.AllUcfGenomes.CompleteRefGenomes.shelve"
+                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/VirusClassificationAndEvaluation.AllUcfGenomes.CompleteRefGenomes.p"
         elif self.IncludeIncompleteGenomes_UcfVirus == False:
             if self.IncludeIncompleteGenomes_RefVirus == True:
-                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/VirusClassificationAndEvaluation.CompleteUcfGenomes.AllRefGenomes.shelve"
+                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/VirusClassificationAndEvaluation.CompleteUcfGenomes.AllRefGenomes.p"
             elif self.IncludeIncompleteGenomes_RefVirus == False:
-                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/VirusClassificationAndEvaluation.CompleteUcfGenomes.CompleteRefGenomes.shelve"
+                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/VirusClassificationAndEvaluation.CompleteUcfGenomes.CompleteRefGenomes.p"
 
         self.final_results["PairwiseSimilarityScore_Cutoff_Dict"] = self.PairwiseSimilarityScore_Cutoff_Dict
         self.final_results["MaxSimScoreDistTable"] = self.MaxSimScoreDistTable

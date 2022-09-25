@@ -359,7 +359,7 @@ class PPHMMDBConstruction:
                 # 										#MUSCLE_GapOpenCost,
                 # 										#MUSCLE_GapExtendCost),
                 # 										stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
-                _ = subprocess.Popen(f"~/repo/muscle/muscle -align {UnAlnClusterFile} -output {AlnClusterFile}",
+                _ = subprocess.Popen(f"~/programs/muscle/muscle -align {UnAlnClusterFile} -output {AlnClusterFile}",
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                 err, out = _.communicate()
                 error_handler(

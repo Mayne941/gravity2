@@ -62,14 +62,14 @@ class Pipeline_II:
                 BLASTp_QueryCoverage_Cutoff=self.options['BLASTp_QueryCoverage_Cutoff'],
                 BLASTp_SubjectCoverage_Cutoff=self.options['BLASTp_SubjectCoverage_Cutoff'],
                 BLASTp_num_alignments=self.options['BLASTp_num_alignments'],
-                BLASTp_N_CPUs=self.options['BLASTp_N_CPUs'],
+                BLASTp_N_CPUs=self.options['N_CPUs'],
                 MUSCLE_GapOpenCost=self.options['MUSCLE_GapOpenCost'],
                 MUSCLE_GapExtendCost=self.options['MUSCLE_GapExtendCost'],
                 ProtClustering_MCLInflation=self.options['ProtClustering_MCLInflation'],
                 N_AlignmentMerging=self.options['N_AlignmentMerging'],
                 HHsuite_evalue_Cutoff=self.options['HHsuite_evalue_Cutoff'],
                 HHsuite_pvalue_Cutoff=self.options['HHsuite_pvalue_Cutoff'],
-                HHsuite_N_CPUs=self.options['HHsuite_N_CPUs'],
+                HHsuite_N_CPUs=self.options['N_CPUs'],
                 HHsuite_QueryCoverage_Cutoff=self.options['HHsuite_QueryCoverage_Cutoff'],
                 HHsuite_SubjectCoverage_Cutoff=self.options['HHsuite_SubjectCoverage_Cutoff'],
                 PPHMMClustering_MCLInflation=self.options['PPHMMClustering_MCLInflation_ForAlnMerging'],
@@ -93,7 +93,7 @@ class Pipeline_II:
             IncludeIncompleteGenomes_RefVirus=str2bool(
                 self.options['UsingDatabaseIncludingIncompleteRefViruses']),
             SeqLength_Cutoff=0,
-            HMMER_N_CPUs=self.options['HMMER_N_CPUs'],
+            HMMER_N_CPUs=self.options['N_CPUs'],
             HMMER_C_EValue_Cutoff=self.options['HMMER_C_EValue_Cutoff'],
             HMMER_HitScore_Cutoff=self.options['HMMER_HitScore_Cutoff'],
         )
@@ -115,7 +115,7 @@ class Pipeline_II:
             GenomeSeqFile_UcfVirus=self.options['GenomeSeqFile_UcfVirus'],
             GenomeSeqFiles_RefVirus=self.options['GenomeSeqFiles_RefVirus'],
             SeqLength_Cutoff=0,
-            HMMER_N_CPUs=int(self.options['HMMER_N_CPUs']),
+            HMMER_N_CPUs=int(self.options['N_CPUs']),
             HMMER_C_EValue_Cutoff=float(self.options['HMMER_C_EValue_Cutoff']),
             HMMER_HitScore_Cutoff=float(self.options['HMMER_HitScore_Cutoff']),
             SimilarityMeasurementScheme=self.options['SimilarityMeasurementScheme'],
@@ -132,7 +132,7 @@ class Pipeline_II:
             Bootstrap=str2bool(self.options['Bootstrap']),
             N_Bootstrap=int(self.options['N_Bootstrap']),
             Bootstrap_method=self.options['Bootstrap_method'],
-            Bootstrap_N_CPUs=int(self.options['Bootstrap_N_CPUs']),
+            Bootstrap_N_CPUs=int(self.options['N_CPUs']),
             VirusGrouping=str2bool(self.options['VirusGrouping']),
         )
         vce.main()
