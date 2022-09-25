@@ -12,10 +12,12 @@ GRAViTy V2 adaptation by Mayne, R., Aiewsakun, P., Simmonds., P. et al. (2022)
 
 Based on original GRAViTy software https://github.com/PAiewsakun/GRAViTy
 
+Please cite:
+
 Aiewsakun, P., Simmonds, P. The genomic underpinnings of eukaryotic virus taxonomy: creating a sequence-based framework for family-level virus classification. Microbiome 6, 38 (2018). https://doi.org/10.1186/s40168-018-0422-7
 
 ## Background
-TBC xxxxxxxxXXXXXXXXXXXXXXXxxxxxxxxxxxxxxxXXXXXXXXXx
+GRAViTy (genome relationships applied to virus taxonomy) is a framework for identifying and classifying virus genomes. GRAViTyV2 is a development on the original framework written in Python 3, which builds in manifold optimizations, wider support, machine learning component refinements, an interactive API, Docker container compatibility, automatic acquisition and filtering of virus metadata resource (VMR) files and a different workflow.
 
 The software as provided may either be run from the shell/other command line, or via a Docker container. Both methods have their own benefits and detriments; the Docker version will automatically set up your environment and dependencies, both of which need to be set up manually if running from the shell, but the former will also require knowledge of containerisation to access the application programming interface (API), import/export data and make any changes to the code base. If unsure, consult your compute cluster's administrator as to which option is preferable.
 
@@ -48,6 +50,7 @@ The following information is designed to help troubleshoot common issues.
 1. *GRAViTyV2 can't find a VMR file*. Download an up-to-date VMR via the scrape_vmr endpoint, or construct your own and point to it with the API call parameter "GenomeDescTableFile".
 1. *GRAViTyV2 fails just after a subprocess.Popen() command, such as BLASTp*. Ensure that all command line tools (mcl, hmmer, ncbi-blast+, hhsuite, muscle, booster) are installed, can be called from the command line and are installed in the locations GRAViTyV2 expects (see paths in ./install-reqs.sh). Ensure versions installed are compatible with your operating system and architecture (in particular, your CPU instruction set if using a server).
 1. *Can't access GRAViTyV2 API in browser*. Ensure program is running in shell/Docker container. Ensure address (localhost/IP of Docker container) and port are correct; if deployed on a server, network or cloud resource, contact your administrator as complex infrastructure such as network loops and proxies are likely to be in place.
+1. *GRAViTyV2 is taking a very long time to compute and/or crashes with memory overflow errors*. The software is extremely resource-intensive and incorrect usage will lead to intractable compute jobs. Of particular note, ensure that database size << 1000 genomes and consider disabling optional steps which are extremely expensive (e.g. bootstrapping, mutual information calculation, use of unclassified virus PPHMMs.)
 
 ## Guide for contributors
 Although forking is encouraged, we will only consider pull requests which address bugs and performance issues. Contributors will please configure pre-commit hooks to match ours, as detailed in the .pre-commit-config.yaml file.
