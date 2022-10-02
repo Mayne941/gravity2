@@ -28,8 +28,8 @@ class Scraper:
             "ssDNA(+)": "II",
             "ssDNA(-)": "II",
             "ssDNA(+/-)": "II",
-            "ssRNA": "II, III",
-            "ssRNA(+/-)": "II, III"
+            "ssRNA": "IV, V",
+            "ssRNA(+/-)": "IV, V"
         }
 
     def scrape(self) -> pd.DataFrame:
@@ -61,7 +61,7 @@ class Scraper:
         return pd.Series([baltimore, code_table, isolate_col])
 
     def is_segmented(self, row):
-        if ":" in row["Virus GENBANK accession"] or ";" in row["Virus GENBANK accession"]:
+        if ":" in row["Virus GENBANK accessiolatest_vmr_first_pass_filtern"] or ";" in row["Virus GENBANK accession"]:
             return 1
         else:
             return 0
@@ -121,12 +121,22 @@ def scrape(payload) -> str:
 @timing
 def first_pass(payload) -> str:
     try:
-        df = pd.read_csv(f"{payload['save_path']}{payload['vmr_name']}")
+        df = pd.read_csv(f"{payload['save_path']}/{payload['vmr_name']}")
         df["Taxonomic grouping"] = df.apply(
             lambda x: construct_first_pass_set(x, df, payload["filter_threshold"]), axis=1)
         df = df.drop_duplicates(subset="Taxonomic grouping", keep="first")
-        df.to_csv(f"{payload['save_path']}{payload['save_name']}")
-        return f"Success! VMR saved to {payload['save_path']}"
+
+        if payload["additional_filter"] == "RNA":
+            df = df[(df["Baltimore Group"] == "III") | (df["Baltimore Group"] == "IV") | (
+                df["Baltimore Group"] == "V") | (df["Baltimore Group"] == "VI")]
+        elif payload["additional_filter"] == "dsRNA":
+            df = df[(df["Baltimore Group"] == "I") |
+                    (df["Baltimore Group"] == "VII")]
+        elif payload["additional_filter"] == "ssDNA":
+            df = df[df["Baltimore Group"] == "II"]
+
+        df.to_csv(f"{payload['save_path']}/{payload['save_name']}")
+        return f"Success! VMR saved to ./{payload['save_path']}"
     except Exception as e:
         print(f"Whoops: {e}")
         return f"Unsuccessful.\n Please check url and table formatting in app/utils/scrape_vmr.py, or contact your administrator."
@@ -135,10 +145,10 @@ def first_pass(payload) -> str:
 @timing
 def second_pass(payload) -> str:
     try:
-        df = pd.read_csv(f"{payload['save_path']}{payload['vmr_name']}")
-        df = df[df[payload['filter_level'] == payload["filter_name"]]]
-        df.to_csv(f"{payload['save_path']}{payload['save_name']}")
-        return f"Success! VMR saved to {payload['save_path']}"
+        df = pd.read_csv(f"{payload['save_path']}/{payload['vmr_name']}")
+        df = df[df[payload['filter_level']] == payload["filter_name"]]
+        df.to_csv(f"{payload['save_path']}/{payload['save_name']}")
+        return f"Success! VMR saved to ./{payload['save_path']}"
     except Exception as e:
         print(f"Whoops: {e}")
         return f"Unsuccessful.\n Please check url and table formatting in app/utils/scrape_vmr.py, or contact your administrator."

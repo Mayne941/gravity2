@@ -19,6 +19,8 @@ class FirstPass(BaseModel):
                            description="Filename of output VMR file")
     filter_threshold: int = Query(10,
                                   description="If filter = true, how many members should be in each taxo grouping? If < threshold members in family, resolve at genus level, and likewise for species.")
+    additional_filter: Literal["none", "dsDNA", "ssDNA", "RNA"] = Query("RNA",
+                                                                        description="Do an extra filter to further reduce size of first pass database. Currently supports: `none`, `dsDNA`, `ssDNA`, `RNA`")
 
 
 class SecondPass(BaseModel):
