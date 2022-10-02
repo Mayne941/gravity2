@@ -1,14 +1,14 @@
-from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
-from app.utils.highest_posterior_density import hpd
-from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ucf_annots, retrieve_ref_virus_vars
-from app.utils.console_messages import section_header
-from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
-from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
-from app.utils.gomdb_constructor import GOMDB_Constructor
-from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
-from app.utils.taxo_label_constructor import TaxoLabel_Constructor
-from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
 from app.utils.dist_mat_to_tree import DistMat2Tree
+from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
+from app.utils.taxo_label_constructor import TaxoLabel_Constructor
+from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
+from app.utils.gomdb_constructor import GOMDB_Constructor
+from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
+from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
+from app.utils.console_messages import section_header
+from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ucf_annots, retrieve_ref_virus_vars
+from app.utils.highest_posterior_density import hpd
+from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
 from Bio import Phylo
 from copy import copy
 from scipy.cluster.hierarchy import linkage, fcluster

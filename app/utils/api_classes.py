@@ -17,6 +17,8 @@ class ScrapeData(BaseModel):
 
 
 class Pipeline_i_data(BaseModel):
+    genbank_email: str = Query('name@provider.com',
+                               description="A valid email address is required to download genbank files.")
     GenomeDescTableFile: FilePath = Query('./data/latest_vmr.csv',
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
     ShelveDir: str = Query('./output/Analysis/Ref/VII',
@@ -119,6 +121,8 @@ class Pipeline_i_data(BaseModel):
 
 
 class Pipeline_ii_data(BaseModel):
+    genbank_email: str = Query('name@provider.com',
+                               description="A valid email address is required to download genbank files.")
     GenomeDescTableFile: FilePath = Query('data/latest_vmr.csv',
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint")
     ShelveDir_UcfVirus: str = Query('output/unclassified_folder',

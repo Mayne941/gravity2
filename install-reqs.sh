@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# make folders
+mkdir data
+mkdir output
+
 # mcl installation
 apt-get install mcl -y
 
