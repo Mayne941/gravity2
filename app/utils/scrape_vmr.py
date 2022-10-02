@@ -1,7 +1,6 @@
 import os
 import re
 import requests
-import struct
 import pandas as pd
 from bs4 import BeautifulSoup as bs
 
