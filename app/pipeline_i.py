@@ -55,6 +55,7 @@ class Pipeline_I:
         '''II: Fire PPHMDB Constructor'''
         [print(log_text) for log_text in self.logs[1]]
         pph = PPHMMDBConstruction(
+            genbank_email=self.options['genbank_email'],
             GenomeSeqFile=self.options['GenomeSeqFile'],
             ShelveDir=self.options['ShelveDir'],
             ProteinLength_Cutoff=self.options['ProteinLength_Cutoff'],

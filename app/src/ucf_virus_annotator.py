@@ -1,13 +1,11 @@
 from copy import copy
 import os
-import shelve
 import string
 import random
 import subprocess
 import pickle
 from scipy.sparse import coo_matrix
 
-# Local functions
 from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.download_genbank_file import DownloadGenBankFile
@@ -17,6 +15,7 @@ from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ref_virus_v
 
 class UcfVirusAnnotator:
     def __init__(self,
+                 genbank_email,
                  GenomeSeqFile_UcfVirus,
                  ShelveDir_UcfVirus,
                  ShelveDirs_RefVirus,
@@ -39,12 +38,14 @@ class UcfVirusAnnotator:
         self.HMMER_C_EValue_Cutoff = HMMER_C_EValue_Cutoff
         self.HMMER_HitScore_Cutoff = HMMER_HitScore_Cutoff
         self.VariableShelveFile_UcfVirus, self.VariableShelveDir_RefVirus = {}, {}
+        self.genbank_email = genbank_email
 
     def get_genbank(self) -> None:
         '''2/2: If not present, download GenBank files'''
         print("- Download GenBank file\n GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s).")
         DownloadGenBankFile(self.GenomeSeqFile_UcfVirus,
-                            self.VariableShelveFile_UcfVirus["SeqIDLists"])
+                            self.VariableShelveFile_UcfVirus["SeqIDLists"],
+                            self.genbank_email)
 
     def mkdirs(self, ShelveDir_RefVirus):
         '''Make filepaths for retrieval and storage'''

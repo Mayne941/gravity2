@@ -8,15 +8,37 @@ class ScrapeData(BaseModel):
                                      description="Path to save the Virus Metadata Resource (VMR).")
     vmr_name: str = Query('latest_vmr.csv',
                           description="Filename for new VMR.")
-    first_pass_filter: bool = Query(False,
-                                    description="One may do a 'first pass filter' to reduce run time and get rough overview of taxonomies.")
+
+
+class FirstPass(BaseModel):
+    save_path: DirectoryPath = Query('./data/',
+                                     description="Path to save the Virus Metadata Resource (VMR).")
+    vmr_name: str = Query('latest_vmr.csv',
+                          description="Filename for VMR to edit.")
+    save_name: str = Query('latest_vmr_first_pass_filter.csv',
+                           description="Filename of output VMR file")
     filter_threshold: int = Query(10,
                                   description="If filter = true, how many members should be in each taxo grouping? If < threshold members in family, resolve at genus level, and likewise for species.")
-    second_pass_filter: bool = Query(False,
-                                     description="Second pass filter extracts all members of family x to build a more diverse, but targeted, database")
+    additional_filter: Literal["none", "dsDNA", "ssDNA", "RNA"] = Query("RNA",
+                                                                        description="Do an extra filter to further reduce size of first pass database. Currently supports: `none`, `dsDNA`, `ssDNA`, `RNA`")
+
+
+class SecondPass(BaseModel):
+    save_path: DirectoryPath = Query('./data/',
+                                     description="Path to save the Virus Metadata Resource (VMR).")
+    vmr_name: str = Query('latest_vmr.csv',
+                          description="Filename for VMR to edit.")
+    save_name: str = Query('latest_vmr_second_pass_filter.csv',
+                           description="Filename of output VMR file")
+    filter_level: str = Query('family',
+                              description="Specify which taxo grouping to filter by. Used in combination with filter_name to generate a VMR of all viral genomes within a specific taxo grouping.")
+    filter_name: str = Query('Caudoviricetes',
+                             description="Used to specify which taxo grouping name to filter by: used in combination with filter_level to generate a VMR of all viral genomes within a specific taxo grouping.")
 
 
 class Pipeline_i_data(BaseModel):
+    genbank_email: str = Query('name@provider.com',
+                               description="A valid email address is required to download genbank files.")
     GenomeDescTableFile: FilePath = Query('./data/latest_vmr.csv',
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
     ShelveDir: str = Query('./output/Analysis/Ref/VII',
@@ -119,6 +141,8 @@ class Pipeline_i_data(BaseModel):
 
 
 class Pipeline_ii_data(BaseModel):
+    genbank_email: str = Query('name@provider.com',
+                               description="A valid email address is required to download genbank files.")
     GenomeDescTableFile: FilePath = Query('data/latest_vmr.csv',
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint")
     ShelveDir_UcfVirus: str = Query('output/unclassified_folder',

@@ -23,6 +23,7 @@ from app.utils.retrieve_pickle import retrieve_genome_vars
 
 class PPHMMDBConstruction:
     def __init__(self,
+                 genbank_email,
                  GenomeSeqFile,
                  ShelveDir,
                  ProteinLength_Cutoff=100,
@@ -66,6 +67,7 @@ class PPHMMDBConstruction:
         self.HHsuite_SubjectCoverage_Cutoff = HHsuite_SubjectCoverage_Cutoff
         self.PPHMMClustering_MCLInflation = PPHMMClustering_MCLInflation
         self.HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging = HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging
+        self.genbank_email = genbank_email
         self.orf_tranl_table = get_orf_trasl_table()
         self.orf_no_match = no_orf_match()
 
@@ -125,7 +127,8 @@ class PPHMMDBConstruction:
         '''3/10: Check if GenBank files exist; dl if needed. Index & transform.'''
         if not os.path.isfile(self.GenomeSeqFile):
             print("- Download GenBank file\n GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s).")
-            DownloadGenBankFile(self.GenomeSeqFile, genomes["SeqIDLists"])
+            DownloadGenBankFile(self.GenomeSeqFile,
+                                genomes["SeqIDLists"], self.genbank_email)
 
         print("- Reading GenBank file")
         GenBankDict = SeqIO.index(self.GenomeSeqFile, "genbank")

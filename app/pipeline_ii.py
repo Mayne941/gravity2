@@ -52,6 +52,7 @@ class Pipeline_II:
         if str2bool(self.options['UseUcfVirusPPHMMs']) == True:
             [print(log_text) for log_text in self.logs[1]]
             pc = PPHMMDBConstruction(
+                genbank_email=self.options['genbank_email'],
                 GenomeSeqFile=self.options['GenomeSeqFile_UcfVirus'],
                 ShelveDir=self.options['ShelveDir_UcfVirus'],
                 ProteinLength_Cutoff=self.options['ProteinLength_Cutoff'],
@@ -85,6 +86,7 @@ class Pipeline_II:
         '''III: Fire UCF Virus Annotator'''
         [print(log_text) for log_text in self.logs[2]]
         ucf = UcfVirusAnnotator(
+            genbank_email=self.options['genbank_email'],
             GenomeSeqFile_UcfVirus=self.options['GenomeSeqFile_UcfVirus'],
             ShelveDir_UcfVirus=self.options['ShelveDir_UcfVirus'],
             ShelveDirs_RefVirus=self.options['ShelveDirs_RefVirus'],
