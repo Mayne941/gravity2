@@ -15,9 +15,6 @@ class Scraper:
         self.url_stem = "https://ictv.global"
         self.save_dir = payload["save_path"]
         self.fname = payload["vmr_name"]
-        self.threshold = payload["filter_threshold"]
-        self.first_pass_filter = payload["first_pass_filter"]
-        self.second_pass_filter = payload["second_pass_filter"]
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
         self.baltimore_map = {
@@ -63,17 +60,6 @@ class Scraper:
 
         return pd.Series([baltimore, code_table, isolate_col])
 
-    def construct_first_pass_set(self, row, df):
-        '''Construct first-pass grouping; ensure diversity is maintained in representative examples'''
-        # RM < Vectorise this as it's slow
-        if df[df["Family"] == row["Family"]].shape[0] >= self.threshold:
-            return row["Family"]
-        else:
-            if df[df["Genus"] == row["Genus"]].shape[0] >= self.threshold:
-                return row["Genus"]
-            else:
-                return row["Species"]
-
     def is_segmented(self, row):
         if ":" in row["Virus GENBANK accession"] or ";" in row["Virus GENBANK accession"]:
             return 1
@@ -84,7 +70,6 @@ class Scraper:
         '''Extract, transform, load. Get baltimore group and synthesise column for genome coverage'''
         df[["Baltimore Group", "Genetic code table", "Virus isolate designation"]] = df.apply(
             lambda x: self.get_baltimore_and_code_table(x), axis=1)
-        # Not required for PL2 so default to blank
         df["Taxonomic grouping"] = ""
 
         '''Find, print list of and remove duplicates or entries with no Acc ID'''
@@ -96,16 +81,6 @@ class Scraper:
         df = df[df["Genetic code table"] == 1]
         df["is_segmented"] = df.apply(lambda x: self.is_segmented(x), axis=1)
         df = df[df["is_segmented"] == 0]
-
-        if self.first_pass_filter:
-            df["Taxonomic grouping"] = df.apply(
-                lambda x: self.construct_first_pass_set(x, df), axis=1)
-            df = df.drop_duplicates(subset="Taxonomic grouping", keep="first")
-            print(
-                f"Value counts for first pass filter, by Baltimore: {df['Baltimore Group'].value_counts()}")
-
-        if self.second_pass_filter:
-            ...
 
         return df
 
@@ -120,8 +95,19 @@ class Scraper:
         return self.save_dir
 
 
+def construct_first_pass_set(row, df, threshold) -> pd.Series:
+    '''Construct first-pass grouping; ensure diversity is maintained in representative examples'''
+    if df[df["Family"] == row["Family"]].shape[0] >= threshold:
+        return row["Family"]
+    else:
+        if df[df["Genus"] == row["Genus"]].shape[0] >= threshold:
+            return row["Genus"]
+        else:
+            return row["Species"]
+
+
 @timing
-def scrape(payload):
+def scrape(payload) -> str:
     print("VMR scrape started. This may take a short while.")
     s = Scraper(payload)
     try:
@@ -130,6 +116,32 @@ def scrape(payload):
     except Exception as ex:
         print(f"Whoops: {ex}")
         return f"Scrape unsuccessful: possibly the VMR format and/or URL has changed.\n Please check url and table formatting in app/utils/scrape_vmr.py, or contact your administrator."
+
+
+@timing
+def first_pass(payload) -> str:
+    try:
+        df = pd.read_csv(f"{payload['save_path']}{payload['vmr_name']}")
+        df["Taxonomic grouping"] = df.apply(
+            lambda x: construct_first_pass_set(x, df, payload["filter_threshold"]), axis=1)
+        df = df.drop_duplicates(subset="Taxonomic grouping", keep="first")
+        df.to_csv(f"{payload['save_path']}{payload['save_name']}")
+        return f"Success! VMR saved to {payload['save_path']}"
+    except Exception as e:
+        print(f"Whoops: {e}")
+        return f"Unsuccessful.\n Please check url and table formatting in app/utils/scrape_vmr.py, or contact your administrator."
+
+
+@timing
+def second_pass(payload) -> str:
+    try:
+        df = pd.read_csv(f"{payload['save_path']}{payload['vmr_name']}")
+        df = df[df[payload['filter_level'] == payload["filter_name"]]]
+        df.to_csv(f"{payload['save_path']}{payload['save_name']}")
+        return f"Success! VMR saved to {payload['save_path']}"
+    except Exception as e:
+        print(f"Whoops: {e}")
+        return f"Unsuccessful.\n Please check url and table formatting in app/utils/scrape_vmr.py, or contact your administrator."
 
 
 if __name__ == "__main__":
