@@ -61,7 +61,7 @@ class Scraper:
         return pd.Series([baltimore, code_table, isolate_col])
 
     def is_segmented(self, row):
-        if ":" in row["Virus GENBANK accessiolatest_vmr_first_pass_filtern"] or ";" in row["Virus GENBANK accession"]:
+        if ":" in row["Virus GENBANK accession"] or ";" in row["Virus GENBANK accession"]:
             return 1
         else:
             return 0
