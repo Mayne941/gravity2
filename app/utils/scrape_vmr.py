@@ -41,7 +41,7 @@ class Scraper:
         latest_url = f"{self.url_stem}{url_rows[0]}"
         return pd.read_excel(latest_url)
 
-    def get_baltimore_and_code_table(self, row):
+    def get_baltimore_and_code_table(self, row) -> pd.Series:
         '''Make new column for roman numeral notation Baltimore classification and genome coverage indicator.'''
         try:
             baltimore = self.baltimore_map[row["Genome composition"]]
@@ -60,7 +60,7 @@ class Scraper:
 
         return pd.Series([baltimore, code_table, isolate_col])
 
-    def is_segmented(self, row):
+    def is_segmented(self, row) -> int:
         if ":" in row["Virus GENBANK accession"] or ";" in row["Virus GENBANK accession"]:
             return 1
         else:

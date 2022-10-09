@@ -1,5 +1,6 @@
 class Log_Generator_Pl1:
     '''Generate list of lists containing input config, for printing and saving to persistent log'''
+
     def __init__(self, options, fpath) -> None:
         self.options = options
         self.fpath = fpath
@@ -11,17 +12,17 @@ class Log_Generator_Pl1:
 
     def text_gen_pre_read(self) -> list:
         return ["Input for ReadGenomeDescTable:",
-                    "="*100,
-                    "Main input",
-                    "-"*50,
-                    f"GenomeDescTableFile: {self.options['GenomeDescTableFile']}",
-                    f"ShelveDir: {self.options['ShelveDir']}",
-                    f"Database: {self.options['Database']}",
-                    f"Database_Header: {self.options['Database_Header']}",
-                    f"TaxoGrouping_Header: {self.options['TaxoGrouping_Header']}",
-                    f"TaxoGroupingFile: {self.options['TaxoGroupingFile']}",
-                    "="*100
-            ]
+                "="*100,
+                "Main input",
+                "-"*50,
+                f"GenomeDescTableFile: {self.options['GenomeDescTableFile']}",
+                f"ShelveDir: {self.options['ShelveDir']}",
+                f"Database: {self.options['Database']}",
+                f"Database_Header: {self.options['Database_Header']}",
+                f"TaxoGrouping_Header: {self.options['TaxoGrouping_Header']}",
+                f"TaxoGroupingFile: {self.options['TaxoGroupingFile']}",
+                "="*100
+                ]
 
     def text_gen_pre_pphmdb(self) -> list:
         return ["Input for PPHMMDBConstruction:",
@@ -41,7 +42,7 @@ class Log_Generator_Pl1:
                 f"BLASTp_QueryCoverage_Cutoff: {self.options['BLASTp_QueryCoverage_Cutoff']}",
                 f"BLASTp_SubjectCoverage_Cutoff: {self.options['BLASTp_SubjectCoverage_Cutoff']}",
                 f"BLASTp_num_alignments: {self.options['BLASTp_num_alignments']}",
-                f"BLASTp_N_CPUs: {self.options['BLASTp_N_CPUs']}",
+                f"N_CPUs: {self.options['N_CPUs']}",
                 f"MUSCLE_GapOpenCost: {self.options['MUSCLE_GapOpenCost']}",
                 f"MUSCLE_GapExtendCost: {self.options['MUSCLE_GapExtendCost']}",
                 f"ProtClustering_MCLInflation: {self.options['ProtClustering_MCLInflation']}",
@@ -50,13 +51,12 @@ class Log_Generator_Pl1:
                 f"N_AlignmentMerging: {self.options['N_AlignmentMerging']}",
                 f"HHsuite_evalue_Cutoff: {self.options['HHsuite_evalue_Cutoff']}",
                 f"HHsuite_pvalue_Cutoff:{self.options['HHsuite_pvalue_Cutoff']}",
-                f"HHsuite_N_CPUs: {self.options['HHsuite_N_CPUs']}",
                 f"HHsuite_QueryCoverage_Cutoff: {self.options['HHsuite_QueryCoverage_Cutoff']}",
                 f"HHsuite_SubjectCoverage_Cutoff: {self.options['HHsuite_SubjectCoverage_Cutoff']}",
                 f"PPHMMClustering_MCLInflation_ForAlnMerging: {self.options['PPHMMClustering_MCLInflation_ForAlnMerging']}",
                 f"HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging: {self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']}",
                 "="*100
-        ]
+                ]
 
     def text_gen_pre_refvirusannotator(self) -> list:
         return ["Input for RefVirusAnnotator:",
@@ -68,7 +68,7 @@ class Log_Generator_Pl1:
                 "Reference virus annotation options",
                 "-"*50,
                 f"AnnotateIncompleteGenomes: {self.options['AnnotateIncompleteGenomes']}",
-                f"HMMER_N_CPUs: {self.options['HMMER_N_CPUs']}",
+                f"N_CPUs: {self.options['N_CPUs']}",
                 f"HMMER_C_EValue_Cutoff: {self.options['HMMER_C_EValue_Cutoff']}",
                 f"HMMER_HitScore_Cutoff: {self.options['HMMER_HitScore_Cutoff']}",
                 "Remove singleton PPHMM options",
@@ -80,12 +80,11 @@ class Log_Generator_Pl1:
                 f"PPHMMSorting: {self.options['PPHMMSorting']}",
                 f"HHsuite_evalue_Cutoff: {self.options['HHsuite_evalue_Cutoff']}",
                 f"HHsuite_pvalue_Cutoff: {self.options['HHsuite_pvalue_Cutoff']}",
-                f"HHsuite_N_CPUs: {self.options['HHsuite_N_CPUs']}",
                 f"HHsuite_QueryCoverage_Cutoff: {self.options['HHsuite_QueryCoverage_Cutoff']}",
                 f"HHsuite_SubjectCoverage_Cutoff: {self.options['HHsuite_SubjectCoverage_Cutoff']}",
                 f"PPHMMClustering_MCLInflation_ForPPHMMSorting: {self.options['PPHMMClustering_MCLInflation_ForPPHMMSorting']}",
                 "="*100
-        ]
+                ]
 
     def text_gen_pre_dendrogram(self) -> list:
         return ["Input for GRAViTyDendrogramAndHeatmapConstruction:",
@@ -105,7 +104,7 @@ class Log_Generator_Pl1:
                 f"Bootstrap: {self.options['Bootstrap']}",
                 f"N_Bootstrap: {self.options['N_Bootstrap']}",
                 f"Bootstrap_method: {self.options['Bootstrap_method']}",
-                f"Bootstrap_N_CPUs: {self.options['Bootstrap_N_CPUs']}",
+                f"N_CPUs: {self.options['N_CPUs']}",
                 "Heatmap construction options",
                 "-"*50,
                 f"Heatmap: {self.options['Heatmap']}",
@@ -117,7 +116,7 @@ class Log_Generator_Pl1:
                 "-"*50,
                 f"VirusGrouping: {self.options['VirusGrouping']}",
                 "="*100
-        ]
+                ]
 
     def text_gen_pre_mutalinfo(self) -> list:
         return ["Input for MutualInformationCalculator:",
@@ -135,7 +134,7 @@ class Log_Generator_Pl1:
                 f"SamplingStrategy: {self.options['SamplingStrategy']}",
                 f"SampleSizePerGroup: {self.options['SampleSizePerGroup']}",
                 "="*100
-        ]
+                ]
 
     def entrypoint(self) -> list:
         print_title()
@@ -152,8 +151,10 @@ class Log_Generator_Pl1:
 
         return logs
 
+
 class Log_Generator_Pl2:
     '''Generate list of lists containing input config, for printing and saving to persistent log'''
+
     def __init__(self, options, fpath) -> None:
         self.options = options
         self.fpath = fpath
@@ -173,7 +174,7 @@ class Log_Generator_Pl2:
                 f"Database: {self.options['Database']}",
                 f"Database_Header: {self.options['Database_Header']}",
                 "="*100
-        ]
+                ]
 
     def text_gen_pre_pphmdb(self) -> list:
         return ["Input for PPHMMDBConstruction:",
@@ -193,7 +194,7 @@ class Log_Generator_Pl2:
                 f"BLASTp_QueryCoverage_Cutoff: {self.options['BLASTp_QueryCoverage_Cutoff']}",
                 f"BLASTp_SubjectCoverage_Cutoff: {self.options['BLASTp_SubjectCoverage_Cutoff']}",
                 f"BLASTp_num_alignments: {self.options['BLASTp_num_alignments']}",
-                f"BLASTp_N_CPUs: {self.options['BLASTp_N_CPUs']}",
+                f"N_CPUs: {self.options['N_CPUs']}",
                 f"MUSCLE_GapOpenCost: {self.options['MUSCLE_GapOpenCost']}",
                 f"MUSCLE_GapExtendCost: {self.options['MUSCLE_GapExtendCost']}",
                 f"ProtClustering_MCLInflation: {self.options['ProtClustering_MCLInflation']}",
@@ -202,13 +203,12 @@ class Log_Generator_Pl2:
                 f"N_AlignmentMerging: {self.options['N_AlignmentMerging']}",
                 f"HHsuite_evalue_Cutoff: {self.options['HHsuite_evalue_Cutoff']}",
                 f"HHsuite_pvalue_Cutoff: {self.options['HHsuite_pvalue_Cutoff']}",
-                f"HHsuite_N_CPUs: {self.options['HHsuite_N_CPUs']}",
                 f"HHsuite_QueryCoverage_Cutoff: {self.options['HHsuite_QueryCoverage_Cutoff']}",
                 f"HHsuite_SubjectCoverage_Cutoff: {self.options['HHsuite_SubjectCoverage_Cutoff']}",
                 f"PPHMMClustering_MCLInflation_ForAlnMerging: {self.options['PPHMMClustering_MCLInflation_ForAlnMerging']}",
                 f"HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging: {self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']}",
                 "="*100
-        ]
+                ]
 
     def text_gen_pre_ucfvirusannotator(self) -> list:
         return [f"Input for UcfVirusAnnotator:",
@@ -221,13 +221,13 @@ class Log_Generator_Pl2:
                 "Unclassified virus annotation options",
                 "-"*50,
                 f"AnnotateIncompleteGenomes_UcfVirus: {self.options['AnnotateIncompleteGenomes_UcfVirus']}",
-                f"UsingDatabaseIncludingIncompleteRefViruses: {self.options['UsingDatabaseIncludingIncompleteRefViruses']}",	
-                f"HMMER_N_CPUs: {self.options['HMMER_N_CPUs']}",
+                f"UsingDatabaseIncludingIncompleteRefViruses: {self.options['UsingDatabaseIncludingIncompleteRefViruses']}",
+                f"N_CPUs: {self.options['N_CPUs']}",
                 f"HMMER_C_EValue_Cutoff: {self.options['HMMER_C_EValue_Cutoff']}",
                 f"HMMER_HitScore_Cutoff: {self.options['HMMER_HitScore_Cutoff']}",
                 "="*100
-        ]
-        
+                ]
+
     def text_gen_pre_classifier(self) -> list:
         return ["Input for VirusClassificationAndEvaluation:",
                 "="*100,
@@ -242,7 +242,7 @@ class Log_Generator_Pl2:
                 f"UseUcfVirusPPHMMs: {self.options['UseUcfVirusPPHMMs']}",
                 f"GenomeSeqFile_UcfVirus: {self.options['GenomeSeqFile_UcfVirus']}",
                 f"GenomeSeqFiles_RefVirus: {self.options['GenomeSeqFiles_RefVirus']}",
-                f"HMMER_N_CPUs: {self.options['HMMER_N_CPUs']}",
+                f"N_CPUs: {self.options['N_CPUs']}",
                 f"HMMER_C_EValue_Cutoff: {self.options['HMMER_C_EValue_Cutoff']}",
                 f"HMMER_HitScore_Cutoff: {self.options['HMMER_HitScore_Cutoff']}",
                 "Virus (dis)similarity measurement options",
@@ -255,7 +255,6 @@ class Log_Generator_Pl2:
                 f"Bootstrap: {self.options['Bootstrap']}",
                 f"N_Bootstrap: {self.options['N_Bootstrap']}",
                 f"Bootstrap_method: {self.options['Bootstrap_method']}",
-                f"Bootstrap_N_CPUs: {self.options['Bootstrap_N_CPUs']}",	
                 f"DatabaseAssignmentSimilarityScore_Cutoff: {self.options['DatabaseAssignmentSimilarityScore_Cutoff']}",
                 f"N_PairwiseSimilarityScores: {self.options['N_PairwiseSimilarityScores']}",
                 "Heatmap construction options",
@@ -267,7 +266,7 @@ class Log_Generator_Pl2:
                 f"VirusGrouping: {self.options['VirusGrouping']}",
                 "="*100,
                 "&"*100
-        ]
+                ]
 
     def entrypoint(self) -> list:
         print_title()
@@ -280,17 +279,18 @@ class Log_Generator_Pl2:
         with open(self.fpath + "/input_parameter_log.txt", "w") as f:
             for list_type in logs:
                 [f.write(f"{item}\n") for item in list_type]
-                
+
         return logs
+
 
 def print_title():
     print('''
-   _____ _____       __      ___ _______     __      _____  
-  / ____|  __ \     /\ \    / (_)__   __|    \ \    / /__ \ 
+   _____ _____       __      ___ _______     __      _____
+  / ____|  __ \     /\ \    / (_)__   __|    \ \    / /__ \
  | |  __| |__) |   /  \ \  / / _   | |_   _   \ \  / /   ) |
- | | |_ |  _  /   / /\ \ \/ / | |  | | | | |   \ \/ /   / / 
- | |__| | | \ \  / ____ \  /  | |  | | |_| |    \  /   / /_ 
+ | | |_ |  _  /   / /\ \ \/ / | |  | | | | |   \ \/ /   / /
+ | |__| | | \ \  / ____ \  /  | |  | | |_| |    \  /   / /_
   \_____|_|  \_\/_/    \_\/   |_|  |_|\__, |     \/   |____|
-                                       __/ |                
-                                      |___/                 
+                                       __/ |
+                                      |___/
 									  		''')
