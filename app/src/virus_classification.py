@@ -904,6 +904,24 @@ class VirusClassificationAndEvaluation:
                        fmt='%s',
                        delimiter="\t",
                        header="Sequence identifier\tSequence description\tCandidate class (class of the best match reference virus)\tSimilarity score*\tSupport from dendrogram**\tEvaluated taxonomic assignment\tThe best taxonomic assignment\tProvisional virus taxonomy")
+
+            '''Save closest cluster estimations for automation functions'''
+            closest_taxa = pd.DataFrame()
+            closest_taxa["isolate_name"] = self.ucf_genomes["VirusNameList"].copy()
+            closest_taxa["run_designation"] = list(
+                map(', '.join, self.ucf_genomes["SeqIDLists"]))
+            closest_taxa["closest_taxon"] = [", ".join(["%s (%s)" % (Taxo, Range) for Taxo, Range in zip(TaxoOfMaxSimScore_TaxoOfMaxSimScoreRange[0], TaxoOfMaxSimScore_TaxoOfMaxSimScoreRange[1])])
+                                             for TaxoOfMaxSimScore_TaxoOfMaxSimScoreRange in zip(self.final_results["TaxoOfMaxSimScoreTable"], self.final_results["TaxoOfMaxSimScoreRangeTable"])]
+            closest_taxa["score"] = [", ".join(["%s (%s)" % (Score, Range) for Score, Range in zip(MaxSimScore_MaxSimScoreRange[0], MaxSimScore_MaxSimScoreRange[1])]) for MaxSimScore_MaxSimScoreRange in zip(
+                np.around(self.final_results["MaxSimScoreTable"], 3).astype("str"), self.final_results["MaxSimScoreRangeTable"])]
+            closest_taxa["phylo_stat"] = [", ".join(["%s (%s)" % (Stat, Range) for Stat, Range in zip(PhyloStat_PhyloStatRange[0], PhyloStat_PhyloStatRange[1])])
+                                          for PhyloStat_PhyloStatRange in zip(self.final_results["PhyloStatTable"], self.final_results["PhyloStatRangeTable"])]
+            closest_taxa["taxo_assignment"] = ["%s (%s)" % (FinalisedTaxoAssignment_FinalisedTaxoAssignmentRange[0], FinalisedTaxoAssignment_FinalisedTaxoAssignmentRange[1]) for FinalisedTaxoAssignment_FinalisedTaxoAssignmentRange in zip(
+                self.final_results["FinalisedTaxoAssignmentList"], self.final_results["FinalisedTaxoAssignmentRangeList"])]
+            closest_taxa["taxo_grouping"] = self.final_results["FinalisedVirusGroupingList"]
+            closest_taxa.to_csv(
+                f"{self.VariableShelveDir_UcfVirus}/ClassificationResults.csv")
+
             with open(ClassificationResultFile, "a") as ClassificationResult_txt:
                 ClassificationResult_txt.write(f"\n"
                                                f"*Similarity score cutoff\n"
@@ -964,7 +982,7 @@ class VirusClassificationAndEvaluation:
             closest_taxa["phylo_stat"] = list(
                 map(', '.join, self.final_results["PhyloStatTable"]))
             closest_taxa["taxo_assignment"] = self.final_results["FinalisedTaxoAssignmentList"]
-            closest_taxa["taxo_grouping"] = self.final_results["FinalisedVirusGroupingList"],
+            closest_taxa["taxo_grouping"] = self.final_results["FinalisedVirusGroupingList"]
             closest_taxa.to_csv(
                 f"{self.VariableShelveDir_UcfVirus}/ClassificationResults.csv")
 
