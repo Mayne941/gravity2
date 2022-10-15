@@ -1,7 +1,8 @@
 from app.pipeline_i import Pipeline_I
 from app.pipeline_ii import Pipeline_II
-from app.utils.api_classes import Pipeline_i_data, Pipeline_ii_data, ScrapeData, FirstPass, SecondPass
+from app.utils.api_classes import Pipeline_i_data, Pipeline_ii_data, ScrapeData, FirstPass, SecondPass, FastaToGb
 from app.utils.scrape_vmr import scrape, first_pass, second_pass
+from app.utils.process_fasta import fasta_to_genbank
 
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
@@ -23,10 +24,6 @@ tags_metadata = [
         "name": "VMR Utilities",
         "description": "Refresh Virus Metadata Resource (VMR) from ICTV and construct first/second pass sets."
     },
-    {
-        "name": "Dev Utilities",
-        "description": "Endpoints for use by developers."
-    }
 ]
 
 app = FastAPI(
@@ -180,19 +177,22 @@ def run_pipeline_ii_from_virus_classification(payload):
 @app.post("/scrape_vmr/", tags=["VMR Utilities"])
 async def run_vmr_scrape(trigger: ScrapeData):
     payload = jsonable_encoder(trigger)
-    status = scrape(payload)
-    return status
+    return scrape(payload)
 
 
 @app.post("/construct_first_pass_vmr/", tags=["VMR Utilities"])
 async def vmr_first_pass(trigger: FirstPass):
     payload = jsonable_encoder(trigger)
-    status = first_pass(payload)
-    return status
+    return first_pass(payload)
 
 
 @app.post("/construct_second_pass_vmr/", tags=["VMR Utilities"])
 async def vmr_second_pass(trigger: SecondPass):
     payload = jsonable_encoder(trigger)
-    status = second_pass(payload)
-    return status
+    return second_pass(payload)
+
+
+@app.post("/convert_fasta_to_genbank_and_vmr/", tags=["VMR Utilities"])
+async def convert_fasta_to_genbank(trigger: FastaToGb):
+    payload = jsonable_encoder(trigger)
+    return fasta_to_genbank(payload)

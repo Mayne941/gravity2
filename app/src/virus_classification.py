@@ -15,6 +15,7 @@ from scipy.cluster.hierarchy import linkage, fcluster
 from collections import Counter
 import matplotlib
 import numpy as np
+import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap as LSC
 import matplotlib.pyplot as plt
 import os
@@ -781,7 +782,7 @@ class VirusClassificationAndEvaluation:
                         VirusGrouping = self.VirusGroupingDict[RefVirusGroup][
                             "VirusGroupingList"][-self.N_UcfViruses:][UcfVirus_i]
                         if VirusGrouping not in FinalisedVirusGroupingDict[RefVirusGroup]:
-                            # RM < NUMBER NEEDS TO BE 4 POINT PREC. TEST.
+                            '''Novel taxa are labelled unassigned taxonomy units (UTUs)'''
                             FinalisedVirusGroupingDict[RefVirusGroup][
                                 VirusGrouping] = f"UTU{FinalisedVirusGroupingIndexDict[RefVirusGroup]}"
                             FinalisedVirusGroupingIndexDict[RefVirusGroup] += 1
@@ -950,6 +951,22 @@ class VirusClassificationAndEvaluation:
                                                f"5: the sequence has a paraphyletic relationship with the candidate class (just outside)\n"
                                                f"6: the candidate class is not supported by the dendrogram\n"
                                                )
+
+            '''Save closest cluster estimations for automation functions'''
+            closest_taxa = pd.DataFrame()
+            closest_taxa["isolate_name"] = self.ucf_genomes["VirusNameList"].copy()
+            closest_taxa["run_designation"] = list(
+                map(', '.join, self.ucf_genomes["SeqIDLists"]))
+            closest_taxa["closest_taxon"] = list(
+                map(', '.join, self.final_results["TaxoOfMaxSimScoreTable"]))
+            closest_taxa["score"] = list(map(', '.join, np.around(
+                self.final_results["MaxSimScoreTable"], 3).astype("str")))
+            closest_taxa["phylo_stat"] = list(
+                map(', '.join, self.final_results["PhyloStatTable"]))
+            closest_taxa["taxo_assignment"] = self.final_results["FinalisedTaxoAssignmentList"]
+            closest_taxa["taxo_grouping"] = self.final_results["FinalisedVirusGroupingList"],
+            closest_taxa.to_csv(
+                f"{self.VariableShelveDir_UcfVirus}/ClassificationResults.csv")
 
         if self.IncludeIncompleteGenomes_UcfVirus == True:
             if self.IncludeIncompleteGenomes_RefVirus == True:
