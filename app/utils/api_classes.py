@@ -36,6 +36,17 @@ class SecondPass(BaseModel):
                              description="Used to specify which taxo grouping name to filter by: used in combination with filter_level to generate a VMR of all viral genomes within a specific taxo grouping.")
 
 
+class FastaToGb(BaseModel):
+    save_path: DirectoryPath = Query('./data/',
+                                     description="Path to save the Virus Metadata Resource (VMR).")
+    fasta_fname: str = Query('my_fasta',
+                             description="Filename for fasta file to convert.")
+    genbank_fname: str = Query('my_genbank.gb',
+                               description="Filename for output genbank. ")
+    vmr_fname: str = Query('my_vmr.csv',
+                           description="Filename for VMR-like document to produce alongside genbank file.")
+
+
 class Pipeline_i_data(BaseModel):
     genbank_email: str = Query('name@provider.com',
                                description="A valid email address is required to download genbank files.")

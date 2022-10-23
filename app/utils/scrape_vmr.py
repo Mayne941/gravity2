@@ -79,8 +79,6 @@ class Scraper:
 
         '''Exclude partial & segmented genomes'''
         df = df[df["Genetic code table"] == 1]
-        df["is_segmented"] = df.apply(lambda x: self.is_segmented(x), axis=1)
-        df = df[df["is_segmented"] == 0]
 
         return df
 

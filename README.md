@@ -23,6 +23,8 @@ The software as provided may either be run from the shell/other command line, or
 
 We assume for the purposes of this readme that the user will interact with GRAViTyV2's API via its graphical user interface (GUI), either via a localhost or LAN/WAN connection. This being said, the user may also interact with the API via the command line (e.g. with curl) or a third-party tool, such as Postman.
 
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx Describe PLI, PLII
+
 ## Installation instructions:
 This guide is tested on Windows Subsystems Linux 20.04, Ubuntu 20.04 LTS and Ubuntu Server 20.04 LTS. We anticipate that variations in operating system and system architecture (in particular, servers) will necessitate amendments to the process outlined below, hence this guide is advisory only. Please see the Troubleshooting section for further details.
 
@@ -42,9 +44,20 @@ Where parameters appear in curly brackets, replace these with values that corres
 1. Check Docker container has built successfully and is running: ```docker ps```
 1. Navigate to API: http://{docker-container-ip}:8000/docs  (container IP may be found by in the Docker Desktop app, or through ```docker inspect {container-id}```, using container ID from previous step)
 
-## Run instructions
-xxxxxxxxXXXXXXXXXXXXXXXxxxxxxxxxxxxxxxXXXXXXXXXx
-. Instructions for navigating API.
+## GRAViTyV2 Workflows
+GRAViTyV2 is a resource-intensive application and it would be intractable to construct databases comprising every known viral genome. For this reason, we advise breaking down queries into several stages which should begin with constructing several databases based on significantly restricted datasets using Pipeline I, then comparing your samples against these with Pipeline II to get an approximate indication of taxonomy (hereafter known as doing a FIRST PASS run). First pass databases may be constructed with the scrape_vmr and construct_first_pass_vmr endpoints; we may choose to create several first pass databases where a simple filtering function may be used to ensure that single representative members of each family are included, or otherwise single members of each genus or species are included if upper taxonomic ranks contain only a small number of examples. It is good practice to keep databases under 800 samples, as compute time scales non-linearly with sample size: we may choose therefore, to find a logical way to split first pass databases into multiple portions, such as into RNA, dsDNA and ssDNA. First pass databases take the longest time to compute, but need only be constructed each time a new VMR is issued.
+
+Consequently, a far-more detailed database can be constructed by running Pipeline I again, using a small subset of viral genomes that are known to be similar to the families/genuses indicated by the results of the first pass search. E.g. if the first pass indicates that an unknown sample is likely to belong to *Caulimoviridae*, a SECOND PASS database may be constructed using Pipeline I, to include all examples from this Family. Then, Pipeline II may be run against this second pass database to get a precise taxonomic evaluation.
+
+In summary, an efficient GRAViTy workflow could look like the following:
+1. Scrape VMR, then run first pass filter function to reduce number of samples. It may be necessary to repeat this step several times if splitting your first pass databases into smaller segments, e.g. by nucleic acid type.
+1. Run Pipeline I several times to construct first pass databases.
+1. Run Pipeline II against your first pass databases to get an approximate estimation of taxonomy.
+1. Run the second pass filter function to create a second pass database, using a subset of the VMR that contains samples that the first pass database experiments have indicated are genetically similar with your unknown samples.
+1. Generate your second pass database by running Pipeline I.
+1. Run Pipeline II using your second pass database, to get a precise taxonomic evaluation.
+
+xxxxxxxxXXXXXXXXXXXXXXXxxxxxxxxxxxxxxxXXXXXXXXXx A complete example workflow is shown in docs/example_workflow.md
 
 ## Troubleshooting
 The following information is designed to help troubleshoot common issues.
