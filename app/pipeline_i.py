@@ -1,16 +1,17 @@
+
+import optparse
+import os
+import time
+import json
+
 from app.src.read_genome_desc_table import ReadGenomeDescTable
 from app.src.pphmmdb_construction import PPHMMDBConstruction
 from app.src.ref_virus_annotator import RefVirusAnnotator
 from app.src.graphing_tools import GRAViTyDendrogramAndHeatmapConstruction
 from app.src.mutual_information_calculator import MutualInformationCalculator
-
 from app.utils.str_to_bool import str2bool
 from app.utils.generate_logs import Log_Generator_Pl1
 from app.utils.timer import timing
-
-import optparse
-import os
-import time
 
 
 class Pipeline_I:
@@ -19,11 +20,14 @@ class Pipeline_I:
         '''Create directories'''
         if not os.path.exists(self.options['ShelveDir']):
             os.makedirs(self.options['ShelveDir'])
+
         '''Logs'''
         self.log_gen = Log_Generator_Pl1(
             self.options, self.options['ShelveDir'])
         self.logs = self.log_gen.entrypoint()
         self.actual_start = time.time()
+        with open(f"{self.options['ShelveDir']}/run_parameters.txt", "w") as f:
+            f.write(json.dumps(payload))
 
         '''Catch bad database flags'''
         if (self.options['Database'] != None and self.options['Database_Header'] == None):
