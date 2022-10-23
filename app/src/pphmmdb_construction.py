@@ -355,13 +355,7 @@ class PPHMMDBConstruction:
 
                 '''Align cluster using muscle'''
                 AlnClusterFile = ClustersDir+"/Cluster_%s.fasta" % Cluster_i
-                # RM < Need to research how to replace these dead muscle kwargs
-                # RM < Harmonize muslce install location with Dockerfile
-                # _ = subprocess.Popen("~/repo/muscle/muscle -align %s -output %s"%(UnAlnClusterFile, #-gapopen %s -gapextend %s" %(	UnAlnClusterFile, # RM << LOTS WRONG HERE
-                # 										AlnClusterFile),#,
-                # 										#MUSCLE_GapOpenCost,
-                # 										#MUSCLE_GapExtendCost),
-                # 										stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+                # RM < Latest MUSCLE doesn't support MUSCLE_GapOpenCost, MUSCLE_GapExtendCost. Users should examine these
                 _ = subprocess.Popen(f"~/programs/muscle/muscle -align {UnAlnClusterFile} -output {AlnClusterFile}",
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                 err, out = _.communicate()
@@ -410,7 +404,7 @@ class PPHMMDBConstruction:
                                    HMMER_PPHMMDbDir,
                                    HHsuite_PPHMMDB,
                                    HHsuiteDir,
-                                   ):  # RM < Still a chunky function, refactor if time allows
+                                   ):
         '''9/10: Make HHSuite PPHMMs and DB, merge & make protein alignmens'''
         if self.N_AlignmentMerging > 0:
             print(
@@ -606,7 +600,6 @@ class PPHMMDBConstruction:
                                 f"/Cluster_{PPHMM_j}.fasta"
                             HHsuite_PPHMMFile_j = HHsuite_PPHMMDir + \
                                 f"/PPHMM_{PPHMM_j}.hhm"
-                            # RM < Test this actually gets evaluated - gapopen/extend are deprecated?
                             _ = subprocess.Popen(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {ClusterFile_i} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
                                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                             err, out = _.communicate()
@@ -661,11 +654,9 @@ class PPHMMDBConstruction:
                     contents = HHsuite_PPHMM_txt.readlines()
                     contents[1] = "NAME  Cluster_%s\n" % AfterMergingPPHMM_i
                     contents = "".join(contents)
-                    # Put cursor at the beginning of the file
                     HHsuite_PPHMM_txt.seek(0)
-                    HHsuite_PPHMM_txt.write(contents)  # Write the contents
-                    HHsuite_PPHMM_txt.truncate()  # Delete everything after the cursor
-
+                    HHsuite_PPHMM_txt.write(contents)
+                    HHsuite_PPHMM_txt.truncate()
                 AfterMergingPPHMM_i += 1
 
             '''Rebuild the HHsuite PPHMM database'''
@@ -746,10 +737,9 @@ class PPHMMDBConstruction:
                 contents = HMMER_PPHMM_txt.readlines()
                 contents.insert(2, f"DESC  {ClusterDescList[-1]}\n")
                 contents = "".join(contents)
-                # Put cursor at the beginning of the file
                 HMMER_PPHMM_txt.seek(0)
-                HMMER_PPHMM_txt.write(contents)  # Write the contents
-                HMMER_PPHMM_txt.truncate()  # Delete everything after the cursor
+                HMMER_PPHMM_txt.write(contents)
+                HMMER_PPHMM_txt.truncate()
 
             progress_bar(
                 f"\033[K Make HMMER PPHMMs: [{'='*int(float(PPHMM_i + 1)/N_PPHMMs*20)}] {PPHMM_i+1}/{N_PPHMMs} PPHHMs \r")

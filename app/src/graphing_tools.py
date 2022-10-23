@@ -25,14 +25,13 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                  SimilarityMeasurementScheme="PG",
                  p=1,
                  Dendrogram=True,
-                 # "single", "complete", "average", "weighted"
                  Dendrogram_LinkageMethod="average",
                  Bootstrap=True,
                  N_Bootstrap=10,
-                 Bootstrap_method="booster",  # "booster", "sumtrees"
+                 Bootstrap_method="booster",
                  Bootstrap_N_CPUs=20,
                  Heatmap=False,
-                 Heatmap_VirusOrderScheme=None,  # "Filename",
+                 Heatmap_VirusOrderScheme=None,
                  Heatmap_WithDendrogram=True,
                  Heatmap_DendrogramFile=None,
                  Heatmap_DendrogramSupport_Cutoff=0.75,
@@ -117,7 +116,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         return DistMat
 
     def dendrogram(self, DistMat, VirusDendrogramDistFile, BootstrappedVirusDendrogramFile):
-        '''4/7: (OPT) RM <<< DOCSTRING'''
+        '''4/7: Build dendrogram'''
         '''Make TaxoLabelList'''
         TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
                                               FamilyList=self.genomes["FamilyList"],
@@ -176,11 +175,11 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                     VirusDendrogramDist_txt.write(
                         BootstrappedVirusDendrogram+"\n")
 
-            '''Create bootstrapped dendrogram'''
+            '''Create bootstrapped dendrogram. N.b. No error handler as successful output goes to stderr'''
             if self.Bootstrap_method == "booster":
                 _ = subprocess.Popen(f"./booster_linux64 -i {self.VirusDendrogramFile} -b {VirusDendrogramDistFile} -o {BootstrappedVirusDendrogramFile} -@ {self.Bootstrap_N_CPUs}",
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                out, err = _.communicate()  # No error handler as successful output goes to stderr
+                out, err = _.communicate()
 
             elif self.Bootstrap_method == "sumtrees":
                 _ = subprocess.Popen(f"sumtrees.py --decimals=2 --no-annotations --preserve-underscores --force-rooted --output-tree-format=newick --output-tree-filepath={BootstrappedVirusDendrogramFile} --target={self.VirusDendrogramFile} {VirusDendrogramDistFile}",
@@ -322,7 +321,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             try:
                 if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.Heatmap_DendrogramSupport_Cutoff or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
                     VirusDendrogram.get_nonterminals(
-                    )[InternalNode_i].confidence = 0  # RM < Was ""
+                    )[InternalNode_i].confidence = 0
                 else:
                     VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
                         VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)

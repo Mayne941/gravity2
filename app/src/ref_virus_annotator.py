@@ -116,8 +116,6 @@ class RefVirusAnnotator:
         N_PPHMMs = LineCount(PPHMMDB_Summary)-1
         PPHMMQueryFile = f"{HMMER_hmmscanDir}/QProtSeqs.fasta"
         PPHMMScanOutFile = f"{HMMER_hmmscanDir}/PPHMMScanOut.txt"
-
-        # RM < Sig table init, modify and return to replace self var
         PPHMMSignatureTable = np.empty((0, N_PPHMMs))
         PPHMMLocMiddleBestHitTable = np.empty((0, N_PPHMMs))
 
@@ -169,7 +167,7 @@ class RefVirusAnnotator:
                     for Line in PPHMMScanOut_txt:
                         if Line[0] != "#":
                             Line = Line.split()
-                            # Concatenate the cluster description back
+                            '''Concatenate the cluster description back'''
                             Line[22] = " ".join(Line[22:])
                             Line = Line[:23]
                             C_EValue = float(Line[11])
@@ -255,7 +253,6 @@ class RefVirusAnnotator:
         '''Delete HMMER_hmmscanDir'''
         _ = subprocess.call(f"rm -rf {HMMER_hmmscanDir}", shell=True)
 
-        # RM < "LocMiddleBestHitTable" overwrites self.PPHMMLocationTable
         return PPHMMSignatureTable, PPHMMLocMiddleBestHitTable
 
     def remove_singleton_pphmms(self, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb):
@@ -309,10 +306,11 @@ class RefVirusAnnotator:
                 Contents = HMMER_PPHMM_txt.readlines()
                 Contents[1] = "NAME  Cluster_%s\n" % PPHMM_j
                 Contents = "".join(Contents)
-                # Put cursor at the beginning of the file
+                '''Put cursor at the beginning of the file'''
                 HMMER_PPHMM_txt.seek(0)
-                HMMER_PPHMM_txt.write(Contents)  # Write the contents
-                HMMER_PPHMM_txt.truncate()  # Delete everything after the cursor
+                '''Write the contents, everything after the cursor'''
+                HMMER_PPHMM_txt.write(Contents)
+                HMMER_PPHMM_txt.truncate()
 
             PPHMM_j += 1
 
@@ -348,7 +346,6 @@ class RefVirusAnnotator:
             HMMER_PPHMMDbSummary_txt.write(Contents)
 
         '''Remove singleton PPHMMs from PPHMMSignatureTable and PPHMMLocationTable'''
-        # RM < Modify Sig and Loc table inplace
         self.PPHMMSignatureTable = np.delete(
             arr=self.PPHMMSignatureTable, obj=SingletonPPHMM_IndexList, axis=1)
         self.PPHMMLocationTable = np.delete(
@@ -483,13 +480,12 @@ class RefVirusAnnotator:
                     if Line == "\n":
                         break
                     else:
-                        # Filter variable length Hit name
+                        '''Filter variable length Hit name'''
                         Line = re.sub(hit_match, "", Line)
                         Line = Line.replace("(", " ").replace(")", " ").split()
                         PPHMM_j = int(Line[0])
                         evalue = float(Line[2])
                         pvalue = float(Line[3])
-                        # RM << Check we want Score and not SS col
                         PPHMMSimScore = float(Line[4])
                         Col = float(Line[6])
                         SubjectLength = int(Line[-1])
@@ -595,10 +591,9 @@ class RefVirusAnnotator:
                 Contents = HMMER_PPHMM_txt.readlines()
                 Contents[1] = f"NAME  Cluster_{PPHMM_j}\n"
                 Contents = "".join(Contents)
-                # Put cursor at the beginning of the file
                 HMMER_PPHMM_txt.seek(0)
-                HMMER_PPHMM_txt.write(Contents)  # Write the contents
-                HMMER_PPHMM_txt.truncate()  # Delete everything after the cursor
+                HMMER_PPHMM_txt.write(Contents)
+                HMMER_PPHMM_txt.truncate()
 
             PPHMM_j += 1
 
@@ -630,7 +625,6 @@ class RefVirusAnnotator:
             HMMER_PPHMMDbSummary_txt.write(Contents)
 
         print("\tSort PPHMMSignatureTable and PPHMMLocationTable")
-        # RM < MODIFY INPLACE ON SELF VARS
         self.PPHMMSignatureTable = self.PPHMMSignatureTable[:, PPHMMOrder]
         self.PPHMMLocationTable = self.PPHMMLocationTable[:, PPHMMOrder]
 

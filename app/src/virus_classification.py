@@ -1,14 +1,3 @@
-from app.utils.dist_mat_to_tree import DistMat2Tree
-from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
-from app.utils.taxo_label_constructor import TaxoLabel_Constructor
-from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
-from app.utils.gomdb_constructor import GOMDB_Constructor
-from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
-from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
-from app.utils.console_messages import section_header
-from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ucf_annots, retrieve_ref_virus_vars
-from app.utils.highest_posterior_density import hpd
-from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
 from Bio import Phylo
 from copy import copy
 from scipy.cluster.hierarchy import linkage, fcluster
@@ -26,10 +15,20 @@ import subprocess
 import operator
 import pickle
 
+from app.utils.dist_mat_to_tree import DistMat2Tree
+from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
+from app.utils.taxo_label_constructor import TaxoLabel_Constructor
+from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
+from app.utils.gomdb_constructor import GOMDB_Constructor
+from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
+from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
+from app.utils.console_messages import section_header
+from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ucf_annots, retrieve_ref_virus_vars
+from app.utils.highest_posterior_density import hpd
+from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
+
 matplotlib.use('agg')
 sys.setrecursionlimit(10000)
-
-# Local functions
 
 
 class VirusClassificationAndEvaluation:
@@ -47,7 +46,6 @@ class VirusClassificationAndEvaluation:
                  HMMER_HitScore_Cutoff=0,
                  SimilarityMeasurementScheme="PG",
                  p=1,
-                 # 'single', 'complete', 'average', 'weighted'
                  Dendrogram_LinkageMethod="average",
                  DatabaseAssignmentSimilarityScore_Cutoff=0.01,
                  N_PairwiseSimilarityScores=10000,
@@ -55,7 +53,7 @@ class VirusClassificationAndEvaluation:
                  Heatmap_DendrogramSupport_Cutoff=0.75,
                  Bootstrap=True,
                  N_Bootstrap=10,
-                 Bootstrap_method="booster",  # "sumtrees", "booster"
+                 Bootstrap_method="booster",
                  Bootstrap_N_CPUs=20,
                  VirusGrouping=True,
                  ):
@@ -216,7 +214,7 @@ class VirusClassificationAndEvaluation:
                 '''Delete HMMER_hmmscanDir'''
                 _ = subprocess.call(
                     f"rm -rf {HMMER_hmmscanDir_UcfVirus}", shell=True)
-                Parameters["PPHMMSignatureTable"] = np.hstack(  # RM < Failing here 0509 PM
+                Parameters["PPHMMSignatureTable"] = np.hstack(
                     (Parameters["PPHMMSignatureTable"], PPHMMSignatureTable_UcfVirusVSUcfDB))
                 Parameters["PPHMMLocationTable"] = np.hstack(
                     (Parameters["PPHMMLocationTable"],  PPHMMLocationTable_UcfVirusVSUcfDB))
@@ -298,7 +296,6 @@ class VirusClassificationAndEvaluation:
 
             if self.VirusGrouping == True:
                 '''(OPT) Virus grouping'''
-                # RM < WILL BREAK DUE TO ARRAY SIZE MISMATCH AFTER ADDING ERROR HANDLING IN ACC ID SELECTION
                 self.do_virus_groupings(
                     RefVirusGroup, DistMat, N_RefViruses, Parameters)
 
@@ -485,12 +482,12 @@ class VirusClassificationAndEvaluation:
             try:
                 if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.Heatmap_DendrogramSupport_Cutoff or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
                     VirusDendrogram.get_nonterminals(
-                    )[InternalNode_i].confidence = 0  # RM < Was ""
+                    )[InternalNode_i].confidence = 0
                 else:
                     VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
                         VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
             except:
-                # RM < First entry always NoneType
+                '''Exception as first entry will always be None'''
                 VirusDendrogram.get_nonterminals(
                 )[InternalNode_i].confidence = 0
 
@@ -828,7 +825,6 @@ class VirusClassificationAndEvaluation:
                     (self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0)), np.zeros((self.N_UcfViruses, 0))
 
             for RefVirusGroup_i in range(self.N_RefVirusGroups):
-                # RM < N_RefVirusGroups = list of databases e.g. VI and VII = 0, 2
                 TaxoOfMaxSimScoreRangeList, MaxSimScoreRangeList, PhyloStatRangeList, TaxoAssignmentRangeList = [], [], [], []
                 for UcfVirus_i in range(self.N_UcfViruses):
                     TaxoOfMaxSimScoreDist_Counter = sorted(list(Counter(

@@ -8,7 +8,7 @@ from fastapi import FastAPI, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 
 description = """
-    App in development
+    Genome Relationships Applied to Virus Taxonomy is a software framework for identifying and classifying viruses, based on analysis of entire genomes.
 """
 
 tags_metadata = [
@@ -22,7 +22,11 @@ tags_metadata = [
     },
     {
         "name": "VMR Utilities",
-        "description": "Refresh Virus Metadata Resource (VMR) from ICTV and construct first/second pass sets."
+        "description": "Refresh Virus Metadata Resource (VMR) from ICTV and construct datasets."
+    },
+    {
+        "name": "Automated Workflows",
+        "description": "Pre-made workflows to automate the transition between a first pass PL2 run to a second pass PL1-2 run."
     },
 ]
 
