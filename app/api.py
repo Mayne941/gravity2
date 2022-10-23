@@ -8,7 +8,7 @@ from fastapi import FastAPI, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 
 description = """
-    App in development
+    Genome Relationships Applied to Virus Taxonomy is a software framework for identifying and classifying viruses, based on analysis of entire genomes.
 """
 
 tags_metadata = [
@@ -22,7 +22,11 @@ tags_metadata = [
     },
     {
         "name": "VMR Utilities",
-        "description": "Refresh Virus Metadata Resource (VMR) from ICTV and construct first/second pass sets."
+        "description": "Refresh Virus Metadata Resource (VMR) from ICTV and construct datasets."
+    },
+    {
+        "name": "Automated Workflows",
+        "description": "Pre-made workflows to automate the transition between a first pass PL2 run to a second pass PL1-2 run."
     },
 ]
 
@@ -196,3 +200,10 @@ async def vmr_second_pass(trigger: SecondPass):
 async def convert_fasta_to_genbank(trigger: FastaToGb):
     payload = jsonable_encoder(trigger)
     return fasta_to_genbank(payload)
+
+'''Automated Workflows'''
+
+
+@app.post("/automate_fp-PL2_to_sp-PL2/", tags=["Automated Workflows"])
+async def automate_first_pass_to_second_pass():
+    ...
