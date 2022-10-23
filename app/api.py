@@ -200,10 +200,3 @@ async def vmr_second_pass(trigger: SecondPass):
 async def convert_fasta_to_genbank(trigger: FastaToGb):
     payload = jsonable_encoder(trigger)
     return fasta_to_genbank(payload)
-
-'''Automated Workflows'''
-
-
-@app.post("/automate_fp-PL2_to_sp-PL2/", tags=["Automated Workflows"])
-async def automate_first_pass_to_second_pass():
-    ...

@@ -1,4 +1,7 @@
 # GRAViTyV2 Documentation
+Contents
+1. Function descriptions
+1. Example workflow
 
 ## Function Descriptions
 ### Pipeline I
@@ -6,12 +9,12 @@ Pipeline I (PL1) is for analysing and creating "databases" of information pertai
 1. Read VMR data
 1. Construct protein-protein hidden markov models (PPHMMs)
 1. Annotate reference viruses
-1. Do mutual information calculation functions and generate visualisations
+1. Do mutual information calculation functions and generate visualisations (optional)
 The GRAViTyV2 API allows for running the entire pipeline, or entering from any specific point within it.
 
-#### Minimum requirements to start PL1 are as follows:
-1. A table of reference virus descriptions, in .csv format (.txt may also work but is not recommended). This table must either be an ICTV Virus Metadata Resource (VMR), or a document with a similar strucutre. As a minimum, your table will need the following columns: "Species", "Virus GENBANK accession", "Genome coverage". VMR scrape and VMR-like document generation from input FASTA data are included, see section "VMR Utilities".
-1. A valid email address to download genomic data from GenBank, or otherwise genomic data in a .gb file. A function for converting FASTA data to gb and generating a VMR-like table is included, see section "VMR Utilities". N.b. you must specify a file path for the GenBank file ("GenomeSeqFile"): if it doesn't exist, GRAViTyV2 will automatically attempt to download genomic data; if the file does exist, it will attempt to read data in from it.
+#### Minimum requirements to start PL1:
+1. A table of reference virus descriptions ("GenomeDescTableFile"), in .csv format (.txt may also work but is not recommended). This table must either be an ICTV Virus Metadata Resource (VMR), or a document with a similar strucutre. As a minimum, your table will need the following columns: "Species", "Virus GENBANK accession", "Genome coverage". VMR scrape and VMR-like document generation from input FASTA data are included, see section "VMR Utilities".
+1. A valid email address ("genbank_email") to download genomic data from GenBank, or otherwise genomic data in a .gb file. N.b. you must specify a file path for the GenBank file ("GenomeSeqFile"): if it doesn't exist, GRAViTyV2 will automatically attempt to download genomic data; if the file does exist, it will attempt to read data in from it.
 1. A directory for saving all of your experimental data ("ShelveDir").
 
 #### Options also exist for:
@@ -25,8 +28,52 @@ The GRAViTyV2 API allows for running the entire pipeline, or entering from any s
 1. Intermediate data (for allowing re-runs or starting pipeline mid-way through) are saved to ./{experiment directory}/{BLAST}{HHsuite}}{HMMER}
 1. Experiment results are saved to ./{experiment directory}/Shelves. This includes the mutual information score, dendrograms and visualisations. Pickle files are also saved here, which contain raw, serialised output, such that all experimental data can be retrieved if necessary.
 
-### VMR Utilities
-xxxxxxxxxxxxxxxxxxxxxxx
+### Pipeline II
+Pipeline II (Pl2) is for comparing unclassified virus genomes against databases compiled via PL1. It comprises these stages:
+1. Read in unclassified virus table
+1. Compile protein-protein hidden markov models (PPHMMs, optional)
+1. Annotate unclassified viruses
+1. Prepare statistics and visualisations (optional)
+
+#### Minimum requirements to start PL1:
+1. Valid email address ("genbank_email") for downloading GenBank data OR .gb file ("GenomeSeqFile_UcfVirus"). A function for converting FASTA data to gb and generating a VMR-like table is included, see section "VMR Utilities". N.b. you must specify a file path for the GenBank file ("GenomeSeqFile"): if it doesn't exist, GRAViTyV2 will automatically attempt to download genomic data; if the file does exist, it will attempt to read data in from it.
+1. A GenBank file from your PL1 run ("GenomeSeqFile_RefVirus")
+1. A directory for PL1 output ("ShelveDir_RefVirus")
+1. A directory to save output to ("ShelveDir_UcfVirus")
+1. VMR or VMR-like documents for your PL1 run ("GenomeDescTableFile") and to correspond to your unclassified genomes file ("GenomeDescTableFile_UcfVirus").
+
+#### Options also exist for:
+1. Specifying a database within your reference virus table to analyse, ignoring others, e.g. Baltimore Group ("Database", "Database_header").
+1. Using a pre-defined grouping ("TaxoGrouping_Header", "TaxoGrouping_File")
+1. Fine-tuning of all numerical procedures within.
+1. Generating visualisations.
+
+#### Output data:
+1. Details of input parameters, to allow for full experiment reproducibility are stored to ./{experiment directory}
+1. Intermediate data (for allowing re-runs or starting pipeline mid-way through) are saved to ./{experiment directory}/{BLAST}{HHsuite}}{HMMER}
+1. Experiment results are saved to ./{experiment directory}/Shelves. This includes the classification results, dendrograms and visualisations. Pickle files are also saved here, which contain raw, serialised output, such that all experimental data can be retrieved if necessary.
+
+## VMR Utilities
+### Scrape VMR
+Fetch virus metadata resource (VMR) file from ICTV website, save as a csv file. Some basic cleaning is done at this stage, e.g. some new columns synthesised to extract Baltimore group, removal of incomplete genomes.
+
+### Construct first pass VMR
+Filter a VMR file by a specific rule, for significantly decreasing the length of a VMR to make a granular, "first pass" run. The purpose of this is to build a representative dataset with one example genome frome each taxon. Save results as csv.
+
+Filter rules:
+- Threshold: function will start at the Family level; if n samples within family < threshold, split at the genus level. If n samples within genus < threshold, extract species name. This ensures that both monotypic and polytypic genomes are adequately represented.
+- Additional filter: optional, we recommend building first pass databases at RNA, dsDNA and ssDNA levels. Hence each unclassified virus should be run against each of these three first pass databases to get an approximate classification.
+
+### Construct second pass VMR
+For use after the first pass: classification results from first pass PL2 will indicate which existing taxa are most similar to unknown samples. This function may then be used to filter by a specific label, to construct a VMR with all individual species from this taxon. Output as CSV.
+
+- Filter level: column name in VMR, e.g. Family
+- Filter name: specific grouping's name, e.g. "Caulimoviridae"
+
+Depending on the complexity of your second pass, you may need to run this function several times and combine their output, e.g. if you are comparing multiple, distantly related unclassified viruses and want to compare them to several taxa in one run.
+
+### Convert FASTA to genbank and VMR
+Input a FASTA file, output a corresponding .gb (GenBank) file and associated VMR-like .csv file.
 
 ## Example Workflow: Get taxonomy for single unknown RNA virus, from FASTA input
 All necessary data to run this example workflow are found in ./docs/example. N.b. parameters can't be copy-pasted exactly: ensure you check all parameters, including genbank_email and n_cpus.
