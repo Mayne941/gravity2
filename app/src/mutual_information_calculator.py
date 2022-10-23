@@ -15,7 +15,6 @@ class MutualInformationCalculator:
                  IncludeIncompleteGenomes=False,
                  VirusGroupingFile=None,
                  N_Sampling=100,
-                 # None, "balance_without_repeat", "balance_with_repeat"
                  SamplingStrategy="balance_with_repeat",
                  SampleSizePerGroup=10,
                  ):
@@ -40,7 +39,7 @@ class MutualInformationCalculator:
         '''2/3: Read virus grouping file to dict'''
         VirusGroupingTable = []
         with open(self.VirusGroupingFile, "r") as VirusGrouping_txt:
-            VirusGroupingSchemeList = next(VirusGrouping_txt)  # the header
+            VirusGroupingSchemeList = next(VirusGrouping_txt)
             VirusGroupingSchemeList = VirusGroupingSchemeList.split("\r\n")[0].split("\n")[
                 0].split("\t")
             for Line in VirusGrouping_txt:
@@ -84,7 +83,7 @@ class MutualInformationCalculator:
                     SampledVirus_IndexList = sum([list(np.random.choice(a=np.where(VirusGroupingList == VirusGroupingID)[
                                                  0], size=self.SampleSizePerGroup, replace=True)) for VirusGroupingID in VirusGroupingIDList], [])
 
-                # RM <OPTIMISE SKLEARN FN??
+                '''Call SK-Learn mutual info classifier. This component scales badly but no replacement currently exists.'''
                 SampledMutualInformationTable.append(mutual_info_classif(
                     PPHMMSignatureTable_Subset[SampledVirus_IndexList], VirusGroupingList[SampledVirus_IndexList]))
 
@@ -105,7 +104,7 @@ class MutualInformationCalculator:
                                                 reverse=True,
                                                 )
                                         )][0]
-                                   )[0])  # RM < extra nesting as zip returns iterable, not list in Py3
+                                   )[0])
 
             ResultDict[VirusGroupingScheme]["AverageMutualInformationScoreList"] = [
                 x for _, x in sorted(zip(PPHMMOrder, AverageMutualInformationScoreList))]

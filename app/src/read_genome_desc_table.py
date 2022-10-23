@@ -35,23 +35,17 @@ class ReadGenomeDescTable:
     def open_table(self) -> None:
         '''Open VMR file and read in relevant data to volatile'''
         print("- Read the GenomeDesc table")
-        # RM < Replace with pandas? Existing code is quick and works well...
         with open(self.GenomeDescTableFile, "r") as GenomeDescTable_txt:
             header_raw = next(GenomeDescTable_txt)
             header = header_raw.replace("\n", "").replace(
                 "\r", "").replace("\t", "").split(",")
-
-            # header = header.split("\r\n")[0].split("\n")[0].split("\t") # RM << Removed 2/9
-
             Baltimore_i = header.index("Baltimore Group")
             Order_i = header.index("Order")
             Family_i = header.index("Family")
             Subfamily_i = header.index("Subfamily")
             Genus_i = header.index("Genus")
-            # Previously "Virus name (s)"
             VirusName_i = header.index("Virus name(s)")
             SeqID_i = header.index("Virus GENBANK accession")
-            # Previously "Virus sequence complete"
             SeqStatus_i = header.index("Genome coverage")
             TranslTable_i = header.index("Genetic code table")
 
@@ -64,7 +58,6 @@ class ReadGenomeDescTable:
                 TaxoGrouping_i = header.index("Family")
 
             for Virus_i, Line in enumerate(GenomeDescTable_txt):
-                # Line = Line.split("\r\n")[0].split("\n")[0].split("\t") # RM << Removed 4/9
                 Line = Line.replace("\n", "").replace(
                     "\r", "").replace("\t", "").split(",")
                 try:
@@ -87,7 +80,7 @@ class ReadGenomeDescTable:
                     self.SubFamList.append(Line[Subfamily_i])
                     self.GenusList.append(Line[Genus_i])
                     self.VirusNameList.append(re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(
-                        r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", Line[VirusName_i])))))  # clean the virus name
+                        r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", Line[VirusName_i])))))
                     self.TaxoGroupingList.append(Line[TaxoGrouping_i])
                     self.SeqStatusList.append(Line[SeqStatus_i])
 
