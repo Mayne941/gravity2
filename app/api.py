@@ -41,8 +41,8 @@ app = FastAPI(
     },
     # RM < Check this license is appropriate
     license_info={
-        "name": "Apache 2.0",
-        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+        "name": "Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)",
+        "url": "https://creativecommons.org/licenses/by-nc/4.0/",
     },
     openapi_tags=tags_metadata
 )
