@@ -746,7 +746,7 @@ class VirusClassificationAndEvaluation:
                                         direction='out')
 
         '''Save the plot to file'''
-        HeatmapWithDendrogramFile = f"{self.VariableShelveDir_UcfVirus}/HeatmapWithDendrogram.RefVirusGroup={RefVirusGroup}.IncompleteUcfRefGenomes={str(int(self.IncludeIncompleteGenomes_UcfVirus))+str(int(self.IncludeIncompleteGenomes_RefVirus))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.pdf"
+        HeatmapWithDendrogramFile = f"{self.VariableShelveDir_UcfVirus}/HeatmapWithDendrogram.RefVirusGroup={RefVirusGroup}.IncompleteUcfRefGenomes={str(int(self.IncludeIncompleteGenomes_UcfVirus))+str(int(self.IncludeIncompleteGenomes_RefVirus))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.png"
         plt.savefig(HeatmapWithDendrogramFile, format="pdf")
 
     def group(self):

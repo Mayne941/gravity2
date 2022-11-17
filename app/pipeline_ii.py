@@ -24,7 +24,7 @@ class Pipeline_II:
             self.options, self.options["ShelveDir_UcfVirus"])
         self.actual_start = time.time()
         self.logs = self.log_gen.entrypoint()
-        with open(f"{self.options['ShelveDir']}/run_parameters.json", "w") as f:
+        with open(f"{self.options['ShelveDir_UcfVirus']}/run_parameters.json", "w") as f:
             f.write(json.dumps(payload))
         '''Catch bad database flags'''
         if (self.options['Database'] != None and self.options['Database_Header'] == None):
