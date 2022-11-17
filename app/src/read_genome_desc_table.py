@@ -200,6 +200,5 @@ class ReadGenomeDescTable:
         '''Create ReadGenomeDescTable "complete genomes' db'''
         print("- Save variables to ReadGenomeDescTable.CompleteGenomes.shelve")
         complete_desc_table = self.update_desc_table("complete_genomes")
-
         self.save_desc_table(complete_desc_table,
                              "/ReadGenomeDescTable.CompleteGenomes.p")
