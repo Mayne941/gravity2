@@ -473,23 +473,22 @@ class VirusClassificationAndEvaluation:
         VirusOrder = [TaxoLabelList_AllVirus.index(
             TaxoLabel) for TaxoLabel in OrderedTaxoLabelList]
 
-        '''Re-order the distance matrix'''
+        '''Re-order the distance matrix for heatmap squares'''
         OrderedDistMat = DistMat[VirusOrder][:, VirusOrder]
 
         '''Remove clade support values that are < Heatmap_DendrogramSupport_Cutoff'''
         N_InternalNodes = len(VirusDendrogram.get_nonterminals())
         for InternalNode_i in range(N_InternalNodes):
             try:
+                '''Here we want to ensure there are no labels on the dendrogram where bootstrap confidence < cutoff (or not present if BS = False)'''
                 if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.Heatmap_DendrogramSupport_Cutoff or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
-                    VirusDendrogram.get_nonterminals(
-                    )[InternalNode_i].confidence = 0
+                    continue
                 else:
                     VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
                         VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
             except:
                 '''Exception as first entry will always be None'''
-                VirusDendrogram.get_nonterminals(
-                )[InternalNode_i].confidence = 0
+                continue
 
         '''Colour terminal branches: reference virus's branch is blue, unclassified virus's branch is red'''
         N_Viruses = N_RefViruses + self.N_UcfViruses
@@ -623,13 +622,14 @@ class VirusClassificationAndEvaluation:
         ax_CBar_W = CBar_width/Fig_width
         ax_CBar_H = CBar_height/Fig_height
 
-        '''Plot the heat map'''
+        '''Plot heat map'''
         fig = plt.figure(figsize=(Fig_width, Fig_height), dpi=300)
 
+        '''Draw Dendrogram'''
         ax_Dendrogram = fig.add_axes(
             [ax_Dendrogram_L, ax_Dendrogram_B, ax_Dendrogram_W, ax_Dendrogram_H], frame_on=False, facecolor="white")
-        Phylo				.draw(VirusDendrogram, label_func=lambda x: "",
-                       do_show=False,  axes=ax_Dendrogram)
+        Phylo		.draw(VirusDendrogram, label_func=lambda x: "",
+                     do_show=False,  axes=ax_Dendrogram)
         VirusDendrogramDepth = max(
             [v for k, v in VirusDendrogram.depths().items()])
         ax_Dendrogram		.set_xlim(
@@ -637,6 +637,7 @@ class VirusClassificationAndEvaluation:
         ax_Dendrogram		.set_ylim([N_Viruses+0.5, 0.5])
         ax_Dendrogram		.set_axis_off()
 
+        '''Dendrogram scale bar'''
         ax_ScaleBar = fig.add_axes(
             [ax_ScaleBar_L, ax_ScaleBar_B, ax_ScaleBar_W, ax_ScaleBar_H], frame_on=False, facecolor="white")
         ax_ScaleBar		.plot([0, 1], [0, 0], 'k-')
@@ -650,16 +651,17 @@ class VirusClassificationAndEvaluation:
             list(map(str, ScaleBarTicks)), rotation=0, size=FontSize)
         ax_ScaleBar		.set_xlabel('Distance', rotation=0, size=FontSize+2)
         ax_ScaleBar		.xaxis.set_label_position('bottom')
-        ax_ScaleBar		.tick_params(top='off',
-                                  bottom='off',
-                                  left='off',
-                                  right='off',
-                                  labeltop='off',
-                                  labelbottom='on',
-                                  labelleft='off',
-                                  labelright='off',
+        ax_ScaleBar		.tick_params(top=False,
+                                  bottom=False,
+                                  left=False,
+                                  right=False,
+                                  labeltop=False,
+                                  labelbottom=True,
+                                  labelleft=False,
+                                  labelright=False,
                                   direction='out')
 
+        '''DrawHeatmap'''
         ax_Heatmap = fig.add_axes(
             [ax_Heatmap_L, ax_Heatmap_B, ax_Heatmap_W, ax_Heatmap_H], frame_on=True, facecolor="white")
         ax_Heatmap		.imshow(OrderedDistMat_RefVirus, cmap=MyBlues,
@@ -678,16 +680,17 @@ class VirusClassificationAndEvaluation:
             ClassLabelList, rotation=90, size=FontSize)
         ax_Heatmap		.set_yticks(TickLocList)
         ax_Heatmap		.set_yticklabels(ClassLabelList, rotation=0, size=FontSize)
-        ax_Heatmap		.tick_params(top='on',
-                                 bottom='off',
-                                 left='off',
-                                 right='on',
-                                 labeltop='on',
-                                 labelbottom='off',
-                                 labelleft='off',
-                                 labelright='on',
-                                 direction='out')
+        ax_Heatmap		.tick_params(top=True,
+                                 bottom=False,
+                                 left=False,
+                                 right=True,
+                                 labeltop=True,
+                                 labelbottom=False,
+                                 labelleft=False,
+                                 labelright=True
+                                 )
 
+        '''Reference virus colour bar'''
         ax_CBar_RefVirus = fig.add_axes(
             [ax_CBar_L, ax_CBar_B + 2*ax_CBar_H/3, ax_CBar_W, ax_CBar_H/3], frame_on=True, facecolor="white")
         ax_CBar_RefVirus	.imshow(np.linspace(0, 1, 1025).reshape(
@@ -695,16 +698,17 @@ class VirusClassificationAndEvaluation:
         ax_CBar_RefVirus	.set_yticks([0.0])
         ax_CBar_RefVirus	.set_yticklabels(
             ["Ref viruses"], rotation=0, size=FontSize + 2)
-        ax_CBar_RefVirus	.tick_params(top='off',
-                                      bottom='off',
-                                      left='off',
-                                      right='on',
-                                      labeltop='off',
-                                      labelbottom='off',
-                                      labelleft='off',
-                                      labelright='on',
+        ax_CBar_RefVirus	.tick_params(top=False,
+                                      bottom=False,
+                                      left=False,
+                                      right=True,
+                                      labeltop=False,
+                                      labelbottom=False,
+                                      labelleft=False,
+                                      labelright=True,
                                       direction='out')
 
+        '''Unclassified virus colour bar'''
         ax_CBar_UcfVirus = fig.add_axes(
             [ax_CBar_L, ax_CBar_B + 1*ax_CBar_H/3, ax_CBar_W, ax_CBar_H/3], frame_on=True, facecolor="white")
         ax_CBar_UcfVirus	.imshow(np.linspace(0, 1, 1025).reshape(
@@ -712,16 +716,17 @@ class VirusClassificationAndEvaluation:
         ax_CBar_UcfVirus	.set_yticks([0.0])
         ax_CBar_UcfVirus	.set_yticklabels(
             ["Ucf viruses"], rotation=0, size=FontSize + 2)
-        ax_CBar_UcfVirus	.tick_params(top='off',
-                                      bottom='off',
-                                      left='off',
-                                      right='on',
-                                      labeltop='off',
-                                      labelbottom='off',
-                                      labelleft='off',
-                                      labelright='on',
+        ax_CBar_UcfVirus	.tick_params(top=False,
+                                      bottom=False,
+                                      left=False,
+                                      right=True,
+                                      labeltop=False,
+                                      labelbottom=False,
+                                      labelleft=False,
+                                      labelright=True,
                                       direction='out')
 
+        '''Ref/Ucf merge colour bar'''
         ax_CBar_CrossGroup = fig.add_axes(
             [ax_CBar_L, ax_CBar_B + 0*ax_CBar_H/3, ax_CBar_W, ax_CBar_H/3], frame_on=True, facecolor="white")
         ax_CBar_CrossGroup	.imshow(np.linspace(0, 1, 1025).reshape(
@@ -735,14 +740,14 @@ class VirusClassificationAndEvaluation:
             ['0', '0.25', '0.50', '0.75', '1'], rotation=0, size=FontSize)
         ax_CBar_CrossGroup	.set_xlabel(
             "Distance", rotation=0, size=FontSize + 2)
-        ax_CBar_CrossGroup	.tick_params(top='off',
-                                        bottom='on',
-                                        left='off',
-                                        right='on',
-                                        labeltop='off',
-                                        labelbottom='on',
-                                        labelleft='off',
-                                        labelright='on',
+        ax_CBar_CrossGroup	.tick_params(top=False,
+                                        bottom=True,
+                                        left=False,
+                                        right=True,
+                                        labeltop=False,
+                                        labelbottom=True,
+                                        labelleft=False,
+                                        labelright=True,
                                         direction='out')
 
         '''Save the plot to file'''
