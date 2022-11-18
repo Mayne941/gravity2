@@ -26,7 +26,7 @@ class Pipeline_I:
             self.options, self.options['ShelveDir'])
         self.logs = self.log_gen.entrypoint()
         self.actual_start = time.time()
-        with open(f"{self.options['ShelveDir']}/run_parameters.txt", "w") as f:
+        with open(f"{self.options['ShelveDir']}/run_parameters.json", "w") as f:
             f.write(json.dumps(payload))
 
         '''Catch bad database flags'''
