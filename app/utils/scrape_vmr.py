@@ -125,13 +125,13 @@ def first_pass(payload) -> str:
         df = df.drop_duplicates(subset="Taxonomic grouping", keep="first")
 
         if payload["additional_filter"] == "RNA":
-            df = df[(df["Baltimore Group"] == "III") | (df["Baltimore Group"] == "IV") | (
-                df["Baltimore Group"] == "V") | (df["Baltimore Group"] == "VI")]
+            df = df[(df["Baltimore Group"].str.contains("III")) | (df["Baltimore Group"].str.contains("IV")) | (
+                df["Baltimore Group"].str.contains("V")) | (df["Baltimore Group"].str.contains("VI"))]
         elif payload["additional_filter"] == "dsRNA":
-            df = df[(df["Baltimore Group"] == "I") |
-                    (df["Baltimore Group"] == "VII")]
+            df = df[(df["Baltimore Group"].str.contains("I")) |
+                    (df["Baltimore Group"].str.contains("VII"))]
         elif payload["additional_filter"] == "ssDNA":
-            df = df[df["Baltimore Group"] == "II"]
+            df = df[df["Baltimore Group"].str.contains("II")]
 
         df.to_csv(f"{payload['save_path']}/{payload['save_name']}")
         return f"Success! VMR saved to ./{payload['save_path']}"
