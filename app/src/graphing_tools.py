@@ -261,14 +261,14 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             ClassLabelList, rotation=90, size=FontSize)
         ax_Heatmap		.set_yticks(TickLocList)
         ax_Heatmap		.set_yticklabels(ClassLabelList, rotation=0, size=FontSize)
-        ax_Heatmap		.tick_params(top='on',
-                                 bottom='off',
-                                 left='off',
-                                 right='on',
-                                 labeltop='on',
-                                 labelbottom='off',
-                                 labelleft='off',
-                                 labelright='on',
+        ax_Heatmap		.tick_params(top=True,
+                                 bottom=False,
+                                 left=False,
+                                 right=True,
+                                 labeltop=True,
+                                 labelbottom=False,
+                                 labelleft=False,
+                                 labelright=True,
                                  direction='out')
 
         ax_CBar = fig.add_axes(
@@ -278,14 +278,14 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         CBar_Graphic	.ax.set_xticklabels(
             ['0.00', '0.25', '0.50', '0.75', '1.00'], size=FontSize)
         CBar_Graphic	.ax.set_xlabel('Distance', rotation=0, size=FontSize+2)
-        CBar_Graphic	.ax.tick_params(top='off',
-                                     bottom='on',
-                                     left='off',
-                                     right='off',
-                                     labeltop='off',
-                                     labelbottom='on',
-                                     labelleft='off',
-                                     labelright='off',
+        CBar_Graphic	.ax.tick_params(top=False,
+                                     bottom=True,
+                                     left=False,
+                                     right=False,
+                                     labeltop=False,
+                                     labelbottom=True,
+                                     labelleft=False,
+                                     labelright=False,
                                      direction='out')
 
         '''Save img'''
@@ -436,14 +436,14 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             list(map(str, ScaleBarTicks)), rotation=0, size=FontSize)
         ax_ScaleBar			.set_xlabel('Distance', rotation=0, size=FontSize+2)
         ax_ScaleBar			.xaxis.set_label_position('bottom')
-        ax_ScaleBar			.tick_params(top='off',
-                                   bottom='off',
-                                   left='off',
-                                   right='off',
-                                   labeltop='off',
-                                   labelbottom='on',
-                                   labelleft='off',
-                                   labelright='off',
+        ax_ScaleBar			.tick_params(top=False,
+                                   bottom=False,
+                                   left=False,
+                                   right=False,
+                                   labeltop=False,
+                                   labelbottom=True,
+                                   labelleft=False,
+                                   labelright=False,
                                    direction='out')
 
         ax_Heatmap = fig.add_axes(
@@ -460,14 +460,14 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         ax_Heatmap			.set_yticks(TickLocList)
         ax_Heatmap			.set_yticklabels(
             ClassLabelList, rotation=0, size=FontSize)
-        ax_Heatmap			.tick_params(top='on',
-                                  bottom='off',
-                                  left='off',
-                                  right='on',
-                                  labeltop='on',
-                                  labelbottom='off',
-                                  labelleft='off',
-                                  labelright='on',
+        ax_Heatmap			.tick_params(top=True,
+                                  bottom=False,
+                                  left=False,
+                                  right=True,
+                                  labeltop=True,
+                                  labelbottom=False,
+                                  labelleft=False,
+                                  labelright=True,
                                   direction='out')
 
         ax_CBar = fig.add_axes(
@@ -477,14 +477,14 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         CBar_Graphic		.ax.set_xticklabels(
             ['0', '0.25', '0.50', '0.75', '1'], rotation=0, size=FontSize)
         CBar_Graphic		.ax.set_xlabel('Distance', rotation=0, size=FontSize+2)
-        CBar_Graphic		.ax.tick_params(top='off',
-                                      bottom='on',
-                                      left='off',
-                                      right='off',
-                                      labeltop='off',
-                                      labelbottom='on',
-                                      labelleft='off',
-                                      labelright='off',
+        CBar_Graphic		.ax.tick_params(top=False,
+                                      bottom=True,
+                                      left=False,
+                                      right=False,
+                                      labeltop=False,
+                                      labelbottom=True,
+                                      labelleft=False,
+                                      labelright=False,
                                       direction='out')
 
         '''Save fig'''
