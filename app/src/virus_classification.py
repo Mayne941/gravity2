@@ -165,7 +165,7 @@ class VirusClassificationAndEvaluation:
                 = np.zeros((self.N_Bootstrap, self.N_UcfViruses, 0)), np.zeros((self.N_Bootstrap, self.N_UcfViruses, 0)), np.zeros((self.N_Bootstrap, self.N_UcfViruses, 0)), np.zeros((self.N_Bootstrap, self.N_UcfViruses, 0))
 
     def classify(self):
-        '''6/8 : RM << DOCSTRING'''
+        '''6/8: Classify viruses'''
         RefVirusGroup_i = 0
         MaxSimScoreTable, TaxoOfMaxSimScoreTable, TaxoAssignmentTable, \
             PhyloStatTable = np.zeros((self.N_UcfViruses, 0)), np.zeros(
@@ -769,7 +769,8 @@ class VirusClassificationAndEvaluation:
                 if RefVirusGroup not in FinalisedVirusGroupingIndexDict:
                     FinalisedVirusGroupingIndexDict[RefVirusGroup] = 1
 
-                if FinalisedTaxoAssignment != "Unclassified":
+                #if FinalisedTaxoAssignment != "Unclassified": # # # # # # #
+                if "Unclassified" not in FinalisedTaxoAssignment:
                     FinalisedTaxoAssignmentList.append(
                         f"{FinalisedTaxoAssignment} ({RefVirusGroup})")
                     FinalisedVirusGroupingList.append(
@@ -800,7 +801,8 @@ class VirusClassificationAndEvaluation:
                 FinalisedTaxoAssignment = self.final_results["TaxoAssignmentTable"][UcfVirus_i][MaxSimScore_i]
                 RefVirusGroup = self.ShelveDirs_RefVirus[MaxSimScore_i].split(
                     "/")[-1]
-                if FinalisedTaxoAssignment != "Unclassified":
+                # if FinalisedTaxoAssignment != "Unclassified":
+                if "Unclassified" not in FinalisedTaxoAssignment:
                     FinalisedTaxoAssignmentList.append(
                         f"{FinalisedTaxoAssignment} ({RefVirusGroup})")
                 else:
@@ -866,7 +868,8 @@ class VirusClassificationAndEvaluation:
                         self.MaxSimScoreDistTable[Bootstrap_i][UcfVirus_i])
                     FinalisedTaxoAssignment = self.TaxoAssignmentDistTable[
                         Bootstrap_i][UcfVirus_i][MaxSimScore_i]
-                    if FinalisedTaxoAssignment != "Unclassified":
+                    #if FinalisedTaxoAssignment != "Unclassified": # # # # # # #
+                    if "Unclassified" not in FinalisedTaxoAssignment:
                         BootstrappedFinalisedTaxoAssignmentList.append(
                             f"{FinalisedTaxoAssignment} ({self.ShelveDirs_RefVirus[MaxSimScore_i].split('/')[-1]})")
                     else:

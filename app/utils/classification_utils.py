@@ -79,6 +79,7 @@ def TaxonomicAssignmentProposerAndEvaluator(SimMat_UcfVirusesVSRefViruses, TaxoG
         CandidateTaxoAssignment = TaxoOfMaxSimScoreList[UcfVirus_i]
         MaxSimScore = MaxSimScoreList[UcfVirus_i]
 
+        original_label = TaxoLabelList_UcfVirus[UcfVirus_i][-8:]
         '''1st criterion: see if the similarity score between the unclassified virus and the best match is greater than the similarity cutoff of the proposed class'''
         if MaxSimScore > PairwiseSimilarityScore_Cutoff_Dict[CandidateTaxoAssignment]["CutOff"]:
             '''if pass the 1st criterion Prune the dendrogram so that it contains only reference sequences and the virus of interest (VoI)'''
@@ -149,14 +150,15 @@ def TaxonomicAssignmentProposerAndEvaluator(SimMat_UcfVirusesVSRefViruses, TaxoG
                     '''Having a paraphyletic relationship with the candidate class (just outside)'''
                     PhyloStatList.append("5")
                 else:
-                    TaxoAssignmentList.append("Unclassified")
+                    TaxoAssignmentList.append(
+                        f"Unclassified - NSBD: {original_label}")
                     '''The candidate class is not supported by the dendrogram'''
                     PhyloStatList.append("6")
             except:
                 continue
         else:
             '''The unclassified virus isn't similar enough to the members of the candidate class'''
-            TaxoAssignmentList.append("Unclassified")
+            TaxoAssignmentList.append(f"Unclassified - NS: {original_label}")
             PhyloStatList.append("NA")
 
         progress_bar(
