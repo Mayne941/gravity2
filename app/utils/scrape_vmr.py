@@ -71,6 +71,7 @@ class Scraper:
         df[["Baltimore Group", "Genetic code table", "Virus isolate designation"]] = df.apply(
             lambda x: self.get_baltimore_and_code_table(x), axis=1)
         df["Taxonomic grouping"] = ""
+        df = df.replace(",", ";", regex=True)
 
         '''Find, print list of and remove duplicates or entries with no Acc ID'''
         df[df["Virus GENBANK accession"].isin(df["Virus GENBANK accession"][df["Virus GENBANK accession"].duplicated(
