@@ -505,15 +505,12 @@ class VirusClassificationAndEvaluation:
 
         TaxoGroupingList_AllVirus = Parameters["TaxoGroupingList"].tolist(
         ) + TaxoAssignmentList
-        # assignment_labels = [str(f"New: {i}") for i in TaxoAssignmentList]
-        # TaxoLabels_minor = Parameters["VirusNameList"].tolist(
-        # ) + assignment_labels # Check why taxo assignment is doing at family
 
         _, LineList_major = make_labels(ClassDendrogram, zip(
             TaxoLabelList_AllVirus, TaxoGroupingList_AllVirus))
 
         _, LineList_minor = make_labels(ClassDendrogram_label, zip(
-            TaxoLabelList_AllVirus, OrderedTaxoLabelList))  # 2nd param needs swapping
+            TaxoLabelList_AllVirus, OrderedTaxoLabelList))
 
         [i.replace("_", " >> ") for i in OrderedTaxoLabelList if "Query" in i]
         ClassLabelList_minor = [

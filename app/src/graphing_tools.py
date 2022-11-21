@@ -329,14 +329,17 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 
         '''Labels, label positions, and ticks'''
         ClassDendrogram_grp = VirusDendrogram
-        ClassDendrogram_label = Phylo.read(
+        ClassDendrogram_label = Phylo.read(  # Needs to be separate read as Bio entities are linked
             self.Heatmap_DendrogramFile, "newick")
 
-        ClassLabelList_major, LineList_major = make_labels(ClassDendrogram_grp, zip(
+        _, LineList_major = make_labels(ClassDendrogram_grp, zip(
             TaxoLabelList, self.genomes["TaxoGroupingList"]))
 
         ClassLabelList_minor, LineList_minor = make_labels(ClassDendrogram_label, zip(
             TaxoLabelList, self.genomes["VirusNameList"]))
+
+        ClassLabelList_minor = [
+            i.split("_")[-1].replace("-", " ") for i in OrderedTaxoLabelList]
 
         '''Plot configuration'''
         Heatmap_width = float(12)
@@ -447,9 +450,17 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         TickLocList = np.array(
             list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:])))))
 
-        ax_Heatmap			.set_xticks(TickLocList)
-        ax_Heatmap			.set_xticklabels(
-            ClassLabelList_minor, rotation=90, size=FontSize)
+        try:
+            ax_Heatmap			.set_xticks(TickLocList)
+            ax_Heatmap			.set_xticklabels(
+                ClassLabelList_minor, rotation=90, size=FontSize)
+        except:
+            # RM < There's a good reason for this, which needs to be fixed
+            TickLocList = np.append(TickLocList, [TickLocList.shape[0] + 1])
+            ax_Heatmap			.set_xticks(TickLocList)
+            ax_Heatmap			.set_xticklabels(
+                ClassLabelList_minor, rotation=90, size=FontSize)
+
         ax_Heatmap			.set_yticks(TickLocList)
         ax_Heatmap			.set_yticklabels(
             ClassLabelList_minor, rotation=0, size=FontSize)
