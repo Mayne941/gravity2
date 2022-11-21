@@ -1,19 +1,19 @@
+from app.utils.make_heatmap_labels import make_labels
+from app.utils.dist_mat_to_tree import DistMat2Tree
+from app.utils.gomdb_constructor import GOMDB_Constructor
+from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
+from app.utils.taxo_label_constructor import TaxoLabel_Constructor
+from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
+from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
+from app.utils.console_messages import section_header
+from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ref_virus_vars
+from app.utils.stdout_utils import error_handler
 import re
 import subprocess
 import os
-from app.utils.stdout_utils import error_handler
-from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ref_virus_vars
-from app.utils.console_messages import section_header
-from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
-from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
-from app.utils.taxo_label_constructor import TaxoLabel_Constructor
-from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
-from app.utils.gomdb_constructor import GOMDB_Constructor
-from app.utils.dist_mat_to_tree import DistMat2Tree
 import numpy as np
 import matplotlib.pyplot as plt
 from Bio import Phylo
-from copy import copy
 import matplotlib
 matplotlib.use('agg')
 
@@ -320,43 +320,23 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         for InternalNode_i in range(N_InternalNodes):
             try:
                 if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.Heatmap_DendrogramSupport_Cutoff or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
-                    VirusDendrogram.get_nonterminals(
-                    )[InternalNode_i].confidence = 0
+                    continue
                 else:
                     VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
                         VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
             except:
-                # RM < First entry always NoneType
-                VirusDendrogram.get_nonterminals(
-                )[InternalNode_i].confidence = 0
+                continue
 
         '''Labels, label positions, and ticks'''
-        Taxo2ClassDict = {TaxoLabel: TaxoGrouping for TaxoLabel, TaxoGrouping in zip(
-            TaxoLabelList, self.genomes["TaxoGroupingList"])}
-        ClassDendrogram = copy(VirusDendrogram)
-        for Clade in ClassDendrogram.find_clades(terminal=True):
-            Clade.name = Taxo2ClassDict[Clade.name]
+        ClassDendrogram_grp = VirusDendrogram
+        ClassDendrogram_label = Phylo.read(
+            self.Heatmap_DendrogramFile, "newick")
 
-        ClassLabelList, LineList = [], [-1]
-        TerminalNodeList = [
-            TerminalNode for TerminalNode in ClassDendrogram.get_terminals()]
-        while len(TerminalNodeList) != 0:
-            FarLeftNode = TerminalNodeList[0]
-            for Clade in ([ClassDendrogram]+ClassDendrogram.get_path(FarLeftNode)):
-                DescendantNodeList = Clade.get_terminals()
-                DescendantClassLabelList = list(
-                    set([c.name for c in DescendantNodeList]))
-                if len(DescendantClassLabelList) == 1:
-                    ClassLabelList.append(DescendantClassLabelList[0])
-                    LineList.append(LineList[-1]+len(DescendantNodeList))
-                    TerminalNodeList = TerminalNodeList[len(
-                        DescendantNodeList):]
-                    break
+        ClassLabelList_major, LineList_major = make_labels(ClassDendrogram_grp, zip(
+            TaxoLabelList, self.genomes["TaxoGroupingList"]))
 
-        ClassLabelList = np.array(ClassLabelList)
-        LineList = np.array(LineList) + 0.5
-        TickLocList = np.array(
-            list(map(np.mean, list(zip(LineList[0:-1], LineList[1:])))))
+        ClassLabelList_minor, LineList_minor = make_labels(ClassDendrogram_label, zip(
+            TaxoLabelList, self.genomes["VirusNameList"]))
 
         '''Plot configuration'''
         Heatmap_width = float(12)
@@ -412,6 +392,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         '''Plot the heat map'''
         fig = plt.figure(figsize=(Fig_width, Fig_height), dpi=300)
 
+        '''Dendrogram'''
         ax_Dendrogram = fig.add_axes(
             [ax_Dendrogram_L, ax_Dendrogram_B, ax_Dendrogram_W, ax_Dendrogram_H], frame_on=False, facecolor="white")
         Phylo.draw(VirusDendrogram, label_func=lambda x: "",
@@ -423,6 +404,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         ax_Dendrogram		.set_ylim([N_Viruses+0.5, 0.5])
         ax_Dendrogram		.set_axis_off()
 
+        '''Dendrogram scale bar'''
         ax_ScaleBar = fig.add_axes(
             [ax_ScaleBar_L, ax_ScaleBar_B, ax_ScaleBar_W, ax_ScaleBar_H], frame_on=False, facecolor="white")
         ax_ScaleBar.plot([0, 1], [0, 0], 'k-')
@@ -446,20 +428,31 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                    labelright=False,
                                    direction='out')
 
+        '''Heatmap'''
         ax_Heatmap = fig.add_axes(
             [ax_Heatmap_L, ax_Heatmap_B, ax_Heatmap_W, ax_Heatmap_H], frame_on=True, facecolor="white")
         Heatmap_Graphic = ax_Heatmap.imshow(
             OrderedDistMat, cmap='magma', aspect='auto', vmin=0, vmax=1, interpolation='none')
-        for l in LineList:
-            ax_Heatmap.axvline(l, color='k', lw=0.2)
-            ax_Heatmap.axhline(l, color='k', lw=0.2)
+
+        '''Draw grouping major & minor lines'''
+        for l in LineList_major:
+            ax_Heatmap.axvline(l, color='k', lw=0.4)
+            ax_Heatmap.axhline(l, color='k', lw=0.4)
+
+        for l in LineList_minor:
+            ax_Heatmap.axvline(l, color='gray', lw=0.2)
+            ax_Heatmap.axhline(l, color='gray', lw=0.2)
+
+        '''Draw gridlines for individual samples'''
+        TickLocList = np.array(
+            list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:])))))
 
         ax_Heatmap			.set_xticks(TickLocList)
         ax_Heatmap			.set_xticklabels(
-            ClassLabelList, rotation=90, size=FontSize)
+            ClassLabelList_minor, rotation=90, size=FontSize)
         ax_Heatmap			.set_yticks(TickLocList)
         ax_Heatmap			.set_yticklabels(
-            ClassLabelList, rotation=0, size=FontSize)
+            ClassLabelList_minor, rotation=0, size=FontSize)
         ax_Heatmap			.tick_params(top=True,
                                   bottom=False,
                                   left=False,
@@ -470,6 +463,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                   labelright=True,
                                   direction='out')
 
+        '''Heatmap colourbars'''
         ax_CBar = fig.add_axes(
             [ax_CBar_L, ax_CBar_B, ax_CBar_W, ax_CBar_H], frame_on=True, facecolor="white")
         CBar_Graphic = fig.colorbar(
@@ -486,7 +480,6 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                       labelleft=False,
                                       labelright=False,
                                       direction='out')
-
         '''Save fig'''
         plt	.savefig(HeatmapWithDendrogramFile, format="png")
 
@@ -521,8 +514,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 
     def main(self):
         '''Generate GRAViTy dendrogram and heat map	'''
-        section_header(
-            "#Generate GRAViTy dendrogram and heat map                                      #")
+        section_header("# Generate GRAViTy dendrogram and heat map #")
 
         '''1/7: Make fpaths'''
         VirusDendrogramDistFile, BootstrappedVirusDendrogramFile, HeatmapFile, HeatmapWithDendrogramFile, VirusGroupingFile = self.mkdirs()
