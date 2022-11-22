@@ -14,6 +14,7 @@ import string
 import subprocess
 import operator
 import pickle
+import re
 
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
@@ -26,6 +27,7 @@ from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ucf_annots, retrieve_ref_virus_vars
 from app.utils.highest_posterior_density import hpd
 from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
+from app.utils.make_heatmap_labels import make_labels
 
 matplotlib.use('agg')
 sys.setrecursionlimit(10000)
@@ -460,11 +462,9 @@ class VirusClassificationAndEvaluation:
         '''Construct GRAViTy heat map with dendrogram'''
         '''Load the tree'''
         if self.Bootstrap == True:
-            BootstrappedVirusDendrogramFile = f"{self.VariableShelveDir_UcfVirus}/BootstrappedDendrogram.RefVirusGroup={RefVirusGroup}.IncompleteUcfRefGenomes={str(int(self.IncludeIncompleteGenomes_UcfVirus))+str(int(self.IncludeIncompleteGenomes_RefVirus))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.nwk"
-            VirusDendrogram = Phylo.read(
-                BootstrappedVirusDendrogramFile, "newick")
-        else:
-            VirusDendrogram = Phylo.read(VirusDendrogramFile, "newick")
+            VirusDendrogramFile = f"{self.VariableShelveDir_UcfVirus}/BootstrappedDendrogram.RefVirusGroup={RefVirusGroup}.IncompleteUcfRefGenomes={str(int(self.IncludeIncompleteGenomes_UcfVirus))+str(int(self.IncludeIncompleteGenomes_RefVirus))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.nwk"
+
+        VirusDendrogram = Phylo.read(VirusDendrogramFile, "newick")
 
         '''Determine virus order'''
         _ = VirusDendrogram.ladderize(reverse=True)
@@ -500,34 +500,21 @@ class VirusClassificationAndEvaluation:
                 VirusDendrogram.get_terminals()[Virus_i].color = "red"
 
         '''Labels, label positions, and ticks'''
+        ClassDendrogram = copy(VirusDendrogram)
+        ClassDendrogram_label = Phylo.read(VirusDendrogramFile, "newick")
+
         TaxoGroupingList_AllVirus = Parameters["TaxoGroupingList"].tolist(
         ) + TaxoAssignmentList
-        Taxo2ClassDict = {TaxoLabel: TaxoGrouping for TaxoLabel, TaxoGrouping in zip(
-            TaxoLabelList_AllVirus, TaxoGroupingList_AllVirus)}
-        ClassDendrogram = copy(VirusDendrogram)
-        for Clade in ClassDendrogram.find_clades(terminal=True):
-            Clade.name = Taxo2ClassDict[Clade.name]
 
-        ClassLabelList, LineList = [], [-1]
-        TerminalNodeList = [
-            TerminalNode for TerminalNode in ClassDendrogram.get_terminals()]
-        while len(TerminalNodeList) != 0:
-            FarLeftNode = TerminalNodeList[0]
-            for Clade in ([ClassDendrogram]+ClassDendrogram.get_path(FarLeftNode)):
-                DescendantNodeList = Clade.get_terminals()
-                DescendantClassLabelList = list(
-                    set([c.name for c in DescendantNodeList]))
-                if len(DescendantClassLabelList) == 1:
-                    ClassLabelList.append(DescendantClassLabelList[0])
-                    LineList.append(LineList[-1]+len(DescendantNodeList))
-                    TerminalNodeList = TerminalNodeList[len(
-                        DescendantNodeList):]
-                    break
+        _, LineList_major = make_labels(ClassDendrogram, zip(
+            TaxoLabelList_AllVirus, TaxoGroupingList_AllVirus))
 
-        ClassLabelList = np.array(ClassLabelList)
-        LineList = np.array(LineList) + 0.5
-        TickLocList = np.array(
-            list(map(np.mean, list(zip(LineList[0:-1], LineList[1:])))))
+        _, LineList_minor = make_labels(ClassDendrogram_label, zip(
+            TaxoLabelList_AllVirus, OrderedTaxoLabelList))
+
+        [i.replace("_", " >> ") for i in OrderedTaxoLabelList if "Query" in i]
+        ClassLabelList_minor = [
+            i.split("_")[-1].replace("-", " ") for i in OrderedTaxoLabelList]
 
         '''Heat map colour indicators'''
         IndicatorMat_RefVirus = np.tile(
@@ -671,24 +658,43 @@ class VirusClassificationAndEvaluation:
         ax_Heatmap		.imshow(OrderedDistMat_CrossGroup, cmap=MyPurples,
                             aspect='auto', vmin=0, vmax=1, interpolation='none')
 
-        for l in LineList:
-            ax_Heatmap.axvline(l, color='k', lw=0.2)
-            ax_Heatmap.axhline(l, color='k', lw=0.2)
+        '''Draw grouping major & minor lines'''
+        for l in LineList_major:
+            ax_Heatmap.axvline(l, color='k', lw=0.4)
+            ax_Heatmap.axhline(l, color='k', lw=0.4)
 
-        ax_Heatmap		.set_xticks(TickLocList)
-        ax_Heatmap		.set_xticklabels(
-            ClassLabelList, rotation=90, size=FontSize)
-        ax_Heatmap		.set_yticks(TickLocList)
-        ax_Heatmap		.set_yticklabels(ClassLabelList, rotation=0, size=FontSize)
-        ax_Heatmap		.tick_params(top=True,
-                                 bottom=False,
-                                 left=False,
-                                 right=True,
-                                 labeltop=True,
-                                 labelbottom=False,
-                                 labelleft=False,
-                                 labelright=True
-                                 )
+        for l in LineList_minor:
+            ax_Heatmap.axvline(l, color='gray', lw=0.2)
+            ax_Heatmap.axhline(l, color='gray', lw=0.2)
+
+        '''Draw gridlines for individual samples'''
+        TickLocList = np.array(
+            list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:])))))
+
+        ax_Heatmap			.set_xticks(TickLocList)
+        ax_Heatmap			.set_xticklabels(
+            ClassLabelList_minor, rotation=90, size=FontSize)
+        ax_Heatmap			.set_yticks(TickLocList)
+        ax_Heatmap			.set_yticklabels(
+            ClassLabelList_minor, rotation=0, size=FontSize)
+
+        '''Selectively colour tick labels red if a UCF sample'''
+        plt.gca().get_xticklabels(
+        )  # Don't delete this: MPL is such a pile of shit that the following lines don't work without it
+        [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
+         if bool(re.match(r"[A-Z]{2}[0-9]{6}", i.get_text()))]
+        [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
+         if bool(re.match(r"[A-Z]{2}[0-9]{6}", i.get_text()))]
+
+        ax_Heatmap			.tick_params(top=True,
+                                  bottom=False,
+                                  left=False,
+                                  right=True,
+                                  labeltop=True,
+                                  labelbottom=False,
+                                  labelleft=False,
+                                  labelright=True,
+                                  direction='out')
 
         '''Reference virus colour bar'''
         ax_CBar_RefVirus = fig.add_axes(
