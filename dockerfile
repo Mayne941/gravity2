@@ -14,4 +14,7 @@ RUN bash install-reqs.sh
 RUN python3 -m pip install --upgrade pip
 RUN pip install -r requirements.txt --prefer-binary
 
+ENV HHLIB="~/programs/hh-suite"
+ENV PATH="$PATH:$HHLIB/bin:$HHLIB/scripts"
+
 CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "80"]

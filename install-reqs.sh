@@ -19,8 +19,6 @@ git clone https://github.com/soedinglab/hh-suite.git .
 mkdir build && cd build
 cmake ..
 make
-export HHLIB="~/programs/hh-suite"
-export PATH="$PATH:$HHLIB/bin:$HHLIB/scripts"
 
 # muscle installation. Assumes Linux x64 build!
 mkdir -p ~/programs/muscle && cd ~/programs/muscle
