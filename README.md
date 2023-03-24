@@ -32,7 +32,7 @@ Where parameters appear in curly brackets, replace these with values that corres
 
 ### Shell (developed for Ubuntu Linux 20.04 LTS)
 1. Navigate to directory: ```cd {path-to-dir}```
-1. Install command line tool requirements: ```bash install-reqs.sh```
+1. Install command line tool requirements: ```bash install-reqs-local.sh```
 1. Install Python libraries with pip: ```pip install -r requirements.txt```
 1. Source vars and start API: ```source env_vars.sh && python3 -m uvicorn app.api:app --reload```
 1. Navigate to http://localhost:8000/docs in browser
