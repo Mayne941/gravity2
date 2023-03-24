@@ -26,6 +26,5 @@ mv muscle5.1.linux_intel64 muscle
 chmod 777 muscle
 
 # booster installation
-cd ~/workspace
 wget https://github.com/evolbioinfo/booster/releases/download/v0.1.2/booster_linux64
 chmod 777 booster_linux64
