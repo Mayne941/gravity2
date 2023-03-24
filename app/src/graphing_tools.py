@@ -447,19 +447,14 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             ax_Heatmap.axhline(l, color='gray', lw=0.2)
 
         '''Draw gridlines for individual samples'''
-        TickLocList = np.array(
-            list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:])))))
+        # RM < Testing bug fond by Peter 22/03
+        # TickLocList = np.array(
+        #     list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:])))))
+        TickLocList = np.arange(0, len(ClassLabelList_minor))
 
-        try:
-            ax_Heatmap			.set_xticks(TickLocList)
-            ax_Heatmap			.set_xticklabels(
-                ClassLabelList_minor, rotation=90, size=FontSize)
-        except:
-            # RM < There's a good reason for this, which needs to be fixed
-            TickLocList = np.append(TickLocList, [TickLocList.shape[0] + 1])
-            ax_Heatmap			.set_xticks(TickLocList)
-            ax_Heatmap			.set_xticklabels(
-                ClassLabelList_minor, rotation=90, size=FontSize)
+        ax_Heatmap			.set_xticks(TickLocList)
+        ax_Heatmap			.set_xticklabels(
+            ClassLabelList_minor, rotation=90, size=FontSize)
 
         ax_Heatmap			.set_yticks(TickLocList)
         ax_Heatmap			.set_yticklabels(

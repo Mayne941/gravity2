@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # make folders
-mkdir data
 mkdir output
 
 # mcl installation
