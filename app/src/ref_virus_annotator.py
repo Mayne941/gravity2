@@ -158,8 +158,7 @@ class RefVirusAnnotator:
                 with open(PPHMMQueryFile, "w") as PPHMMQuery_txt:
                     SeqIO.write(ProtSeq6frames, PPHMMQuery_txt, "fasta")
 
-                # p = subprocess.Popen(f"hmmscan --cpu {self.HMMER_N_CPUs} --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDb} {PPHMMQueryFile}",
-                p = subprocess.Popen(f"hmmscan --cpu {self.HMMER_N_CPUs} --noali --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDb} {PPHMMQueryFile}",
+                p = subprocess.Popen(f"hmmscan --cpu {self.HMMER_N_CPUs} --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDb} {PPHMMQueryFile}",
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                 out, err = p.communicate()
 
