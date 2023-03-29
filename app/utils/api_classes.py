@@ -30,10 +30,20 @@ class SecondPass(BaseModel):
                           description="Filename for VMR to edit.")
     save_name: str = Query('latest_vmr_second_pass_filter.csv',
                            description="Filename of output VMR file")
-    filter_level: str = Query('family',
+    filter_level: str = Query('Family',
                               description="Specify which taxo grouping to filter by. Used in combination with filter_name to generate a VMR of all viral genomes within a specific taxo grouping.")
     filter_name: str = Query('Caudoviricetes',
                              description="Used to specify which taxo grouping name to filter by: used in combination with filter_level to generate a VMR of all viral genomes within a specific taxo grouping.")
+
+class VmrFilter(BaseModel):
+    save_path: DirectoryPath = Query('./data/',
+                                     description="Path to save the Virus Metadata Resource (VMR).")
+    vmr_name: str = Query('latest_vmr.csv',
+                          description="Filename for VMR to edit.")
+    save_name: str = Query('latest_vmr_filtered.csv',
+                           description="Filename of output VMR file")
+    filter_level: str = Query('Family',
+                              description="Specify which taxo grouping to filter by. Filter will remove all except first instance from this taxon.")
 
 
 class FastaToGb(BaseModel):
