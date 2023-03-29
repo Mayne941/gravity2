@@ -82,10 +82,10 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                     os.remove(BootstrappedVirusDendrogramFile)
 
         if self.Heatmap == True:
-            HeatmapFile = f"{self.VariableShelveDir}/Heatmap.IncompleteGenomes={str(int(self.IncludeIncompleteGenomes))}.Scheme={self.SimilarityMeasurementScheme}.p={self.p}.png"
+            HeatmapFile = f"{self.VariableShelveDir}/Heatmap.IncompleteGenomes={str(int(self.IncludeIncompleteGenomes))}.Scheme={self.SimilarityMeasurementScheme}.p={self.p}.pdf"
 
         if self.Heatmap_WithDendrogram == True:
-            HeatmapWithDendrogramFile = f"{self.VariableShelveDir}/HeatmapWithDendrogram.IncompleteGenomes={str(int(self.IncludeIncompleteGenomes))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.support_cutoff={self.Heatmap_DendrogramSupport_Cutoff}.png"
+            HeatmapWithDendrogramFile = f"{self.VariableShelveDir}/HeatmapWithDendrogram.IncompleteGenomes={str(int(self.IncludeIncompleteGenomes))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.support_cutoff={self.Heatmap_DendrogramSupport_Cutoff}.pdf"
             if self.Heatmap_DendrogramFile == None:
                 if self.Dendrogram == True:
                     if self.Bootstrap == True:
@@ -192,7 +192,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                     f"WARNING: 'Bootstrap_method' can either be 'booster' or 'sumtrees', but you gave me {self.Bootstrap_method}.")
 
     def heatmap(self, DistMat, HeatmapFile):
-        '''5/7: (OPT) Construct and save heatmap as png'''
+        '''5/7: (OPT) Construct and save heatmap as pdf'''
         '''Determine virus order'''
         N_Viruses = len(DistMat)
         if self.Heatmap_VirusOrderScheme == None:
@@ -289,10 +289,10 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                      direction='out')
 
         '''Save img'''
-        plt.savefig(HeatmapFile, format="png")
+        plt.savefig(HeatmapFile, format="pdf")
 
     def heatmap_with_dendro(self, DistMat, HeatmapWithDendrogramFile):
-        '''6/7: (OPT) Construct GRAViTy heat map with dendrogram, save as png.
+        '''6/7: (OPT) Construct GRAViTy heat map with dendrogram, save as pdf.
         Needs to be independent of stage 4 as user may provide pre-computer dendrogram file'''
         N_Viruses = len(DistMat)
 
@@ -487,7 +487,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                       labelright=False,
                                       direction='out')
         '''Save fig'''
-        plt	.savefig(HeatmapWithDendrogramFile, format="png")
+        plt	.savefig(HeatmapWithDendrogramFile, format="pdf")
 
     def virus_grouping(self, DistMat, VirusGroupingFile):
         '''7/7: (OPT) Group viruses via Thiels-U and other metrics; save as txt.'''
