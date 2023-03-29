@@ -1,7 +1,7 @@
 from app.pipeline_i import Pipeline_I
 from app.pipeline_ii import Pipeline_II
-from app.utils.api_classes import Pipeline_i_data, Pipeline_ii_data, ScrapeData, FirstPass, SecondPass, FastaToGb
-from app.utils.scrape_vmr import scrape, first_pass, second_pass
+from app.utils.api_classes import Pipeline_i_data, Pipeline_ii_data, ScrapeData, FirstPass, SecondPass, FastaToGb, VmrFilter
+from app.utils.scrape_vmr import scrape, first_pass, second_pass, vmr_filter
 from app.utils.process_fasta import fasta_to_genbank
 
 from fastapi import FastAPI, BackgroundTasks
@@ -200,3 +200,8 @@ async def vmr_second_pass(trigger: SecondPass):
 async def convert_fasta_to_genbank(trigger: FastaToGb):
     payload = jsonable_encoder(trigger)
     return fasta_to_genbank(payload)
+
+@app.post("/filter_vmr/", tags=["VMR Utilities"])
+async def filter_that_vmr(trigger: VmrFilter):
+    payload = jsonable_encoder(trigger)
+    return vmr_filter(payload)
