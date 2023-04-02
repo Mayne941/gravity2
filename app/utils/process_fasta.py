@@ -14,9 +14,11 @@ def fasta_to_genbank(payload):
 
     for i in range(len(sequences)):
         sequences[i].annotations['molecule_type'] = 'DNA'
-        seq_names.append(sequences[i].id)
-        seq_codes.append(f"GRAVITY_{i+1}")
-        sequences[i].id = f"GRAVITY_{i+1}"
+        # seq_names.append(sequences[i].id)
+        # seq_codes.append(f"Query_{i+1}")
+        seq_codes.append(sequences[i].id)
+        seq_names.append(f"Query_{i+1}_{sequences[i].id}")
+        sequences[i].id = f"Query_{i+1}"
 
     count = SeqIO.write(sequences, output_handle, "genbank")
 
