@@ -70,6 +70,18 @@ class FastaToGb(BaseModel):
     vmr_fname: str = Query('my_vmr.csv',
                            description="Filename for VMR-like document to produce alongside genbank file.")
 
+class CombineGenomeSegs(BaseModel):
+    save_path: DirectoryPath = Query('./data/',
+                                     description="Path to save the Virus Metadata Resource (VMR).")
+    fasta_fname: str = Query('my_fasta',
+                             description="Filename for fasta file to convert.")
+    combined_seq_name: str = Query("my_seq",
+                                   description="Give a name to the virus whose genome segments you are concatenating")
+    genbank_fname: str = Query('my_genbank.gb',
+                               description="Filename for output genbank. ")
+    vmr_fname: str = Query('my_vmr.csv',
+                           description="Filename for VMR-like document to produce alongside genbank file.")
+
 
 class Pipeline_i_data(BaseModel):
     genbank_email: str = Query('name@provider.com',

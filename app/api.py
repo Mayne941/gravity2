@@ -1,8 +1,8 @@
 from app.pipeline_i import Pipeline_I
 from app.pipeline_ii import Pipeline_II
-from app.utils.api_classes import Pipeline_i_data, Pipeline_ii_data, ScrapeData, FirstPassBaltimoreFilter, FirstPassTaxonFilter, SecondPass, FastaToGb, VmrFilter
+from app.utils.api_classes import Pipeline_i_data, Pipeline_ii_data, ScrapeData, FirstPassBaltimoreFilter, FirstPassTaxonFilter, SecondPass, FastaToGb, VmrFilter, CombineGenomeSegs
 from app.utils.scrape_vmr import scrape, first_pass_taxon_filter, first_pass_baltimore_filter, second_pass, vmr_filter
-from app.utils.process_fasta import fasta_to_genbank
+from app.utils.process_fasta import fasta_to_genbank, combine_segments
 
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
@@ -199,13 +199,18 @@ async def vmr_second_pass(trigger: SecondPass):
     payload = jsonable_encoder(trigger)
     return second_pass(payload)
 
+@app.post("/filter_vmr/", tags=["VMR Utilities"])
+async def filter_that_vmr(trigger: VmrFilter):
+    payload = jsonable_encoder(trigger)
+    return vmr_filter(payload)
 
 @app.post("/convert_fasta_to_genbank_and_vmr/", tags=["VMR Utilities"])
 async def convert_fasta_to_genbank(trigger: FastaToGb):
     payload = jsonable_encoder(trigger)
     return fasta_to_genbank(payload)
 
-@app.post("/filter_vmr/", tags=["VMR Utilities"])
-async def filter_that_vmr(trigger: VmrFilter):
+@app.post("/combine_genome_segments/", tags=["VMR Utilities"])
+async def convert_genome_segments(trigger: CombineGenomeSegs):
     payload = jsonable_encoder(trigger)
-    return vmr_filter(payload)
+    return combine_segments(payload)
+
