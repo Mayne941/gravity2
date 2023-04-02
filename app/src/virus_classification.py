@@ -512,7 +512,8 @@ class VirusClassificationAndEvaluation:
         _, LineList_minor = make_labels(ClassDendrogram_label, zip(
             TaxoLabelList_AllVirus, OrderedTaxoLabelList))
 
-        [i.replace("_", " >> ") for i in OrderedTaxoLabelList if "Query" in i]
+        '''Rename UCFs to have their query ID'''
+        OrderedTaxoLabelList = [i.replace("_", ": ") if "Query" in i else i for i in OrderedTaxoLabelList]
         ClassLabelList_minor = [
             i.split("_")[-1].replace("-", " ") for i in OrderedTaxoLabelList]
 
@@ -680,11 +681,11 @@ class VirusClassificationAndEvaluation:
 
         '''Selectively colour tick labels red if a UCF sample'''
         plt.gca().get_xticklabels(
-        )  # Don't delete this: MPL is such a pile of shit that the following lines don't work without it
+        )  # Don't delete this repeated code, axes need to be re-parameterised for this to work
         [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
-         if bool(re.match(r"[A-Z]{2}[0-9]{6}", i.get_text()))]
+         if bool(re.match(r"Query", i.get_text()))]
         [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
-         if bool(re.match(r"[A-Z]{2}[0-9]{6}", i.get_text()))]
+         if bool(re.match(r"Query", i.get_text()))]
 
         ax_Heatmap			.tick_params(top=True,
                                   bottom=False,
@@ -695,7 +696,13 @@ class VirusClassificationAndEvaluation:
                                   labelleft=False,
                                   labelright=True,
                                   direction='out')
+        
+        [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
+         if bool(re.match(r"Query", i.get_text()))]
+        [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
+         if bool(re.match(r"Query", i.get_text()))]
 
+        breakpoint() #################################################
         '''Reference virus colour bar'''
         ax_CBar_RefVirus = fig.add_axes(
             [ax_CBar_L, ax_CBar_B + 2*ax_CBar_H/3, ax_CBar_W, ax_CBar_H/3], frame_on=True, facecolor="white")
