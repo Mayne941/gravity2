@@ -118,27 +118,42 @@ def scrape(payload) -> str:
 
 
 @timing
-def first_pass(payload) -> str:
+def first_pass_baltimore_filter(payload) -> str:
     try:
         df = pd.read_csv(f"{payload['save_path']}/{payload['vmr_name']}")
         df["Taxonomic grouping"] = df.apply(
             lambda x: construct_first_pass_set(x, df, payload["filter_threshold"]), axis=1)
         df = df.drop_duplicates(subset="Taxonomic grouping", keep="first")
 
-        if payload["additional_filter"] == "RNA":
+        if payload["baltimore_filter"] == "RNA":
             df = df[(df["Baltimore Group"].str.contains("III")) | (df["Baltimore Group"].str.contains("IV")) | (
                 df["Baltimore Group"].str.contains("V")) | (df["Baltimore Group"].str.contains("VI"))]
-        elif payload["additional_filter"] == "dsRNA":
+        elif payload["baltimore_filter"] == "dsRNA":
             df = df[(df["Baltimore Group"].str.contains("I")) |
                     (df["Baltimore Group"].str.contains("VII"))]
-        elif payload["additional_filter"] == "ssDNA":
+        elif payload["baltimore_filter"] == "ssDNA":
             df = df[df["Baltimore Group"].str.contains("II")]
 
         df.to_csv(f"{payload['save_path']}/{payload['save_name']}")
         return f"Success! VMR saved to ./{payload['save_path']}"
     except Exception as e:
         print(f"Error processing VMR, error: {e}")
-        return f"Unsuccessful.\n Please check url and table formatting in app/utils/scrape_vmr.py, or contact your administrator."
+        return f"Unsuccessful.\n Please check url and table formatting in app/utils/scrape_vmr.py, your spelling of the filter parameters, or contact your administrator."
+
+@timing
+def first_pass_taxon_filter(payload) -> str:
+    try:
+        df = pd.read_csv(f"{payload['save_path']}/{payload['vmr_name']}")
+        df = df[df[payload['filter_level']] == payload["filter_name"]]
+        df["Taxonomic grouping"] = df.apply(
+            lambda x: construct_first_pass_set(x, df, payload["filter_threshold"]), axis=1)
+        df = df.drop_duplicates(subset="Taxonomic grouping", keep="first")
+        df.to_csv(f"{payload['save_path']}/{payload['save_name']}")
+        return f"Success! VMR saved to ./{payload['save_path']}"
+    except Exception as e:
+        breakpoint()
+        print(f"Error processing VMR, error: {e}")
+        return f"Unsuccessful.\n Please check url and table formatting in app/utils/scrape_vmr.py, your spelling of the filter parameters, or contact your administrator."
 
 
 @timing

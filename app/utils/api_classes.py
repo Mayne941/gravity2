@@ -10,7 +10,7 @@ class ScrapeData(BaseModel):
                           description="Filename for new VMR.")
 
 
-class FirstPass(BaseModel):
+class FirstPassBaltimoreFilter(BaseModel):
     save_path: DirectoryPath = Query('./data/',
                                      description="Path to save the Virus Metadata Resource (VMR).")
     vmr_name: str = Query('latest_vmr.csv',
@@ -19,8 +19,22 @@ class FirstPass(BaseModel):
                            description="Filename of output VMR file")
     filter_threshold: int = Query(10,
                                   description="If filter = true, how many members should be in each taxo grouping? If < threshold members in family, resolve at genus level, and likewise for species.")
-    additional_filter: Literal["none", "dsDNA", "ssDNA", "RNA"] = Query("RNA",
+    baltimore_filter: Literal["none", "dsDNA", "ssDNA", "RNA"] = Query("RNA",
                                                                         description="Do an extra filter to further reduce size of first pass database. Currently supports: `none`, `dsDNA`, `ssDNA`, `RNA`")
+    
+class FirstPassTaxonFilter(BaseModel):
+    save_path: DirectoryPath = Query('./data/',
+                                     description="Path to save the Virus Metadata Resource (VMR).")
+    vmr_name: str = Query('latest_vmr.csv',
+                          description="Filename for VMR to edit.")
+    save_name: str = Query('latest_vmr_first_pass_filter.csv',
+                           description="Filename of output VMR file")
+    filter_threshold: int = Query(10,
+                                  description="If filter = true, how many members should be in each taxo grouping? If < threshold members in family, resolve at genus level, and likewise for species.")
+    filter_level: str = Query('Family',
+                              description="Specify which taxo grouping to filter by. Used in combination with filter_name to generate a VMR of all viral genomes within a specific taxo grouping.")
+    filter_name: str = Query('Caudoviricetes',
+                             description="Used to specify which taxo grouping name to filter by: used in combination with filter_level to generate a VMR of all viral genomes within a specific taxo grouping.")
 
 
 class SecondPass(BaseModel):
