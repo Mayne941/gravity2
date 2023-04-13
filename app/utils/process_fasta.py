@@ -14,8 +14,8 @@ def fasta_to_genbank(payload):
     '''Parse input, prepare data structures'''
     input_handle = open(
         f"{payload['save_path']}/{payload['fasta_fname']}", "r")
-    output_handle = open(
-        f"{payload['save_path']}/{payload['genbank_fname']}", "w")
+    # output_handle = open(
+    #     f"{payload['save_path']}/{payload['genbank_fname']}", "w")
     sequences = list(SeqIO.parse(input_handle, "fasta"))
     seq_names, seq_codes = [], []
 
@@ -25,19 +25,20 @@ def fasta_to_genbank(payload):
         seq_names.append(f"Query_{i+1}_{sequences[i].id}")
         sequences[i].id = f"Query_{i+1}"
 
-    count = SeqIO.write(sequences, output_handle, "genbank")
+    # RM < DISABLED AS OUTPUT FILE SEEMS INCOMPATIBLE WITH GRAVITY
+    #count = SeqIO.write(sequences, output_handle, "genbank")
 
     '''Build VMR-like csv'''
     df = pd.DataFrame(columns=get_vmr_cols())
     df["Virus GENBANK accession"] = seq_codes
     df["Virus name(s)"] = seq_names
-    df["Genetic code table"] = "Complete coding genome"
+    df["Genetic code table"] = 1
 
     df.to_csv(f"{payload['save_path']}/{payload['vmr_fname']}")
 
-    output_handle.close()
+    # output_handle.close()
     input_handle.close()
-    print("Successfully converted {} records".format(count))
+    return f"Successfully converted {df.shape[0]} records"
 
 def combine_segments(payload):
     input_handle = open(
@@ -64,4 +65,4 @@ def combine_segments(payload):
 
     output_handle.close()
     input_handle.close()
-    print("Successfully combined {} records".format(count))
+    return "Successfully combined {} records".format(count)
