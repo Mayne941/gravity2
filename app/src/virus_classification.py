@@ -702,7 +702,6 @@ class VirusClassificationAndEvaluation:
         [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
          if bool(re.match(r"Query", i.get_text()))]
 
-        breakpoint() #################################################
         '''Reference virus colour bar'''
         ax_CBar_RefVirus = fig.add_axes(
             [ax_CBar_L, ax_CBar_B + 2*ax_CBar_H/3, ax_CBar_W, ax_CBar_H/3], frame_on=True, facecolor="white")

@@ -98,6 +98,7 @@ class ReadGenomeDescTable:
                     if self.Database_Header != None:
                         self.DatabaseList.append(Line[Database_i])
 
+
     def update_desc_table(self, flag) -> dict:
         '''Create dictionary in GRAViTy structure for saving to persistent storage'''
         master_data = {}

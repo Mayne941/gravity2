@@ -59,7 +59,7 @@ def combine_segments(payload):
     df = pd.DataFrame(columns=get_vmr_cols())
     df["Virus GENBANK accession"] = [", ".join(seq_codes).replace(",", ";")]
     df["Virus name(s)"] = f"Query_{payload['combined_seq_name']}"
-    df["Genetic code table"] = "Complete coding genome"
+    df["Genetic code table"] = 1
     df.to_csv(f"{payload['save_path']}/{payload['vmr_fname']}")
 
     output_handle.close()
