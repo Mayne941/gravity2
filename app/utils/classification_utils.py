@@ -65,6 +65,7 @@ def TaxonomicAssignmentProposerAndEvaluator(SimMat_UcfVirusesVSRefViruses, TaxoG
     TaxoOfMaxSimScoreList = TaxoGrouping[np.argmax(
         SimMat_UcfVirusesVSRefViruses, axis=1)]
 
+    vd_temp = VirusDendrogram ####################
     print("Evaluating taxonomic assignments")
     '''Rename the reference virus leaves in the dendrogram to class label'''
     VirusDendrogram = Tree(VirusDendrogram)
