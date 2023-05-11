@@ -171,7 +171,7 @@ def vmr_filter(payload) -> str:
     try:
         df = pd.read_csv(f"{payload['save_path']}/{payload['vmr_name']}")
         df = df.drop_duplicates(subset=payload["filter_level"], keep="first")
-        df.to_csv(f"{payload['save_path']}/{payload['save_name']}")
+        df.to_csv(f"{payload['save_path']}/{payload['save_name']}", index=False)
         return f"Success! VMR saved to ./{payload['save_path']}"
     except Exception as e:
         print(f"Error processing VMR, error: {e}")

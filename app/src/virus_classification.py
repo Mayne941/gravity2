@@ -513,7 +513,7 @@ class VirusClassificationAndEvaluation:
             TaxoLabelList_AllVirus, OrderedTaxoLabelList))
 
         '''Rename UCFs to have their query ID'''
-        OrderedTaxoLabelList = [i.replace("_", ": ") if "Query" in i else i for i in OrderedTaxoLabelList]
+        # OrderedTaxoLabelList = [i.replace("_", ": ") if "Query" in i else i for i in OrderedTaxoLabelList]
         ClassLabelList_x, ClassLabelList_y = split_labels(OrderedTaxoLabelList)
 
         '''Heat map colour indicators'''
@@ -673,10 +673,10 @@ class VirusClassificationAndEvaluation:
 
         ax_Heatmap			.set_xticks(TickLocList)
         ax_Heatmap			.set_xticklabels(
-            ClassLabelList_minor, rotation=90, size=FontSize)
+            ClassLabelList_x, rotation=90, size=FontSize)
         ax_Heatmap			.set_yticks(TickLocList)
         ax_Heatmap			.set_yticklabels(
-            ClassLabelList_minor, rotation=0, size=FontSize)
+            ClassLabelList_y, rotation=0, size=FontSize)
 
         '''Selectively colour tick labels red if a UCF sample'''
         plt.gca().get_xticklabels(

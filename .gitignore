@@ -1,6 +1,0 @@
-*.pyc
-*.py.bak
-/data/
-/output/
-/*.egg-info
-/*.egg

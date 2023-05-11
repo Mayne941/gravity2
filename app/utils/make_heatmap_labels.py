@@ -30,7 +30,10 @@ def split_labels(OrderedTaxoLabelList):
     '''Clean join and split labels between X and Y axes (by species and virus name)'''
     ClassLabelList_minor = []
     for label in OrderedTaxoLabelList:
-        label_split = label.split("_")[1:]
+        if "Query" in label:
+            label_split = label.split("_")
+        else:
+            label_split = label.split("_")[1:]
         label_final = []
         for word in label_split:
             if "-" in word:

@@ -446,7 +446,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             ax_Heatmap.axhline(l, color='gray', lw=0.2)
 
         '''Draw gridlines for individual samples'''
-        TickLocList = np.arange(0, len(ClassLabelList_minor))
+        TickLocList = np.arange(0, len(ClassLabelList_y))
 
         ax_Heatmap			.set_xticks(TickLocList)
         ax_Heatmap			.set_xticklabels(
