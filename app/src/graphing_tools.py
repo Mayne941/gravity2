@@ -482,8 +482,9 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                       labelleft=False,
                                       labelright=False,
                                       direction='out')
+
         '''Save fig'''
-        plt	.savefig(HeatmapWithDendrogramFile, format="pdf")
+        plt	.savefig(HeatmapWithDendrogramFile, format="pdf", bbox_inches = "tight")
 
     def virus_grouping(self, DistMat, VirusGroupingFile):
         '''7/7: (OPT) Group viruses via Thiels-U and other metrics; save as txt.'''
