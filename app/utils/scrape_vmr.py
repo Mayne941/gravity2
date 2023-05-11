@@ -38,7 +38,7 @@ class Scraper:
         table_tags = soup.find("table", {"id": "edit-table"})
         url_rows = [re.search(r"<a\shref=.*\">", str(row))[0].replace('<a href=\"', '').replace(
             '">', '') for row in table_tags.findAll("tr") if re.search(r"<a\shref=.*</a>", str(row))]
-        latest_url = f"{self.url_stem}{url_rows[0]}"
+        latest_url = f"{self.url_stem}{url_rows[1]}"
         return pd.read_excel(latest_url)
 
     def get_baltimore_and_code_table(self, row) -> pd.Series:
@@ -151,7 +151,6 @@ def first_pass_taxon_filter(payload) -> str:
         df.to_csv(f"{payload['save_path']}/{payload['save_name']}")
         return f"Success! VMR saved to ./{payload['save_path']}"
     except Exception as e:
-        breakpoint()
         print(f"Error processing VMR, error: {e}")
         return f"Unsuccessful.\n Please check url and table formatting in app/utils/scrape_vmr.py, your spelling of the filter parameters, or contact your administrator."
 

@@ -27,7 +27,7 @@ from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ucf_annots, retrieve_ref_virus_vars
 from app.utils.highest_posterior_density import hpd
 from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
-from app.utils.make_heatmap_labels import make_labels
+from app.utils.make_heatmap_labels import make_labels, split_labels
 
 matplotlib.use('agg')
 sys.setrecursionlimit(10000)
@@ -514,8 +514,7 @@ class VirusClassificationAndEvaluation:
 
         '''Rename UCFs to have their query ID'''
         OrderedTaxoLabelList = [i.replace("_", ": ") if "Query" in i else i for i in OrderedTaxoLabelList]
-        ClassLabelList_minor = [
-            i.split("_")[-1].replace("-", " ") for i in OrderedTaxoLabelList]
+        ClassLabelList_x, ClassLabelList_y = split_labels(OrderedTaxoLabelList)
 
         '''Heat map colour indicators'''
         IndicatorMat_RefVirus = np.tile(
@@ -696,7 +695,7 @@ class VirusClassificationAndEvaluation:
                                   labelleft=False,
                                   labelright=True,
                                   direction='out')
-        
+
         [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
          if bool(re.match(r"Query", i.get_text()))]
         [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
@@ -936,7 +935,7 @@ class VirusClassificationAndEvaluation:
                 self.final_results["FinalisedTaxoAssignmentList"], self.final_results["FinalisedTaxoAssignmentRangeList"])]
             closest_taxa["taxo_grouping"] = self.final_results["FinalisedVirusGroupingList"]
             closest_taxa.to_csv(
-                f"{self.VariableShelveDir_UcfVirus}/ClassificationResults.csv")
+                f"{self.VariableShelveDir_UcfVirus}/ClassificationResults.csv") ######################
 
             with open(ClassificationResultFile, "a") as ClassificationResult_txt:
                 ClassificationResult_txt.write(f"\n"

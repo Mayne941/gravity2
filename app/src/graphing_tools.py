@@ -1,4 +1,4 @@
-from app.utils.make_heatmap_labels import make_labels
+from app.utils.make_heatmap_labels import make_labels, split_labels
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.gomdb_constructor import GOMDB_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
@@ -332,14 +332,12 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         ClassDendrogram_label = Phylo.read(  # Needs to be separate read as Bio entities are linked
             self.Heatmap_DendrogramFile, "newick")
 
+        '''Construct taxo labels in ordered list for heatmap axis labels'''
         _, LineList_major = make_labels(ClassDendrogram_grp, zip(
             TaxoLabelList, self.genomes["TaxoGroupingList"]))
-
-        ClassLabelList_minor, LineList_minor = make_labels(ClassDendrogram_label, zip(
+        _, LineList_minor = make_labels(ClassDendrogram_label, zip(
             TaxoLabelList, self.genomes["VirusNameList"]))
-
-        ClassLabelList_minor = [
-            i.split("_")[-1].replace("-", " ") for i in OrderedTaxoLabelList]
+        ClassLabelList_x, ClassLabelList_y = split_labels(OrderedTaxoLabelList)
 
         '''Plot configuration'''
         Heatmap_width = float(12)
@@ -398,6 +396,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         '''Dendrogram'''
         ax_Dendrogram = fig.add_axes(
             [ax_Dendrogram_L, ax_Dendrogram_B, ax_Dendrogram_W, ax_Dendrogram_H], frame_on=False, facecolor="white")
+
         Phylo.draw(VirusDendrogram, label_func=lambda x: "",
                    do_show=False,  axes=ax_Dendrogram)
         VirusDendrogramDepth = max(
@@ -447,18 +446,15 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             ax_Heatmap.axhline(l, color='gray', lw=0.2)
 
         '''Draw gridlines for individual samples'''
-        # RM < Testing bug fond by Peter 22/03
-        # TickLocList = np.array(
-        #     list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:])))))
         TickLocList = np.arange(0, len(ClassLabelList_minor))
 
         ax_Heatmap			.set_xticks(TickLocList)
         ax_Heatmap			.set_xticklabels(
-            ClassLabelList_minor, rotation=90, size=FontSize)
+            ClassLabelList_x, rotation=90, size=FontSize)
 
         ax_Heatmap			.set_yticks(TickLocList)
         ax_Heatmap			.set_yticklabels(
-            ClassLabelList_minor, rotation=0, size=FontSize)
+            ClassLabelList_y, rotation=0, size=FontSize)
         ax_Heatmap			.tick_params(top=True,
                                   bottom=False,
                                   left=False,
