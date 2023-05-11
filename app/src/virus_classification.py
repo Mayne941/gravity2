@@ -934,6 +934,7 @@ class VirusClassificationAndEvaluation:
             closest_taxa["taxo_assignment"] = ["%s (%s)" % (FinalisedTaxoAssignment_FinalisedTaxoAssignmentRange[0], FinalisedTaxoAssignment_FinalisedTaxoAssignmentRange[1]) for FinalisedTaxoAssignment_FinalisedTaxoAssignmentRange in zip(
                 self.final_results["FinalisedTaxoAssignmentList"], self.final_results["FinalisedTaxoAssignmentRangeList"])]
             closest_taxa["taxo_grouping"] = self.final_results["FinalisedVirusGroupingList"]
+
             closest_taxa.to_csv(
                 f"{self.VariableShelveDir_UcfVirus}/ClassificationResults.csv") ######################
 
