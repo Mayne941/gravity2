@@ -355,14 +355,10 @@ class PPHMMDBConstruction:
 
                 '''Align cluster using muscle'''
                 AlnClusterFile = ClustersDir+"/Cluster_%s.fasta" % Cluster_i
-                _ = subprocess.Popen("muscle -in %s -out %s -gapopen %s -gapextend %s" %(	UnAlnClusterFile,
-                                                        AlnClusterFile,
-                                                        -3.0,
-                                                        -0.0),
+                _ = subprocess.Popen(f"muscle -in {UnAlnClusterFile} -out {AlnClusterFile} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
                                                         stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 
                 err, out = _.communicate()
-                print(f"Muscle output, ln 361 pphmmdb contruction: {out}")
                 error_handler(
                     out, err, f"Something is wrong with muscle (Cluster_{Cluster_i}):")
 
@@ -592,7 +588,6 @@ class PPHMMDBConstruction:
                                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
                                 err, out = _.communicate()
-                                print(f"Muscle output, ln 600 pphmmdb construction: {out}") ##########
                                 break
 
                             PPHMM_i, PPHMM_j = sorted(
@@ -608,10 +603,7 @@ class PPHMMDBConstruction:
                                 f"/PPHMM_{PPHMM_j}.hhm"
                             _ = subprocess.Popen(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {ClusterFile_i} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
                                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                            # _ = subprocess.Popen(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {ClusterFile_i} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
-                            #                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                             err, out = _.communicate()
-                            print(f"Muscle output, ln 618 pphmmdb construction: {out}") ##############
 
                             _ = subprocess.Popen(
                                 f"rm {ClusterFile_j} {HHsuite_PPHMMFile_j}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
