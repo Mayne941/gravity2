@@ -355,19 +355,23 @@ class PPHMMDBConstruction:
 
                 '''Align cluster using muscle'''
                 AlnClusterFile = ClustersDir+"/Cluster_%s.fasta" % Cluster_i
-                # RM < Latest MUSCLE doesn't support MUSCLE_GapOpenCost, MUSCLE_GapExtendCost. Users should examine these
-                _ = subprocess.Popen(f"~/programs/muscle/muscle -align {UnAlnClusterFile} -output {AlnClusterFile}",
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                _ = subprocess.Popen("muscle -in %s -out %s -gapopen %s -gapextend %s" %(	UnAlnClusterFile,
+                                                        AlnClusterFile,
+                                                        -3.0,
+                                                        -0.0),
+                                                        stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+
                 err, out = _.communicate()
+                print(f"Muscle output, ln 361 pphmmdb contruction: {out}")
                 error_handler(
                     out, err, f"Something is wrong with muscle (Cluster_{Cluster_i}):")
 
                 '''Cluster annotations'''
                 Cluster_MetaDataDict[Cluster_i] = {"Cluster": Cluster,
-                                                   "DescList": DescList,
-                                                   "TaxoLists": TaxoLists,
-                                                   "AlignmentLength": AlignIO.read(AlnClusterFile, "fasta").get_alignment_length()
-                                                   }
+                                                "DescList": DescList,
+                                                "TaxoLists": TaxoLists,
+                                                "AlignmentLength": AlignIO.read(AlnClusterFile, "fasta").get_alignment_length()
+                                                }
                 Cluster_i += 1
                 progress_bar(
                     f"\033[K Make protein alignments: [{'='*int(float(Cluster_i)/N_Clusters*20)}] {Cluster_i}/{N_Clusters} alignments \r")
@@ -586,7 +590,9 @@ class PPHMMDBConstruction:
                             if not m:
                                 _ = subprocess.Popen(f"muscle -in {ClusterFile_i} -out {ClusterFile_i} -refine",
                                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+
                                 err, out = _.communicate()
+                                print(f"Muscle output, ln 600 pphmmdb construction: {out}") ##########
                                 break
 
                             PPHMM_i, PPHMM_j = sorted(
@@ -602,7 +608,10 @@ class PPHMMDBConstruction:
                                 f"/PPHMM_{PPHMM_j}.hhm"
                             _ = subprocess.Popen(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {ClusterFile_i} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
                                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                            # _ = subprocess.Popen(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {ClusterFile_i} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
+                            #                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                             err, out = _.communicate()
+                            print(f"Muscle output, ln 618 pphmmdb construction: {out}") ##############
 
                             _ = subprocess.Popen(
                                 f"rm {ClusterFile_j} {HHsuite_PPHMMFile_j}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)

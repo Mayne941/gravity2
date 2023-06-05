@@ -61,13 +61,15 @@ class ReadGenomeDescTable:
                 Line = Line.replace("\n", "").replace(
                     "\r", "").replace("\t", "").split(",")
                 try:
-                    SeqIDList = re.findall(
-                        r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", Line[SeqID_i])
+                    '''Regular exp to extract accession numbers'''
+                    # SeqIDList = re.findall( ####################################################################
+                    #     r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", Line[SeqID_i])
+                    SeqIDList = []
                 except IndexError as ex:
                     raise SystemExit(
                         f"Error parsing VMR: exception {ex}"
                         f"On line {Line}"
-                        f"This usually happens because the VMR is malformed - please check it manually."
+                        f"Accession ID could not be extracted."
                         f"GRAViTy terminated."
                     )
 

@@ -153,7 +153,7 @@ class VirusClassificationAndEvaluation:
 
     def update_globals(self):
         '''5/8: Update global vars with loaded ucf genome data'''
-        self.TaxoLabelList_UcfVirus = list(map('_'.join, list(zip(["Query%.4d" % i for i in range(len(self.ucf_genomes["SeqIDLists"]))],
+        self.TaxoLabelList_UcfVirus = list(map('_'.join, list(zip([f"Query_{i+1}" for i in range(len(self.ucf_genomes["SeqIDLists"]))], # RM < TODO UNIFY LABELS WITH EXCEL FILE
                                                                   ["/".join(SeqIDList) if len(SeqIDList) <= 3 else "/".join(
                                                                       SeqIDList[0:3])+"/..." for SeqIDList in self.ucf_genomes["SeqIDLists"]]
                                                                   ))))
@@ -579,6 +579,16 @@ class VirusClassificationAndEvaluation:
 
         Outer_margin = 0.5
         FontSize = 6
+        linewidth_major = 0.4
+        linewidth_minor = 0.2
+        dpi=300
+
+        if len(ClassLabelList_x) >= 200:
+            '''Reduce draw parameter size if large n'''
+            FontSize = FontSize/2
+            linewidth_major = linewidth_major/2
+            linewidth_minor = linewidth_minor/2
+            dpi=dpi*1.5
 
         Fig_width = Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap + \
             Heatmap_width + TaxoLable_space + Outer_margin
@@ -660,12 +670,12 @@ class VirusClassificationAndEvaluation:
 
         '''Draw grouping major & minor lines'''
         for l in LineList_major:
-            ax_Heatmap.axvline(l, color='k', lw=0.4)
-            ax_Heatmap.axhline(l, color='k', lw=0.4)
+            ax_Heatmap.axvline(l, color='k', lw=linewidth_major)
+            ax_Heatmap.axhline(l, color='k', lw=linewidth_major)
 
         for l in LineList_minor:
-            ax_Heatmap.axvline(l, color='gray', lw=0.2)
-            ax_Heatmap.axhline(l, color='gray', lw=0.2)
+            ax_Heatmap.axvline(l, color='gray', lw=linewidth_minor)
+            ax_Heatmap.axhline(l, color='gray', lw=linewidth_minor)
 
         '''Draw gridlines for individual samples'''
         TickLocList = np.array(
@@ -679,13 +689,7 @@ class VirusClassificationAndEvaluation:
             ClassLabelList_y, rotation=0, size=FontSize)
 
         '''Selectively colour tick labels red if a UCF sample'''
-        plt.gca().get_xticklabels(
-        )  # Don't delete this repeated code, axes need to be re-parameterised for this to work
-        [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
-         if bool(re.match(r"Query", i.get_text()))]
-        [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
-         if bool(re.match(r"Query", i.get_text()))]
-
+        plt.gca().get_xticklabels()
         ax_Heatmap			.tick_params(top=True,
                                   bottom=False,
                                   left=False,
