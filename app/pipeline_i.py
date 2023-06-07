@@ -45,6 +45,7 @@ class Pipeline_I:
         [print(log_text) for log_text in self.logs[0]]
         rgdt = ReadGenomeDescTable(
             GenomeDescTableFile=self.options['GenomeDescTableFile'],
+            GenomeSeqFile=self.options['GenomeSeqFile'],
             ShelveDir=self.options['ShelveDir'],
             Database=self.options['Database'],
             Database_Header=self.options['Database_Header'],
