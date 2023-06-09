@@ -12,16 +12,19 @@ class ReadGenomeDescTable:
 
     def __init__(self,
                  GenomeDescTableFile,
+                 GenomeSeqFile,
                  ShelveDir,
                  Database=None,
                  Database_Header=None,
                  TaxoGrouping_Header="Family",
-                 TaxoGroupingFile=None) -> None:
+                 TaxoGroupingFile=None
+                 ) -> None:
         self.GenomeDescTableFile = GenomeDescTableFile
         self.VariableShelveDir = ShelveDir + "/Shelves"
         if not os.path.exists(self.VariableShelveDir):
             os.makedirs(self.VariableShelveDir)
         self.Database = Database
+        self.GenomeSeqFile = GenomeSeqFile
         self.Database_Header = Database_Header
         self.TaxoGrouping_Header = TaxoGrouping_Header
         self.TaxoGroupingFile = TaxoGroupingFile
@@ -60,16 +63,21 @@ class ReadGenomeDescTable:
             for Virus_i, Line in enumerate(GenomeDescTable_txt):
                 Line = Line.replace("\n", "").replace(
                     "\r", "").replace("\t", "").split(",")
-                try:
-                    SeqIDList = re.findall(
-                        r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", Line[SeqID_i])
-                except IndexError as ex:
-                    raise SystemExit(
-                        f"Error parsing VMR: exception {ex}"
-                        f"On line {Line}"
-                        f"This usually happens because the VMR is malformed - please check it manually."
-                        f"GRAViTy terminated."
-                    )
+                if not os.path.isfile(self.GenomeSeqFile):
+                    try:
+                        '''Regular exp to extract accession numbers'''
+                        SeqIDList = re.findall(
+                            r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", Line[SeqID_i])
+                    except IndexError as ex:
+                        raise SystemExit(
+                            f"Error parsing VMR: exception {ex}"
+                            f"On line {Line}"
+                            f"Accession ID could not be extracted."
+                            f"GRAViTy terminated."
+                        )
+                else:
+                    '''If we specify the genbank file, don't extract accession IDS and consequently download'''
+                    SeqIDList = []
 
                 if SeqIDList != [] or Line[SeqID_i] != "":
                     '''Ignore record without sequences'''

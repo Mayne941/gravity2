@@ -1,4 +1,4 @@
-from app.utils.make_heatmap_labels import make_labels
+from app.utils.make_heatmap_labels import make_labels, split_labels
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.gomdb_constructor import GOMDB_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
@@ -332,14 +332,12 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         ClassDendrogram_label = Phylo.read(  # Needs to be separate read as Bio entities are linked
             self.Heatmap_DendrogramFile, "newick")
 
+        '''Construct taxo labels in ordered list for heatmap axis labels'''
         _, LineList_major = make_labels(ClassDendrogram_grp, zip(
             TaxoLabelList, self.genomes["TaxoGroupingList"]))
-
-        ClassLabelList_minor, LineList_minor = make_labels(ClassDendrogram_label, zip(
+        _, LineList_minor = make_labels(ClassDendrogram_label, zip(
             TaxoLabelList, self.genomes["VirusNameList"]))
-
-        ClassLabelList_minor = [
-            i.split("_")[-1].replace("-", " ") for i in OrderedTaxoLabelList]
+        ClassLabelList_x, ClassLabelList_y = split_labels(OrderedTaxoLabelList)
 
         '''Plot configuration'''
         Heatmap_width = float(12)
@@ -362,6 +360,17 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 
         Outer_margin = 0.5
         FontSize = 6
+        dpi=600
+
+        if len(ClassLabelList_x) >= 200:
+            '''Reduce draw parameter size if large n'''
+            FontSize = FontSize/2
+            dpi=dpi*1.5
+
+        elif len(ClassLabelList_x) >= 400:
+            FontSize = FontSize/4
+            dpi=dpi*3
+
 
         Fig_width = Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap + \
             Heatmap_width + TaxoLable_space + Outer_margin
@@ -393,11 +402,12 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         ax_CBar_H = CBar_height/Fig_height
 
         '''Plot the heat map'''
-        fig = plt.figure(figsize=(Fig_width, Fig_height), dpi=300)
+        fig = plt.figure(figsize=(Fig_width, Fig_height), dpi=dpi)
 
         '''Dendrogram'''
         ax_Dendrogram = fig.add_axes(
             [ax_Dendrogram_L, ax_Dendrogram_B, ax_Dendrogram_W, ax_Dendrogram_H], frame_on=False, facecolor="white")
+
         Phylo.draw(VirusDendrogram, label_func=lambda x: "",
                    do_show=False,  axes=ax_Dendrogram)
         VirusDendrogramDepth = max(
@@ -447,18 +457,15 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             ax_Heatmap.axhline(l, color='gray', lw=0.2)
 
         '''Draw gridlines for individual samples'''
-        # RM < Testing bug fond by Peter 22/03
-        # TickLocList = np.array(
-        #     list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:])))))
-        TickLocList = np.arange(0, len(ClassLabelList_minor))
+        TickLocList = np.arange(0, len(ClassLabelList_y))
 
         ax_Heatmap			.set_xticks(TickLocList)
         ax_Heatmap			.set_xticklabels(
-            ClassLabelList_minor, rotation=90, size=FontSize)
+            ClassLabelList_x, rotation=90, size=FontSize)
 
         ax_Heatmap			.set_yticks(TickLocList)
         ax_Heatmap			.set_yticklabels(
-            ClassLabelList_minor, rotation=0, size=FontSize)
+            ClassLabelList_y, rotation=0, size=FontSize)
         ax_Heatmap			.tick_params(top=True,
                                   bottom=False,
                                   left=False,
@@ -486,8 +493,9 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                       labelleft=False,
                                       labelright=False,
                                       direction='out')
+
         '''Save fig'''
-        plt	.savefig(HeatmapWithDendrogramFile, format="pdf")
+        plt	.savefig(HeatmapWithDendrogramFile, format="pdf", bbox_inches = "tight", dpi=dpi)
 
     def virus_grouping(self, DistMat, VirusGroupingFile):
         '''7/7: (OPT) Group viruses via Thiels-U and other metrics; save as txt.'''

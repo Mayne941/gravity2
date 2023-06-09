@@ -66,7 +66,6 @@ def PPHMMSignatureTable_Constructor(
         if len(GenBankSeq) >= SeqLength_Cutoff:
             '''limit the sequence by length; 0=include sequences of all lengths'''
             GenBankID = "/".join(GenBankIDList)
-            GenBankDesc = "/".join(GenBankDescList)
             ProtSeq1 = SeqRecord(GenBankSeq[0:].translate(
                 table=TranslTable), id=GenBankID+'_+1')
             ProtSeq2 = SeqRecord(GenBankSeq[1:].translate(
@@ -82,12 +81,25 @@ def PPHMMSignatureTable_Constructor(
 
             ProtSeq6frames = ProtSeq1+ProtSeq2+ProtSeq3+ProtSeqC1+ProtSeqC2+ProtSeqC3
             ProtSeq6frames.id = GenBankID
+
+            # if len(ProtSeq6frames) > 100000:
+            #     '''If sequence too big, take off the largest chunk that can be processed'''
+            #     ProtSeq6frames = ProtSeq6frames[0:99999]
+
+            # RM < TODO TEST: DO RHS OF SEQUENCES MATCH BETTER?
+            # midway = int(len(ProtSeq6frames) / 2)
+            # ProtSeq6frames = ProtSeq6frames[13000:-1]
+
             with open(PPHMMQueryFile, "w") as PPHMMQuery_txt:
                 SeqIO.write(ProtSeq6frames, PPHMMQuery_txt, "fasta")
 
+            # p = subprocess.Popen(f"hmmscan --cpu {HMMER_N_CPUs} --F1 0.5 --F2 0.5 --F3 0.5 --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDB} {PPHMMQueryFile}",
             p = subprocess.Popen(f"hmmscan --cpu {HMMER_N_CPUs} --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDB} {PPHMMQueryFile}",
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             out, err = p.communicate()
+
+            if len(err) > 0:
+                print(f"HMMScan error (pphmm_signature_table_constructor): {err}")
 
             PPHMMIDList, PPHMMScoreList, FeatureFrameBestHitList, FeatureLocFromBestHitList, \
                 FeatureLocToBestHitList, FeatureDescList = [], [], [], [], [], []

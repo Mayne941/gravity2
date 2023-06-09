@@ -21,7 +21,7 @@ class FirstPassBaltimoreFilter(BaseModel):
                                   description="If filter = true, how many members should be in each taxo grouping? If < threshold members in family, resolve at genus level, and likewise for species.")
     baltimore_filter: Literal["none", "dsDNA", "ssDNA", "RNA"] = Query("RNA",
                                                                         description="Do an extra filter to further reduce size of first pass database. Currently supports: `none`, `dsDNA`, `ssDNA`, `RNA`")
-    
+
 class FirstPassTaxonFilter(BaseModel):
     save_path: DirectoryPath = Query('./data/',
                                      description="Path to save the Virus Metadata Resource (VMR).")
@@ -82,6 +82,138 @@ class CombineGenomeSegs(BaseModel):
     vmr_fname: str = Query('my_vmr.csv',
                            description="Filename for VMR-like document to produce alongside genbank file.")
 
+class E2e_data(BaseModel):
+    '''PL1'''
+    GenomeDescTableFile_FirstPass: FilePath = Query('./data/latest_vmr_firstpass.csv',
+                                          description="FIRST PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
+    GenomeDescTableFile_SecondPass: FilePath = Query('./data/latest_vmr_secondpass.csv',
+                                          description="SECOND PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
+    ShelveDir_FirstPass: str = Query('./output/myexperiment_firstpass_pipeline_1',
+                           description="FIRST PASS PIPELINE 1: Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")
+    ShelveDir_SecondPass: str = Query('./output/myexperiment_secondpass_pipeline_1',
+                           description="SECOND PASS PIPELINE 1: Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")
+    TaxoGrouping_Header: Literal["Taxonomic grouping", "Family"] = Query('Taxonomic grouping',
+                                                                         description="The header of the Taxonomic grouping column.")
+    TaxoGroupingFile_FirstPass: Union[FilePath, None] = Query("{null} or {path to taxo grouping file}",
+                                                    description="FIRST PASS PIPELINE 1: It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
+    TaxoGroupingFile_SecondPass: Union[FilePath, None] = Query("{null} or {path to taxo grouping file}",
+                                                    description="SECOND PASS PIPELINE 1: It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
+    GenomeSeqFile_FirstPass: str = Query('./output/myexperiment_firstpass_pipeline_1.gb',
+                               description="FIRST PASS PIPELINE 1: Full path to the genome sequence GenBank file. If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column")
+    GenomeSeqFile_SecondPass: str = Query('./output/myexperiment_secondpass_pipeline_1.gb',
+                               description="SECOND PASS PIPELINE 1: Full path to the genome sequence GenBank file. If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column")
+    AnnotateIncompleteGenomes: bool = Query(False,
+                                            description="Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes.")
+    RemoveSingletonPPHMMs: bool = Query(False,
+                                        description="Remove singleton PPHMMs from the database if True.")
+    N_VirusesOfTheClassToIgnore: int = Field(1, gt=0,
+                                             description="When 'RemoveSingletonPPHMMs' == TRUE, singleton PPHMMs are removed from the PPHMM database only if they show similarity to viruses that belong to taxonomic groups with more than NUMBER members.")
+    PPHMMSorting: bool = Query(False,
+                               description="Sort PPHMMs if True.")
+    PPHMMClustering_MCLInflation_ForPPHMMSorting: int = Field(2, gt=0,
+                                                              description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
+    Heatmap: bool = Query(False,
+                          description="GRAViTy can generate a heatmap (with the dendrogram) to represent the pairwise (dis)similarity matrix")
+    Heatmap_VirusOrderScheme: Union[FilePath, None] = Query("{null} or {path to virus order scheme}",
+                                                            description="Full path to the virus order file. The indices of the genome entries start from 0")
+    Heatmap_WithDendrogram: bool = Query(True,
+                                         description="Construct (dis)similarity heatmap with dendrogram if True.")
+    Heatmap_DendrogramFile: Union[FilePath, None] = Query("{null} or {path to dendrogram file}",
+                                                          description="Full path to the dendrogram file. If 'None', the dendrogram will be estimated by GRAViTy")
+    Heatmap_DendrogramSupport_Cutoff: float = Field(0.75, ge=0, le=1,
+                                                    description="Threshold for the BOOTSTRAP SUPPORT to be shown on the dendrogram on the heatmap.")
+    VirusGroupingFile: Union[FilePath, None] = Query("{null} or {path to virus grouping file}",
+                                                     description="Fill path to the virus grouping scheme file. The file contains column(s) of arbitrary taxonomic grouping scheme(s) that users want to investigate. Note that file must contain headers, see docs for further info. If 'None', the taxonomic grouping as specified in 'Taxonomic grouping' column in the VMR will be used.")
+    N_Sampling: int = Field(10, gt=0,
+                            description="The number of mutual information scores sample size.")
+    SamplingStrategy: Literal[None, "balance_without_repeat", "balance_with_repeat"] = Query('balance_with_repeat',
+                                                                                             description="Virus sampling scheme.")
+    SampleSizePerGroup: int = Field(10, gt=0,
+                                    description="If 'SamplingStrategy' != None, this option specifies the number of viruses to be sampled per taxonomic group")
+
+    '''PL2'''
+    ShelveDir_UcfVirus_FirstPass: str = Query('output/myexperiment_firstpass_pipeline_2',
+                                    description="FIRST PASS PIPELINE 2: Full path to the shelve directory of unclassified viruses, storing GRAViTy outputs.")
+    ShelveDir_UcfVirus_SecondPass: str = Query('output/myexperiment_secondpass_pipeline_2',
+                                    description="SECOND PASS PIPELINE 2: Full path to the shelve directory of unclassified viruses, storing GRAViTy outputs.")
+    GenomeDescTableFile_UcfVirus: FilePath = Query("data/unclassified_viruses_vmr.csv",
+                                                   description="Full path to the Virus Metadata Resource-like (VMR-like) tab delimited file of unclassified viruses, wth headers. VVMR can be downloaded using the scrape endpoint")
+    GenomeSeqFile_UcfVirus: str = Query('output/myexperiment_unclassified_viruses.gb',
+                                        description="Full path to the genome sequence GenBank file of unclassified viruses.")
+    UseUcfVirusPPHMMs: bool = Query(True,
+                                    description="Annotate reference and unclassified viruses using the PPHMM database derived from unclassified viruses if True.")
+    AnnotateIncompleteGenomes_UcfVirus: bool = Query(True,
+                                                     description="Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes.")
+    UsingDatabaseIncludingIncompleteRefViruses: bool = Query(False,
+                                                             description="Annotate unclassified viruses using the PPHMM and GOM databases derived from all reference viruses if True, otherwise using those derived from complete reference genomes only.")
+    DatabaseAssignmentSimilarityScore_Cutoff: float = Field(0.01, gt=0,
+                                                            description="Threshold to determine if the unclassified virus at least belongs to a particular database. For example, an unclassified virus is assigned to the family 'X' in the reference 'Baltimore group X' database, with the (greatest) similarity score of 0.1. This score might be too low to justify that the virus is a member of the family 'X', and fail the similarity threshold test. However, since the similarity score of 0.1 > %default, GRAViTy will make a guess that it might still be a virus of the 'Baltimore group X' database, under the default setting.")
+    N_PairwiseSimilarityScores: int = Field(10000, gt=0,
+                                            description="Number of data points in the distributions of intra- and inter-group similarity scores used to estimate the similarity threshold. ")
+
+    '''GENERAL'''
+    genbank_email: str = Query('name@provider.com',
+                               description="A valid email address is required to download genbank files.")
+    Database: Union[str, None] = Query("{null} or {column name}",
+                                       description="GRAViTy will only analyse genomes that are labelled with DATABASE in the database column. The database column can be specified by the DATABASE HEADER argument. If 'None', all entries are analysed.")
+    Database_Header: Union[str, None] = Query("{null} or {database header col name}",
+                                              description="The header of the database column. Cannot be 'None' if DATABASE is specified.")
+    ProteinLength_Cutoff: int = Field(100, gt=0,
+                                      description="Proteins with length < LENGTH aa will be ignored")
+    IncludeProteinsFromIncompleteGenomes: bool = Query(True,
+                                                       description="Include protein sequences from incomplete genomes to the database if True.")
+    BLASTp_evalue_Cutoff: float = Field(0.001, ge=0,
+                                        description="Threshold for protein sequence similarity detection. A hit with an E-value > E-VALUE will be ignored.")
+    BLASTp_PercentageIden_Cutoff: int = Field(50, ge=0, le=100,
+                                              description="Threshold for protein sequence similarity detection. A hit with a percentage identity < PERCENTAGE IDENTITY will be ignored.")
+    BLASTp_QueryCoverage_Cutoff: int = Field(75, ge=0, le=100,
+                                             description="Threshold for protein sequence similarity detection. A hit with a query coverage < COVERAGE will be ignored.")
+    BLASTp_SubjectCoverage_Cutoff: int = Field(75, ge=0, le=100,
+                                               description="Threshold for protein sequence similarity detection. A hit with a subject coverage < COVERAGE will be ignored.")
+    BLASTp_num_alignments: int = Field(1000000, gt=0,
+                                       description="Maximum number of sequences to be considered in a BLASTp search.")
+    N_CPUs: int = Field(24, gt=1,
+                        description="The number of threads (CPUs) to use in the BLASTp, HMMER, HHSuite, Bootstrap searches.")
+    MUSCLE_GapOpenCost: float = Field(-3.0, lt=0,
+                                      description="MUSCLE gap opening panelty for aligning protein sequences.")
+    MUSCLE_GapExtendCost: float = Field(-0.0, le=0,
+                                        description="MUSCLE gap extension panelty for aligning protein sequences.")
+    ProtClustering_MCLInflation: int = Field(2, gt=0,
+                                             description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
+    N_AlignmentMerging: Literal[-1, 0] = Query(0,
+                                               description="Number of rounds of alignment merging. ROUND == 0 means no merging. ROUND == -1 means merging until exhausted.")
+    PPHMMClustering_MCLInflation_ForAlnMerging: int = Field(5, gt=0,
+                                                            description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
+    HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging: bool = Query(True,
+                                                           description="Make a HMMER PPHMM DB for each round of protein merging if True.")
+    HHsuite_evalue_Cutoff: float = Field(1e-06, gt=0,
+                                         description="Threshold for PPHMM similarity detection. A hit with an E-value > E-VALUE will be ignored.")
+    HHsuite_pvalue_Cutoff: float = Field(0.05, ge=0, le=1,
+                                         description="Threshold for PPHMM similarity detection. A hit with a p-value > P-VALUE will be ignored.")
+    HHsuite_QueryCoverage_Cutoff: float = Field(85.0, ge=0, le=100,
+                                                description="Threshold for PPHMM similarity detection. A hit with a query coverage < COVERAGE will be ignored.")
+    HHsuite_SubjectCoverage_Cutoff: float = Field(85.0, ge=0, le=100,
+                                                  description="Threshold for PPHMM similarity detection. A hit with a subject coverage < COVERAGE will be ignored")
+    HMMER_C_EValue_Cutoff: float = Field(0.001, gt=0,
+                                         description="Threshold for HMM-protein similarity detection. A hit with an E-value > E-VALUE will be ignored.")
+    HMMER_HitScore_Cutoff: int = Field(0, ge=0,
+                                       description="Threshold for HMM-protein similarity detection. A hit with a score < SCORE will be ignored.")
+    p: float = Field(1, ge=0,
+                     description="Distance transformation P coefficient, 0 <= P. D = 1 - S**P. If P = 1, no distance transformation is applied. If P > 1, shallow branches will be stretched out so shallow splits can be seen more clearly. If p < 1, deep branches are stretch out so that deep splits can be seen more clearly. If p = 0, the entire dendrogram will be reduced to a single branch (root), with all taxa forming a polytomy clade at the tip of the dendrogram. If p = Inf, the resultant dendrogram will be star-like, with all taxa forming a polytomy clade at the root.")
+    Dendrogram: bool = Query(True,
+                             description="Construct dendrogram if True.")
+    Dendrogram_LinkageMethod: Literal["single", "complete", "average", "weighted", "centroid", "median", "ward"] = Query('average',
+                                                                                                                         description="LINKAGE for dendrogram construction. If LINKAGE = 'single', the nearest point algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'complete', the farthest point algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'average', the UPGMA algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'weighted', the WPGMA algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'centroid', the UPGMC algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'median', the WPGMC algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'ward', the incremental algorithm is used to cluster viruses and compute cluster distances.")
+    Bootstrap: bool = Query(True,
+                            description="Perform bootstrapping if True.")
+    N_Bootstrap: int = Field(10, gt=0,
+                             description="The number of pseudoreplicate datasets by resampling.")
+    Bootstrap_method: Literal["booster", "sumtrees"] = Query('booster',
+                                                             description="Two METHODs for tree summary construction are implemented in GRAViTy. If METHOD = 'sumtrees', SumTrees (Sukumaran, J & MT Holder, 2010, Bioinformatics; https://dendropy.org/programs/sumtrees.html) will be used to summarize non-parameteric bootstrap support for splits on the best estimated dendrogram. The calculation is based on the standard Felsenstein bootstrap method. If METHOD = 'booster', BOOSTER (Lemoine et al., 2018, Nature; https://booster.pasteur.fr/) will be used. With large trees and moderate phylogenetic signal, BOOSTER tends to be more informative than the standard Felsenstein bootstrap method.")
+    VirusGrouping: bool = Query(True,
+                                description="Perform virus grouping if True.")
+    SimilarityMeasurementScheme: Literal["P", "G", "L", "PG", "PL"] = Query("PG",
+                                                                            description="Virus similarity measurement SCHEMEs. If SCHEME = 'P', an overall similarity between two viruses is their GJ_P. If SCHEME = 'L', an overall similarity between two viruses is their GJ_L. If SCHEME = 'G', an overall similarity between two viruses is their GJ_G. If SCHEME = 'PG', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_G. If SCHEME = 'PL', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_L.")
 
 class Pipeline_i_data(BaseModel):
     genbank_email: str = Query('name@provider.com',

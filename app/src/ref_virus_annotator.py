@@ -139,7 +139,6 @@ class RefVirusAnnotator:
             if len(GenBankSeq) >= self.SeqLength_Cutoff:
                 '''limit the sequence by length; 0=include sequences of all lengths'''
                 GenBankID = "/".join(GenBankIDList)
-                GenBankDesc = "/".join(GenBankDescList)
                 ProtSeq1 = SeqRecord(GenBankSeq[0:].translate(
                     table=TranslTable), id=GenBankID+'_+1')
                 ProtSeq2 = SeqRecord(GenBankSeq[1:].translate(
@@ -155,12 +154,23 @@ class RefVirusAnnotator:
 
                 ProtSeq6frames = ProtSeq1+ProtSeq2+ProtSeq3+ProtSeqC1+ProtSeqC2+ProtSeqC3
                 ProtSeq6frames.id = GenBankID
+
+                # RM TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<
+                if len(GenBankSeq) > 100000:
+                    ProtSeq6frames = ProtSeq6frames[0:99999]
+
                 with open(PPHMMQueryFile, "w") as PPHMMQuery_txt:
                     SeqIO.write(ProtSeq6frames, PPHMMQuery_txt, "fasta")
 
                 p = subprocess.Popen(f"hmmscan --cpu {self.HMMER_N_CPUs} --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDb} {PPHMMQueryFile}",
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                 out, err = p.communicate()
+                if len(err) > 0:
+                    print(f"Error running HMMScan: {err}")
+                    p = subprocess.Popen(f"nhmmscan --cpu {self.HMMER_N_CPUs} --noali --nobias {PPHMMScanOutFile} {HMMER_PPHMMDb} {PPHMMQueryFile}",
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                    out, err = p.communicate()
+
 
                 PPHMMIDList, PPHMMScoreList, FeatureFrameBestHitList, FeatureLocFromBestHitList, \
                     FeatureLocToBestHitList, FeatureDescList = [], [], [], [], [], []
@@ -174,6 +184,7 @@ class RefVirusAnnotator:
                             C_EValue = float(Line[11])
                             HitScore = float(Line[7])
                             OriAASeqlen = float(len(GenBankSeq))/3
+
                             if C_EValue < self.HMMER_C_EValue_Cutoff and HitScore > self.HMMER_HitScore_Cutoff:
                                 '''Determine the frame and the location of the hit'''
                                 iden = int(Line[0].split('_')[-1])
@@ -253,7 +264,6 @@ class RefVirusAnnotator:
 
         '''Delete HMMER_hmmscanDir'''
         _ = subprocess.call(f"rm -rf {HMMER_hmmscanDir}", shell=True)
-
         return PPHMMSignatureTable, PPHMMLocMiddleBestHitTable
 
     def remove_singleton_pphmms(self, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb):

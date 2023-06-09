@@ -27,7 +27,7 @@ from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ucf_annots, retrieve_ref_virus_vars
 from app.utils.highest_posterior_density import hpd
 from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
-from app.utils.make_heatmap_labels import make_labels
+from app.utils.make_heatmap_labels import make_labels, split_labels
 
 matplotlib.use('agg')
 sys.setrecursionlimit(10000)
@@ -153,7 +153,7 @@ class VirusClassificationAndEvaluation:
 
     def update_globals(self):
         '''5/8: Update global vars with loaded ucf genome data'''
-        self.TaxoLabelList_UcfVirus = list(map('_'.join, list(zip(["Query%.4d" % i for i in range(len(self.ucf_genomes["SeqIDLists"]))],
+        self.TaxoLabelList_UcfVirus = list(map('_'.join, list(zip([f"Query_{i+1}" for i in range(len(self.ucf_genomes["SeqIDLists"]))], # RM < TODO UNIFY LABELS WITH EXCEL FILE
                                                                   ["/".join(SeqIDList) if len(SeqIDList) <= 3 else "/".join(
                                                                       SeqIDList[0:3])+"/..." for SeqIDList in self.ucf_genomes["SeqIDLists"]]
                                                                   ))))
@@ -513,9 +513,8 @@ class VirusClassificationAndEvaluation:
             TaxoLabelList_AllVirus, OrderedTaxoLabelList))
 
         '''Rename UCFs to have their query ID'''
-        OrderedTaxoLabelList = [i.replace("_", ": ") if "Query" in i else i for i in OrderedTaxoLabelList]
-        ClassLabelList_minor = [
-            i.split("_")[-1].replace("-", " ") for i in OrderedTaxoLabelList]
+        # OrderedTaxoLabelList = [i.replace("_", ": ") if "Query" in i else i for i in OrderedTaxoLabelList]
+        ClassLabelList_x, ClassLabelList_y = split_labels(OrderedTaxoLabelList)
 
         '''Heat map colour indicators'''
         IndicatorMat_RefVirus = np.tile(
@@ -580,6 +579,22 @@ class VirusClassificationAndEvaluation:
 
         Outer_margin = 0.5
         FontSize = 6
+        linewidth_major = 0.4
+        linewidth_minor = 0.2
+        dpi=600
+
+        if len(ClassLabelList_x) >= 200:
+            '''Reduce draw parameter size if large n'''
+            FontSize = FontSize/2
+            linewidth_major = linewidth_major/2
+            linewidth_minor = linewidth_minor/2
+            dpi=dpi*1.5
+
+        elif len(ClassLabelList_x) >= 400:
+            FontSize = FontSize/4
+            linewidth_major = linewidth_major/4
+            linewidth_minor = linewidth_minor/4
+            dpi=dpi*3
 
         Fig_width = Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap + \
             Heatmap_width + TaxoLable_space + Outer_margin
@@ -661,12 +676,12 @@ class VirusClassificationAndEvaluation:
 
         '''Draw grouping major & minor lines'''
         for l in LineList_major:
-            ax_Heatmap.axvline(l, color='k', lw=0.4)
-            ax_Heatmap.axhline(l, color='k', lw=0.4)
+            ax_Heatmap.axvline(l, color='k', lw=linewidth_major)
+            ax_Heatmap.axhline(l, color='k', lw=linewidth_major)
 
         for l in LineList_minor:
-            ax_Heatmap.axvline(l, color='gray', lw=0.2)
-            ax_Heatmap.axhline(l, color='gray', lw=0.2)
+            ax_Heatmap.axvline(l, color='gray', lw=linewidth_minor)
+            ax_Heatmap.axhline(l, color='gray', lw=linewidth_minor)
 
         '''Draw gridlines for individual samples'''
         TickLocList = np.array(
@@ -674,19 +689,13 @@ class VirusClassificationAndEvaluation:
 
         ax_Heatmap			.set_xticks(TickLocList)
         ax_Heatmap			.set_xticklabels(
-            ClassLabelList_minor, rotation=90, size=FontSize)
+            ClassLabelList_x, rotation=90, size=FontSize)
         ax_Heatmap			.set_yticks(TickLocList)
         ax_Heatmap			.set_yticklabels(
-            ClassLabelList_minor, rotation=0, size=FontSize)
+            ClassLabelList_y, rotation=0, size=FontSize)
 
         '''Selectively colour tick labels red if a UCF sample'''
-        plt.gca().get_xticklabels(
-        )  # Don't delete this repeated code, axes need to be re-parameterised for this to work
-        [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
-         if bool(re.match(r"Query", i.get_text()))]
-        [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
-         if bool(re.match(r"Query", i.get_text()))]
-
+        plt.gca().get_xticklabels()
         ax_Heatmap			.tick_params(top=True,
                                   bottom=False,
                                   left=False,
@@ -696,7 +705,7 @@ class VirusClassificationAndEvaluation:
                                   labelleft=False,
                                   labelright=True,
                                   direction='out')
-        
+
         [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
          if bool(re.match(r"Query", i.get_text()))]
         [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
@@ -764,7 +773,7 @@ class VirusClassificationAndEvaluation:
 
         '''Save the plot to file'''
         HeatmapWithDendrogramFile = f"{self.VariableShelveDir_UcfVirus}/HeatmapWithDendrogram.RefVirusGroup={RefVirusGroup}.IncompleteUcfRefGenomes={str(int(self.IncludeIncompleteGenomes_UcfVirus))+str(int(self.IncludeIncompleteGenomes_RefVirus))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.pdf"
-        plt.savefig(HeatmapWithDendrogramFile, format="pdf")
+        plt.savefig(HeatmapWithDendrogramFile, format="pdf", bbox_inches = "tight", dpi=dpi)
 
     def group(self):
         '''7/8 : Pool results from all classfiers, and finalise the taxonomic assignment (and virus grouping)'''
@@ -935,8 +944,9 @@ class VirusClassificationAndEvaluation:
             closest_taxa["taxo_assignment"] = ["%s (%s)" % (FinalisedTaxoAssignment_FinalisedTaxoAssignmentRange[0], FinalisedTaxoAssignment_FinalisedTaxoAssignmentRange[1]) for FinalisedTaxoAssignment_FinalisedTaxoAssignmentRange in zip(
                 self.final_results["FinalisedTaxoAssignmentList"], self.final_results["FinalisedTaxoAssignmentRangeList"])]
             closest_taxa["taxo_grouping"] = self.final_results["FinalisedVirusGroupingList"]
+
             closest_taxa.to_csv(
-                f"{self.VariableShelveDir_UcfVirus}/ClassificationResults.csv")
+                f"{self.VariableShelveDir_UcfVirus}/ClassificationResults.csv") ######################
 
             with open(ClassificationResultFile, "a") as ClassificationResult_txt:
                 ClassificationResult_txt.write(f"\n"

@@ -68,9 +68,20 @@ The following information is designed to help troubleshoot common issues.
 1. *How do I specify "nothing" for a parameter in the API, e.g. I don't want to specify a ```Database``` parameter*. The API accepts JSON-like objects: to specify no input for these parameters, use ```null```.
 1. *How do I find out what all of the parameters for the API functions mean?* Scroll down on the API front-end to the "Schemas" section. Each function description can be expanded to give details of each parameter's type and functionality. High level descriptions of the functions and the rationale for their use are included in the documentation (./docs).
 1. *Labels in my output heatmap/dendrogram don't seem to correspond with my input VMR labels* Ensure that there are no commas in your free text fields in the input VMR: GRAViTyV2 works by reading in comma-delimited (CSV) files, which struggle when commas are present in strings. The simplest, non-programmatic way of doing this is to do find-replace all commas with semicolons, via Excel or similar spreadsheet software.
+1. *Muscle is returning error "Segmentation fault"* Ensure muscle has installed properly by trying to run it through the CLI. If the program won't respond at all, check you have the correct version installed (i.e. operating system and bit type) and manually reinstall, see https://drive5.com/muscle/manual/. If you're having trouble, we highly recommend using Conda (https://conda.io/projects/conda/en/latest/user-guide/install/index.html) to automatically install this package separately, with ```conda install -c bioconda muscle=3.8```. Conversely, if the program will initialise but a Segmentation Fault returns mid-job, this usually implies that your machine has run out of memory during calculations.
 
 ## Guide for contributors
 Although forking is encouraged, we will only consider pull requests which address bugs and performance issues. Contributors will please configure pre-commit hooks to match ours, as detailed in the .pre-commit-config.yaml file.
+
+## Change log
+09.06.23
+1. Muscle downgrade to better support work involving extremely long sequences
+1. Fasta to Genbank conversion fixes
+1. Input Accession IDs will now not be looked up on Entrez if the user specifies a pre-computed Genbank file, which reduces chances of accidental Accession ID matches with user-specified naming conventions
+1. Enhanced support for Booster bootstrapping
+1. Segment concatenation endpoint now arranges sequences by size
+1. Figure size and component scaling is now partially automated, which enhances readability of GRAViTy heatmaps when large numbers of samples are used
+1. General code tidying and quality of life changes
 
 ## Disclaimer
 The material embodied in this software is provided to you "as-is", “with all faults”, and without warranty of any kind, express, implied or otherwise, including without limitation, any warranty of fitness for a particular purpose, warranty of non-infringement, or warranties of any kind concerning the safety, suitability, lack of viruses, inaccuracies, or other harmful components of this software. There are inherent dangers in the use of any software, and you are solely responsible for determining whether this software is compatible with your equipment and other software installed on your equipment. You are convert_fasta_to_genbankalso solely responsible for the protection of your equipment and backup of your data, and the developers/providers will not be liable for any damages you may suffer in connection with using, modifying, or distributing this software. Without limiting the foregoing, the developers/providers make no warranty that: the software will meet your requirements; the software will be uninterrupted, timely, secure, or error-free; the results that may be obtained from the use of the software will be effective, accurate, or reliable; the quality of the software will meet your expectations; any errors in the software will be identified or corrected.

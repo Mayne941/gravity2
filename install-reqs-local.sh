@@ -21,9 +21,11 @@ make
 
 # muscle installation. Assumes Linux x64 build!
 mkdir -p ~/programs/muscle && cd ~/programs/muscle
-wget https://github.com/rcedgar/muscle/releases/download/v5.1/muscle5.1.linux_intel64
-mv muscle5.1.linux_intel64 muscle
+wget https://drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux64.tar.gz
+tar -zxvf muscle3.8.31_i86linux64.tar.gz
+mv muscle3.8.31_i86linux64 muscle
 chmod 777 muscle
+alias muscle="~/programs/muscle/muscle"
 
 # booster installation
 wget https://github.com/evolbioinfo/booster/releases/download/v0.1.2/booster_linux64

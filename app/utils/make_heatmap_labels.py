@@ -25,3 +25,22 @@ def make_labels(dendro, labels):
                 break
 
     return np.array(classes), np.array(lines) + 0.5
+
+def split_labels(OrderedTaxoLabelList):
+    '''Clean join and split labels between X and Y axes (by species and virus name)'''
+    ClassLabelList_minor = []
+    for label in OrderedTaxoLabelList:
+        if "Query" in label:
+            label_split = label.split("_")
+        else:
+            label_split = label.split("_")[1:]
+        label_final = []
+        for word in label_split:
+            if "-" in word:
+                word = f"---{word.replace('-', ' ')}"
+            label_final.append(word)
+        ClassLabelList_minor.append(f"{' '.join(label_final)}")
+
+    ClassLabelList_x = [i.split("---")[-1] for i in ClassLabelList_minor]
+    ClassLabelList_y = [i.split("---")[0] for i in ClassLabelList_minor]
+    return ClassLabelList_x, ClassLabelList_y
