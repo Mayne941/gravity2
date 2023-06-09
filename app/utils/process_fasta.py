@@ -42,6 +42,14 @@ def fasta_to_genbank(payload):
     return f"Successfully converted {df.shape[0]} records"
 
 def combine_segments(payload):
+    '''Here is the spreadsheet I have been using for the taxonomy proposal comparisons.
+       These have all been run and it includes several segmented viruses that were joined
+       by a script I wrote (eg. 2022.018M.A.Orthobunyavirus_29nsp_abolish4sp). If you could test of these, we could compare directly with the outputs run previously. '''
+    '''Note that the program would be best if it could process several segmented virus sequences at the same time (as in the list),
+      rather than individually. As mentioned  there needs to be some kind of notation so that accession numbers for segments are separated
+      from each using a different delimiter than between those of different viruses. I suppose the other issue is working out how to generate
+      similar sets of concatenated sequences when they are not on GenBank. There would have to be some way to indicate which sequences in a
+      combined FASTA file should be joined up and which should be in separate sets.'''
     input_handle = open(
         f"{payload['save_path']}/{payload['fasta_fname']}", "r")
     output_handle = open(
@@ -53,7 +61,7 @@ def combine_segments(payload):
         sequences[i].annotations['molecule_type'] = 'DNA'
         seq_codes.append(sequences[i].id)
         seq_names.append(f"Query_{i+1}_{sequences[i].id}")
-        sequences[i].id = f"Query_{i+1}"
+        sequences[i].id = sequences[i].id
 
     count = SeqIO.write(sequences, output_handle, "genbank")
 
