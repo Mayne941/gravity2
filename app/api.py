@@ -44,7 +44,6 @@ app = FastAPI(
         "url": "http://www.mayneba.com",
         "email": "director@mayneba.com"
     },
-    # RM < Check this license is appropriate
     license_info={
         "name": "Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)",
         "url": "https://creativecommons.org/licenses/by-nc/4.0/",

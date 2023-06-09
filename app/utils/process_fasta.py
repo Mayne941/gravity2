@@ -14,9 +14,10 @@ def fasta_to_genbank(payload):
     '''Parse input, prepare data structures'''
     input_handle = open(
         f"{payload['save_path']}/{payload['fasta_fname']}", "r")
-    # output_handle = open(
-    #     f"{payload['save_path']}/{payload['genbank_fname']}", "w")
-    sequences = list(SeqIO.parse(input_handle, "fasta"))
+    output_handle = open(
+        f"{payload['save_path']}/{payload['genbank_fname']}", "w")
+    raw_seqs = SeqIO.parse(input_handle, "fasta")
+    sequences = list(raw_seqs)
     seq_names, seq_codes = [], []
 
     for i in range(len(sequences)):
@@ -25,8 +26,7 @@ def fasta_to_genbank(payload):
         seq_names.append(f"Query_{i+1}_{sequences[i].id}")
         sequences[i].id = f"Query_{i+1}"
 
-    # RM < DISABLED AS OUTPUT FILE SEEMS INCOMPATIBLE WITH GRAVITY
-    #count = SeqIO.write(sequences, output_handle, "genbank")
+    _ = SeqIO.write(sequences, output_handle, "genbank")
 
     '''Build VMR-like csv'''
     df = pd.DataFrame(columns=get_vmr_cols())
@@ -36,7 +36,7 @@ def fasta_to_genbank(payload):
 
     df.to_csv(f"{payload['save_path']}/{payload['vmr_fname']}")
 
-    # output_handle.close()
+    output_handle.close()
     input_handle.close()
     return f"Successfully converted {df.shape[0]} records"
 

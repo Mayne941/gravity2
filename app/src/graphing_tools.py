@@ -360,6 +360,17 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 
         Outer_margin = 0.5
         FontSize = 6
+        dpi=600
+
+        if len(ClassLabelList_x) >= 200:
+            '''Reduce draw parameter size if large n'''
+            FontSize = FontSize/2
+            dpi=dpi*1.5
+
+        elif len(ClassLabelList_x) >= 400:
+            FontSize = FontSize/4
+            dpi=dpi*3
+
 
         Fig_width = Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap + \
             Heatmap_width + TaxoLable_space + Outer_margin
@@ -391,7 +402,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         ax_CBar_H = CBar_height/Fig_height
 
         '''Plot the heat map'''
-        fig = plt.figure(figsize=(Fig_width, Fig_height), dpi=300)
+        fig = plt.figure(figsize=(Fig_width, Fig_height), dpi=dpi)
 
         '''Dendrogram'''
         ax_Dendrogram = fig.add_axes(
@@ -484,7 +495,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                       direction='out')
 
         '''Save fig'''
-        plt	.savefig(HeatmapWithDendrogramFile, format="pdf", bbox_inches = "tight")
+        plt	.savefig(HeatmapWithDendrogramFile, format="pdf", bbox_inches = "tight", dpi=dpi)
 
     def virus_grouping(self, DistMat, VirusGroupingFile):
         '''7/7: (OPT) Group viruses via Thiels-U and other metrics; save as txt.'''

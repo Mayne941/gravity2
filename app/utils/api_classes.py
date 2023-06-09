@@ -136,14 +136,10 @@ class E2e_data(BaseModel):
                                     description="FIRST PASS PIPELINE 2: Full path to the shelve directory of unclassified viruses, storing GRAViTy outputs.")
     ShelveDir_UcfVirus_SecondPass: str = Query('output/myexperiment_secondpass_pipeline_2',
                                     description="SECOND PASS PIPELINE 2: Full path to the shelve directory of unclassified viruses, storing GRAViTy outputs.")
-    ShelveDirs_RefVirus_FirstPass: ShelveDir_FirstPass ###
-    ShelveDirs_RefVirus_SecondPass: ShelveDir_SecondPass ###
     GenomeDescTableFile_UcfVirus: FilePath = Query("data/unclassified_viruses_vmr.csv",
                                                    description="Full path to the Virus Metadata Resource-like (VMR-like) tab delimited file of unclassified viruses, wth headers. VVMR can be downloaded using the scrape endpoint")
     GenomeSeqFile_UcfVirus: str = Query('output/myexperiment_unclassified_viruses.gb',
                                         description="Full path to the genome sequence GenBank file of unclassified viruses.")
-    GenomeSeqFiles_RefVirus_FirstPass: GenomeSeqFile_FirstPass
-    GenomeSeqFiles_RefVirus_SecondPass: GenomeSeqFile_SecondPass
     UseUcfVirusPPHMMs: bool = Query(True,
                                     description="Annotate reference and unclassified viruses using the PPHMM database derived from unclassified viruses if True.")
     AnnotateIncompleteGenomes_UcfVirus: bool = Query(True,

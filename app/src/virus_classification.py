@@ -581,7 +581,7 @@ class VirusClassificationAndEvaluation:
         FontSize = 6
         linewidth_major = 0.4
         linewidth_minor = 0.2
-        dpi=300
+        dpi=600
 
         if len(ClassLabelList_x) >= 200:
             '''Reduce draw parameter size if large n'''
@@ -589,6 +589,12 @@ class VirusClassificationAndEvaluation:
             linewidth_major = linewidth_major/2
             linewidth_minor = linewidth_minor/2
             dpi=dpi*1.5
+
+        elif len(ClassLabelList_x) >= 400:
+            FontSize = FontSize/4
+            linewidth_major = linewidth_major/4
+            linewidth_minor = linewidth_minor/4
+            dpi=dpi*3
 
         Fig_width = Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap + \
             Heatmap_width + TaxoLable_space + Outer_margin
@@ -767,7 +773,7 @@ class VirusClassificationAndEvaluation:
 
         '''Save the plot to file'''
         HeatmapWithDendrogramFile = f"{self.VariableShelveDir_UcfVirus}/HeatmapWithDendrogram.RefVirusGroup={RefVirusGroup}.IncompleteUcfRefGenomes={str(int(self.IncludeIncompleteGenomes_UcfVirus))+str(int(self.IncludeIncompleteGenomes_RefVirus))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.pdf"
-        plt.savefig(HeatmapWithDendrogramFile, format="pdf", bbox_inches = "tight")
+        plt.savefig(HeatmapWithDendrogramFile, format="pdf", bbox_inches = "tight", dpi=dpi)
 
     def group(self):
         '''7/8 : Pool results from all classfiers, and finalise the taxonomic assignment (and virus grouping)'''
