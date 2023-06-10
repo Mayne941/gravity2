@@ -144,7 +144,13 @@ class PPHMMDBConstruction:
         for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"]):
             for SeqID in SeqIDList:
                 '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
-                GenBankRecord = GenBankDict[SeqID]
+                try:
+                    GenBankRecord = GenBankDict[SeqID]
+                except KeyError as ex:
+                    raise SystemExit(f"{ex}\n"
+                                        f"Explanation: I couldn't extract a sequence ID from the input Genbank file.\n"
+                                        f"This usually happens when you've tried to re-run the experiment with an old .gb file.\n"
+                                        f"Try deleting your input .gb file ({self.GenomeSeqFile}), then starting again.")
                 GenBankID = GenBankRecord.name
                 GenBankFeatures = GenBankRecord.features
 
