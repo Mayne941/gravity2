@@ -21,35 +21,40 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
         PPHMMLocation_dCorMat = np.zeros((N_Viruses, N_Viruses))
 
     Comparison_i = 0
-    for i in range(N_Viruses):
-        for j in range(i, N_Viruses):
-            if "P" in SimilarityMeasurementScheme:
-                PPHMMSignature_i = PPHMMSignatureTable[i]
-                PPHMMSignature_j = PPHMMSignatureTable[j]
-                # May raise warnings when zero division is called - may be ignored.
-                PPHMMSignature_GJMat[i, j] = np.sum(np.minimum(
-                    PPHMMSignature_i, PPHMMSignature_j))/np.sum(np.maximum(PPHMMSignature_i, PPHMMSignature_j))
-                PPHMMSignature_GJMat[j, i] = PPHMMSignature_GJMat[i, j]
+    try:
+        for i in range(N_Viruses):
+            for j in range(i, N_Viruses):
+                if "P" in SimilarityMeasurementScheme:
+                    PPHMMSignature_i = PPHMMSignatureTable[i]
+                    PPHMMSignature_j = PPHMMSignatureTable[j]
+                    # May raise warnings when zero division is called - may be ignored.
+                    PPHMMSignature_GJMat[i, j] = np.sum(np.minimum(
+                        PPHMMSignature_i, PPHMMSignature_j))/np.sum(np.maximum(PPHMMSignature_i, PPHMMSignature_j))
+                    PPHMMSignature_GJMat[j, i] = PPHMMSignature_GJMat[i, j]
 
-            if "G" in SimilarityMeasurementScheme:
-                GOMSignature_i = GOMSignatureTable[i]
-                GOMSignature_j = GOMSignatureTable[j]
-                GOMSignature_GJMat[i, j] = np.sum(np.minimum(
-                    GOMSignature_i, GOMSignature_j))/np.sum(np.maximum(GOMSignature_i, GOMSignature_j))
-                GOMSignature_GJMat[j, i] = GOMSignature_GJMat[i, j]
+                if "G" in SimilarityMeasurementScheme:
+                    GOMSignature_i = GOMSignatureTable[i]
+                    GOMSignature_j = GOMSignatureTable[j]
+                    GOMSignature_GJMat[i, j] = np.sum(np.minimum(
+                        GOMSignature_i, GOMSignature_j))/np.sum(np.maximum(GOMSignature_i, GOMSignature_j))
+                    GOMSignature_GJMat[j, i] = GOMSignature_GJMat[i, j]
 
-            if "L" in SimilarityMeasurementScheme:
-                PPHMMLocation_i = PPHMMLocationTable[i]
-                PPHMMLocation_j = PPHMMLocationTable[j]
-                PresentPPHMM_IndexList = np.column_stack(
-                    (PPHMMLocation_i != 0, PPHMMLocation_j != 0)).any(axis=1)
-                PPHMMLocation_dCorMat[i, j] = dcor(PPHMMLocation_i[PresentPPHMM_IndexList].reshape(
-                    -1, 1), PPHMMLocation_j[PresentPPHMM_IndexList].reshape(-1, 1))
-                PPHMMLocation_dCorMat[j, i] = PPHMMLocation_dCorMat[i, j]
+                if "L" in SimilarityMeasurementScheme:
+                    PPHMMLocation_i = PPHMMLocationTable[i]
+                    PPHMMLocation_j = PPHMMLocationTable[j]
+                    PresentPPHMM_IndexList = np.column_stack(
+                        (PPHMMLocation_i != 0, PPHMMLocation_j != 0)).any(axis=1)
+                    PPHMMLocation_dCorMat[i, j] = dcor(PPHMMLocation_i[PresentPPHMM_IndexList].reshape(
+                        -1, 1), PPHMMLocation_j[PresentPPHMM_IndexList].reshape(-1, 1))
+                    PPHMMLocation_dCorMat[j, i] = PPHMMLocation_dCorMat[i, j]
 
-            Comparison_i += 1
-            progress_bar(
-                f"\033[K Compute pairwise similarity: [{'='*int(Comparison_i/N_Comparisons*20)}] {Comparison_i}/{N_Comparisons} comparisons \r")
+                Comparison_i += 1
+                progress_bar(
+                    f"\033[K Compute pairwise similarity: [{'='*int(Comparison_i/N_Comparisons*20)}] {Comparison_i}/{N_Comparisons} comparisons \r")
+    except ZeroDivisionError as ex:
+        raise SystemExit(f"{ex}\n"
+                         f"This usually means that there is no similarity between any of the sequences in your database, so we can't generate any stats or figures.\n"
+                         f"Check your input VMR: are there any entries, and do you expect them to be related? Check your input Genbank file: are there any sequences in it?")
     clean_stdout()
 
     if "P" in SimilarityMeasurementScheme:
