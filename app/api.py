@@ -69,10 +69,11 @@ async def end_to_end(payload: E2e_data, background_tasks: BackgroundTasks):
 
 def run_end_to_end(payload):
     payload_fp_pl1, payload_fp_pl2, payload_sp_pl1, payload_sp_pl2 = split_payloads_for_e2e(payload)
-    run_pipeline_i_full(payload_fp_pl1)
-    run_pipeline_ii_full(payload_fp_pl2)
-    run_pipeline_i_full(payload_sp_pl1)
-    run_pipeline_ii_full(payload_sp_pl2)
+    if not payload["SkipFirstPass"]:
+        run_pipeline_i_full(payload_fp_pl1)
+        run_pipeline_ii_full(payload_fp_pl2)
+    run_pipeline_i_full(payload_sp_pl1, refresh_genbank=True)
+    run_pipeline_ii_full(payload_sp_pl2, refresh_genbank=True)
 
 
 '''PL1 Entrypoints'''
@@ -85,9 +86,9 @@ async def pipeline_i_full(payload: Pipeline_i_data, background_tasks: Background
     return "Task fired successfully, running in background"
 
 
-def run_pipeline_i_full(payload):
+def run_pipeline_i_full(payload, refresh_genbank=False):
     pl = Pipeline_I(payload)
-    pl.read_genome_desc_table()
+    pl.read_genome_desc_table(refresh_genbank)
 
 
 @app.post("/pipeline_i_from_pphmmdb_construction/", tags=["Pipeline I"])
@@ -150,9 +151,9 @@ async def pipeline_ii_full(payload: Pipeline_ii_data, background_tasks: Backgrou
     return "Task fired successfully, running in background"
 
 
-def run_pipeline_ii_full(payload):
+def run_pipeline_ii_full(payload, refresh_genbank=False):
     pl = Pipeline_II(payload)
-    pl.read_genome_desc_table()
+    pl.read_genome_desc_table(refresh_genbank)
 
 
 @app.post("/pipeline_ii_from_pphmmdb_construction/", tags=["Pipeline II"])

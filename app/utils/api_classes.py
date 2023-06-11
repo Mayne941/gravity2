@@ -84,6 +84,8 @@ class CombineGenomeSegs(BaseModel):
 
 class E2e_data(BaseModel):
     '''PL1'''
+    SkipFirstPass: bool = Query(False,
+                                        description="Opt to skip first pass through both pipelines. N.b. first pass parameters still need to be filled in with valid entries.")
     GenomeDescTableFile_FirstPass: FilePath = Query('./data/latest_vmr_firstpass.csv',
                                           description="FIRST PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
     GenomeDescTableFile_SecondPass: FilePath = Query('./data/latest_vmr_secondpass.csv',

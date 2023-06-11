@@ -40,7 +40,7 @@ class Pipeline_I:
                 raise SystemExit("GRAViTy terminated.")
 
     @timing
-    def read_genome_desc_table(self):
+    def read_genome_desc_table(self, refresh_genbank):
         '''I: Fire Read Genom Desc Table'''
         [print(log_text) for log_text in self.logs[0]]
         rgdt = ReadGenomeDescTable(
@@ -51,6 +51,7 @@ class Pipeline_I:
             Database_Header=self.options['Database_Header'],
             TaxoGrouping_Header=self.options['TaxoGrouping_Header'],
             TaxoGroupingFile=self.options['TaxoGroupingFile'],
+            RefreshGenbank=refresh_genbank
         )
         rgdt.entrypoint()
         self.pphmmdb_construction()

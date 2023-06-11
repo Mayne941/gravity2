@@ -12,9 +12,8 @@ def DownloadGenBankFile(GenomeSeqFile, SeqIDLists, email):
         handle = Entrez.efetch(db="nucleotide", id=", ".join(
             [", ".join(x) for x in SeqIDLists]), rettype="gb", retmode="text")
     except Exception as e:
-        print(f"Failed to pull Genbank Data from NCBI Entrez with exception: {e}")
-        print(f"This is usually a temporary problem due to NCBI server down time, try again in a few minutes!")
-        raise SystemExit()
+        raise SystemExit(f"Failed to pull Genbank Data from NCBI Entrez with exception: {e}"
+                         f"This is usually a temporary problem due to NCBI server down time, try again in a few minutes!")
     with open(GenomeSeqFile, "w") as GenomeSeqFile_handle:
         GenomeSeqFile_handle.write(handle.read())
 

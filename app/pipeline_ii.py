@@ -37,7 +37,7 @@ class Pipeline_II:
                 raise SystemExit("GRAViTy terminated.")
 
     @timing
-    def read_genome_desc_table(self):
+    def read_genome_desc_table(self, resfresh_genbank):
         '''I: Fire Read Genom Desc Table'''
         [print(log_text) for log_text in self.logs[0]]
         rgdt = ReadGenomeDescTable(
@@ -46,6 +46,7 @@ class Pipeline_II:
             ShelveDir=self.options['ShelveDir_UcfVirus'],
             Database=self.options['Database'],
             Database_Header=self.options['Database_Header'],
+            RefreshGenbank=resfresh_genbank
         )
         rgdt.entrypoint()
         self.pphmmdb_construction()
