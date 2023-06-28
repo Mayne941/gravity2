@@ -11,7 +11,7 @@ import optparse
 import os
 import time
 import json
-
+import shutil
 
 class Pipeline_II:
     def __init__(self, payload):
@@ -24,6 +24,8 @@ class Pipeline_II:
             self.options, self.options["ShelveDir_UcfVirus"])
         self.actual_start = time.time()
         self.logs = self.log_gen.entrypoint()
+        shutil.copyfile(self.options['GenomeDescTableFile_UcfVirus'], f"{self.options['ShelveDir_UcfVirus']}/PL2_vmr.csv")
+
         with open(f"{self.options['ShelveDir_UcfVirus']}/run_parameters.json", "w") as f:
             f.write(json.dumps(payload))
         '''Catch bad database flags'''

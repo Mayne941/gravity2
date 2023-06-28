@@ -68,7 +68,7 @@ class ReadGenomeDescTable:
                 if not os.path.isfile(self.GenomeSeqFile) or self.refresh_genbank:
                     try:
                         '''Regular exp to extract accession numbers'''
-                        print(f"*** You DIDN'T specify an input Genbank file, OR we're doing an end-to-end test, so I'm going to try to extract sequence IDs from the VMR")
+                        # print(f"*** You DIDN'T specify an input Genbank file, OR we're doing an end-to-end test, so I'm going to try to extract sequence IDs from the VMR")
                         SeqIDList = re.findall(
                             r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", Line[SeqID_i])
                     except IndexError as ex:
@@ -80,7 +80,7 @@ class ReadGenomeDescTable:
                         )
                 else:
                     '''If we specify the genbank file, don't extract accession IDS and consequently download'''
-                    print(f"*** You DID specify an input Genbank file, so I'm NOT going to try to extract sequence IDs from the VMR")
+                    # print(f"*** You DID specify an input Genbank file, so I'm NOT going to try to extract sequence IDs from the VMR")
                     SeqIDList = []
 
                 if SeqIDList != [] or Line[SeqID_i] != "":
@@ -173,9 +173,7 @@ class ReadGenomeDescTable:
             self.VirusNameList)
 
         '''Ensure SeqIDLists will be a h list (i.e. not a v list)'''
-        self.SeqIDLists	.extend([[1], [1, 2]])
-        self.SeqIDLists = np.array(self.SeqIDLists)
-        self.SeqIDLists = self.SeqIDLists[:-2]
+        self.SeqIDLists = np.array(self.SeqIDLists, dtype="object")
 
         SeqIDFlatList = [
             SeqID for SeqIDList in self.SeqIDLists for SeqID in SeqIDList]

@@ -18,16 +18,20 @@ def fasta_to_genbank(payload):
         f"{payload['save_path']}/{payload['genbank_fname']}", "w")
     raw_seqs = SeqIO.parse(input_handle, "fasta")
     sequences = list(raw_seqs)
-    seq_names, seq_codes = [], []
+    seq_names, seq_codes, output_seqs = [], [], []
 
     for i in range(len(sequences)):
         sequences[i].annotations['molecule_type'] = 'DNA'
-        seq_codes.append(sequences[i].id)
-        seq_names.append(f"Query_{i+1}_{sequences[i].id}")
-        sequences[i].id = sequences[i].id
+        if not sequences[i].id in seq_codes:
+            output_seqs.append(sequences[i])
+            seq_codes.append(sequences[i].id)
+            seq_names.append(f"Query_{i+1}_{sequences[i].id}")
+            sequences[i].id = sequences[i].id
+        else:
+            print(f"WARNING: I detected an entry in your FASTA file that has a duplicate accession ID: {sequences[id].id}\n GRAViTy has only kept the first entry!")
 
     '''Write genbank'''
-    _ = SeqIO.write(sequences, output_handle, "genbank")
+    _ = SeqIO.write(output_seqs, output_handle, "genbank")
     output_handle.close()
     input_handle.close()
 

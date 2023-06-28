@@ -38,6 +38,7 @@ class Scraper:
         table_tags = soup.find("table", {"id": "edit-table"})
         url_rows = [re.search(r"<a\shref=.*\">", str(row))[0].replace('<a href=\"', '').replace(
             '">', '') for row in table_tags.findAll("tr") if re.search(r"<a\shref=.*</a>", str(row))]
+        #url_rows[1] = '/filebrowser/download/472' # Uncomment to grab a non-latest VMR
         latest_url = f"{self.url_stem}{url_rows[1]}"
         return pd.read_excel(latest_url)
 

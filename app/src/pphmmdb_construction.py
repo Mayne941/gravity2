@@ -285,15 +285,16 @@ class PPHMMDBConstruction:
                         Line = BLASTHit.split("\t")
                         qseqid = Line[0]
                         sseqid = Line[1]
-                        pident = float(Line[2])
-                        qcovs = float(Line[3])
-                        qlen = float(Line[4])
-                        slen = float(Line[5])
-                        evalue = float(Line[6])
+                        pident = float(Line[2]) # % identity
+                        qcovs = float(Line[3])  # query coverage
+                        qlen = float(Line[4])   # query length
+                        slen = float(Line[5])   # subject length
                         bitscore = float(Line[7][:-1])
                         [SeqID_I, SeqID_II] = sorted([qseqid, sseqid])
                         Pair = ", ".join([SeqID_I, SeqID_II])
+                        # RM < TODO TEST
                         if ((qseqid != sseqid) and (pident >= self.BLASTp_PercentageIden_Cutoff) and (qcovs >= self.BLASTp_QueryCoverage_Cutoff) and ((qcovs*qlen/slen) >= self.BLASTp_SubjectCoverage_Cutoff)):
+                            '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
                             if Pair in SeenPair:
                                 '''If the pair has already been seen...'''
                                 if bitscore > BitScoreMat[SeenPair[Pair]][2]:
@@ -319,7 +320,7 @@ class PPHMMDBConstruction:
                    )
 
     def mcl_clustering(self, ProtIDList, BLASTBitScoreFile, BLASTProtClusterFile):
-        '''7/10: Use Muscle to do clustering on BLASTp bit scores'''
+        '''7/10: Use Mcl to do clustering on BLASTp bit scores'''
         print("- Doing protein sequence clustering based on BLASTp bit scores, using the MCL algorithm")
         _ = subprocess.Popen(f"mcl {BLASTBitScoreFile} --abc -o {BLASTProtClusterFile} -I {self.ProtClustering_MCLInflation}",
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)

@@ -631,8 +631,19 @@ class VirusClassificationAndEvaluation:
         '''Draw Dendrogram'''
         ax_Dendrogram = fig.add_axes(
             [ax_Dendrogram_L, ax_Dendrogram_B, ax_Dendrogram_W, ax_Dendrogram_H], frame_on=False, facecolor="white")
-        Phylo		.draw(VirusDendrogram, label_func=lambda x: "",
-                     do_show=False,  axes=ax_Dendrogram)
+        try:
+            Phylo.draw(VirusDendrogram, label_func=lambda x: "",
+                    do_show=False,  axes=ax_Dendrogram)
+        except Exception as ex:
+            # breakpoint()
+            # from Bio.Phylo.Consensus import get_support
+            # trees = list(Phylo.parse(VirusDendrogramFile, "newick"))
+            # target_tree = trees[0]
+            # support_tree = get_support(target_tree, trees)
+            # Phylo.draw(support_tree, label_func=lambda x: "",
+            #         do_show=False,  axes=ax_Dendrogram)
+            raise SystemExit(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try disabling this feature and trying again.")
+
         VirusDendrogramDepth = max(
             [v for k, v in VirusDendrogram.depths().items()])
         ax_Dendrogram		.set_xlim(
