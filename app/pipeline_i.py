@@ -3,6 +3,7 @@ import optparse
 import os
 import time
 import json
+import shutil
 
 from app.src.read_genome_desc_table import ReadGenomeDescTable
 from app.src.pphmmdb_construction import PPHMMDBConstruction
@@ -28,6 +29,7 @@ class Pipeline_I:
         self.actual_start = time.time()
         with open(f"{self.options['ShelveDir']}/run_parameters.json", "w") as f:
             f.write(json.dumps(payload))
+        shutil.copyfile(self.options['GenomeDescTableFile'], f"{self.options['ShelveDir']}/PL1_vmr.csv")
 
         '''Catch bad database flags'''
         if (self.options['Database'] != None and self.options['Database_Header'] == None):

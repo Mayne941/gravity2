@@ -11,3 +11,4 @@ beautifulsoup4==4.11.1
 requests==2.31.0
 openpyxl==3.0.10
 scipy==1.9.1
+dendropy==4.6.1
