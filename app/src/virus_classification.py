@@ -559,7 +559,35 @@ class VirusClassificationAndEvaluation:
         MyPurples = LSC('MyPurples', PurpleColour_Dict, 1024)
 
         '''Plot configuration'''
-        Heatmap_width = float(12)
+        Outer_margin = 0.5
+        FontSize = 6
+        linewidth_major = 0.4
+        linewidth_minor = 0.2
+        dpi=600
+
+        if len(ClassLabelList_x) >= 200:
+            '''Reduce draw parameter size if large n'''
+            FontSize = FontSize/2
+            linewidth_major = linewidth_major/2
+            linewidth_minor = linewidth_minor/2
+            dpi=dpi*1.5
+            Heatmap_width = float(12)
+
+        elif len(ClassLabelList_x) >= 400:
+            FontSize = FontSize/4
+            linewidth_major = linewidth_major/4
+            linewidth_minor = linewidth_minor/4
+            dpi=dpi*3
+            Heatmap_width = float(12)
+
+        elif len(ClassLabelList_x) >= 600:
+            FontSize = 1
+            linewidth_major = linewidth_major/8
+            linewidth_minor = linewidth_minor/8
+            dpi=dpi*3
+            Heatmap_width = float(24)
+
+
         Heatmap_height = Heatmap_width
         TaxoLable_space = 1.00
 
@@ -576,25 +604,6 @@ class VirusClassificationAndEvaluation:
         ScaleBar_width = Dendrogram_width
         ScaleBar_height = CBar_height
         ScaleBarLable_space = CBarLable_space
-
-        Outer_margin = 0.5
-        FontSize = 6
-        linewidth_major = 0.4
-        linewidth_minor = 0.2
-        dpi=600
-
-        if len(ClassLabelList_x) >= 200:
-            '''Reduce draw parameter size if large n'''
-            FontSize = FontSize/2
-            linewidth_major = linewidth_major/2
-            linewidth_minor = linewidth_minor/2
-            dpi=dpi*1.5
-
-        elif len(ClassLabelList_x) >= 400:
-            FontSize = FontSize/4
-            linewidth_major = linewidth_major/4
-            linewidth_minor = linewidth_minor/4
-            dpi=dpi*3
 
         Fig_width = Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap + \
             Heatmap_width + TaxoLable_space + Outer_margin
@@ -626,7 +635,7 @@ class VirusClassificationAndEvaluation:
         ax_CBar_H = CBar_height/Fig_height
 
         '''Plot heat map'''
-        fig = plt.figure(figsize=(Fig_width, Fig_height), dpi=300)
+        fig = plt.figure(figsize=(Fig_width, Fig_height), dpi=dpi)
 
         '''Draw Dendrogram'''
         ax_Dendrogram = fig.add_axes(
@@ -635,14 +644,7 @@ class VirusClassificationAndEvaluation:
             Phylo.draw(VirusDendrogram, label_func=lambda x: "",
                     do_show=False,  axes=ax_Dendrogram)
         except Exception as ex:
-            # breakpoint()
-            # from Bio.Phylo.Consensus import get_support
-            # trees = list(Phylo.parse(VirusDendrogramFile, "newick"))
-            # target_tree = trees[0]
-            # support_tree = get_support(target_tree, trees)
-            # Phylo.draw(support_tree, label_func=lambda x: "",
-            #         do_show=False,  axes=ax_Dendrogram)
-            raise SystemExit(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try disabling this feature and trying again.")
+            raise SystemExit(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try swapping bootstrap method or disabling, then try again.")
 
         VirusDendrogramDepth = max(
             [v for k, v in VirusDendrogram.depths().items()])
@@ -801,7 +803,6 @@ class VirusClassificationAndEvaluation:
                 if RefVirusGroup not in FinalisedVirusGroupingIndexDict:
                     FinalisedVirusGroupingIndexDict[RefVirusGroup] = 1
 
-                #if FinalisedTaxoAssignment != "Unclassified": # # # # # # #
                 if "Unclassified" not in FinalisedTaxoAssignment:
                     FinalisedTaxoAssignmentList.append(
                         f"{FinalisedTaxoAssignment} ({RefVirusGroup})")
@@ -833,7 +834,6 @@ class VirusClassificationAndEvaluation:
                 FinalisedTaxoAssignment = self.final_results["TaxoAssignmentTable"][UcfVirus_i][MaxSimScore_i]
                 RefVirusGroup = self.ShelveDirs_RefVirus[MaxSimScore_i].split(
                     "/")[-1]
-                # if FinalisedTaxoAssignment != "Unclassified":
                 if "Unclassified" not in FinalisedTaxoAssignment:
                     FinalisedTaxoAssignmentList.append(
                         f"{FinalisedTaxoAssignment} ({RefVirusGroup})")
@@ -900,7 +900,6 @@ class VirusClassificationAndEvaluation:
                         self.MaxSimScoreDistTable[Bootstrap_i][UcfVirus_i])
                     FinalisedTaxoAssignment = self.TaxoAssignmentDistTable[
                         Bootstrap_i][UcfVirus_i][MaxSimScore_i]
-                    #if FinalisedTaxoAssignment != "Unclassified": # # # # # # #
                     if "Unclassified" not in FinalisedTaxoAssignment:
                         BootstrappedFinalisedTaxoAssignmentList.append(
                             f"{FinalisedTaxoAssignment} ({self.ShelveDirs_RefVirus[MaxSimScore_i].split('/')[-1]})")

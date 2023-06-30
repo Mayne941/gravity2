@@ -21,8 +21,10 @@ def fasta_to_genbank(payload):
     seq_names, seq_codes, output_seqs = [], [], []
 
     for i in range(len(sequences)):
+        '''Annotate each sequence and create VMR entries'''
         sequences[i].annotations['molecule_type'] = 'DNA'
         if not sequences[i].id in seq_codes:
+            '''Don't process duplicate Acc IDs - omit all but first'''
             output_seqs.append(sequences[i])
             seq_codes.append(sequences[i].id)
             seq_names.append(f"Query_{i+1}_{sequences[i].id}")

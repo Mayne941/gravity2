@@ -292,7 +292,6 @@ class PPHMMDBConstruction:
                         bitscore = float(Line[7][:-1])
                         [SeqID_I, SeqID_II] = sorted([qseqid, sseqid])
                         Pair = ", ".join([SeqID_I, SeqID_II])
-                        # RM < TODO TEST
                         if ((qseqid != sseqid) and (pident >= self.BLASTp_PercentageIden_Cutoff) and (qcovs >= self.BLASTp_QueryCoverage_Cutoff) and ((qcovs*qlen/slen) >= self.BLASTp_SubjectCoverage_Cutoff)):
                             '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
                             if Pair in SeenPair:
@@ -356,18 +355,22 @@ class PPHMMDBConstruction:
                         ":", "_").replace("; ", " ").replace(";", " ").replace(" (", "/").replace("(", "/").replace(")", ""))
 
                 '''Cluster file'''
-                UnAlnClusterFile = ClustersDir+"/Cluster_%s.fasta" % Cluster_i
-                with open(UnAlnClusterFile, "w") as UnAlnClusterTXT:
+                AlnClusterFile = f"{ClustersDir}/Cluster_{Cluster_i}.fasta"
+                with open(AlnClusterFile, "w") as UnAlnClusterTXT:
                     p = SeqIO.write(HitList, UnAlnClusterTXT, "fasta")
 
                 '''Align cluster using muscle'''
-                AlnClusterFile = ClustersDir+"/Cluster_%s.fasta" % Cluster_i
-                _ = subprocess.Popen(f"muscle -in {UnAlnClusterFile} -out {AlnClusterFile} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
+                _ = subprocess.Popen(f"muscle -in {AlnClusterFile} -out {AlnClusterFile} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
                                                         stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
-
                 err, out = _.communicate()
+
+                if "Segmentation fault" in str(out):
+                    _ = subprocess.Popen(f"muscle -in {AlnClusterFile} -out {AlnClusterFile} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost} -maxiters 2 -diags1 -sv",
+                                                        stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+                    err, out = _.communicate()
+
                 error_handler(
-                    out, err, f"Something is wrong with muscle (Cluster_{Cluster_i}):")
+                    out, err, f"ERROR: Something is wrong with muscle (Cluster_{Cluster_i}):")
 
                 '''Cluster annotations'''
                 Cluster_MetaDataDict[Cluster_i] = {"Cluster": Cluster,
@@ -814,7 +817,7 @@ class PPHMMDBConstruction:
         '''5/10: Make BLAST DB'''
         self.make_blastp_db(BLASTSubjectFile, ProtList)
 
-        '''6/10: Do BLASTp analysis, save output'''
+        # '''6/10: Do BLASTp analysis, save output'''
         self.blastp_analysis(ProtList, BLASTQueryFile,
                              BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile)
 
