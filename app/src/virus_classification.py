@@ -564,6 +564,7 @@ class VirusClassificationAndEvaluation:
         linewidth_major = 0.4
         linewidth_minor = 0.2
         dpi=600
+        Heatmap_width = float(12)
 
         if len(ClassLabelList_x) >= 200:
             '''Reduce draw parameter size if large n'''
@@ -571,14 +572,13 @@ class VirusClassificationAndEvaluation:
             linewidth_major = linewidth_major/2
             linewidth_minor = linewidth_minor/2
             dpi=dpi*1.5
-            Heatmap_width = float(12)
+
 
         elif len(ClassLabelList_x) >= 400:
             FontSize = FontSize/4
             linewidth_major = linewidth_major/4
             linewidth_minor = linewidth_minor/4
             dpi=dpi*3
-            Heatmap_width = float(12)
 
         elif len(ClassLabelList_x) >= 600:
             FontSize = 1
