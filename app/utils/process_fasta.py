@@ -13,9 +13,9 @@ def fasta_to_genbank(payload):
     '''Convert FASTA-style base sequences into genbank files, generate VMR-like object'''
     '''Parse input, prepare data structures'''
     input_handle = open(
-        f"{payload['save_path']}/{payload['fasta_fname']}", "r")
+        f"{payload['fasta_fname']}", "r")
     output_handle = open(
-        f"{payload['save_path']}/{payload['genbank_fname']}", "w")
+        f"{payload['genbank_fname']}", "w")
     raw_seqs = SeqIO.parse(input_handle, "fasta")
     sequences = list(raw_seqs)
     seq_names, seq_codes, output_seqs = [], [], []
@@ -43,15 +43,15 @@ def fasta_to_genbank(payload):
     df["Virus name(s)"] = seq_names
     df["Genetic code table"] = 1
 
-    df.to_csv(f"{payload['save_path']}/{payload['vmr_fname']}")
+    df.to_csv(f"{payload['vmr_fname']}")
 
     return f"Successfully converted {df.shape[0]} records"
 
 def combine_segments(payload):
     input_handle = open(
-        f"{payload['save_path']}/{payload['fasta_fname']}", "r")
+        f"{payload['fasta_fname']}", "r")
     output_handle = open(
-        f"{payload['save_path']}/{payload['genbank_fname']}", "w")
+        f"{payload['genbank_fname']}", "w")
     sequences = list(SeqIO.parse(input_handle, "fasta"))
     seq_names, seq_codes = [], []
 
@@ -86,8 +86,8 @@ def combine_segments(payload):
     df["Virus GENBANK accession"] = [", ".join(seq_codes).replace(",", ";")]
     df["Virus name(s)"] = f"Query_{payload['combined_seq_name']}"
     df["Genetic code table"] = 1
-    df.to_csv(f"{payload['save_path']}/{payload['vmr_fname']}")
+    df.to_csv(f"{payload['vmr_fname']}")
 
     output_handle.close()
     input_handle.close()
-    return "Successfully combined {} records".format(count)
+    return f"Successfully combined {count} records"
