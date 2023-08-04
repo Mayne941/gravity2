@@ -25,6 +25,18 @@ We assume for the purposes of this readme that the user will interact with GRAVi
 
 GRAViTy comprises two distinct pipelines. Pipeline 1 (PL1) is for analysing and creating "databases" of information pertaining to these analyses, on "reference" viruses, i.e. genomes for which we have previously generated taxonomic data. Pipeline 2 (PL2) is for identifying and classifying "unclassified" viruses, by doing comparisons with the genomes in databases generated during PL1. Both pipelines generate additional statistics and visualisations, such as heatmaps. Users will please refer to our documentation (./docs) and publications for further details.
 
+```mermaid
+flowchart TD
+   A[Read Reference Genomes]-->B[Construct PPHMMs]
+   B[Construct PPHMMs]-->C[Annotate Reference Viruses]
+   C[Annotate Reference Viruses]-->D[Generate Graphs]
+   D[Generate Graphs]-->E[Evaluate/MI Score]
+   F[Read Unclassified Genomes]-->G[Construct PPHMMs]
+   C[Annotate Reference Viruses]-.->G[Construct PPHMMs]
+   G[Construct PPHMMs]-->H[Annotate Unclassified Viruses]
+   H[Annotate Unclassified Viruses]-->I[Virus Classification]
+```
+
 ## Installation instructions:
 This guide is tested on Windows Subsystems Linux 20.04, Ubuntu 20.04 LTS and Ubuntu Server 20.04 LTS. We anticipate that variations in operating system and system architecture (in particular, servers) will necessitate amendments to the process outlined below, hence this guide is advisory only. Please see the Troubleshooting section for further details.
 

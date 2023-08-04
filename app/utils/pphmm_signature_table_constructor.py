@@ -82,9 +82,10 @@ def PPHMMSignatureTable_Constructor(
             ProtSeq6frames = ProtSeq1+ProtSeq2+ProtSeq3+ProtSeqC1+ProtSeqC2+ProtSeqC3
             ProtSeq6frames.id = GenBankID
 
-            # if len(ProtSeq6frames) > 100000:
-            #     '''If sequence too big, take off the largest chunk that can be processed'''
-            #     ProtSeq6frames = ProtSeq6frames[0:99999]
+            #############################################
+            if len(ProtSeq6frames) > 100000:
+                '''If sequence too big, take off the largest chunk that can be processed'''
+                ProtSeq6frames = ProtSeq6frames[0:99999]
 
             # RM < TODO TEST: DO RHS OF SEQUENCES MATCH BETTER?
             # midway = int(len(ProtSeq6frames) / 2)
@@ -99,7 +100,11 @@ def PPHMMSignatureTable_Constructor(
             out, err = p.communicate()
 
             if len(err) > 0:
-                print(f"HMMScan error (pphmm_signature_table_constructor): {err}")
+                print(f"Error running HMMScan: {err}")
+                p = subprocess.Popen(f"nhmmscan --cpu {HMMER_N_CPUs} --noali --nobias {PPHMMScanOutFile} {HMMER_PPHMMDB} {PPHMMQueryFile}",
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                out, err = p.communicate()
+            #############################################
 
             PPHMMIDList, PPHMMScoreList, FeatureFrameBestHitList, FeatureLocFromBestHitList, \
                 FeatureLocToBestHitList, FeatureDescList = [], [], [], [], [], []

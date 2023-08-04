@@ -155,7 +155,6 @@ class RefVirusAnnotator:
                 ProtSeq6frames = ProtSeq1+ProtSeq2+ProtSeq3+ProtSeqC1+ProtSeqC2+ProtSeqC3
                 ProtSeq6frames.id = GenBankID
 
-                # RM TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 if len(GenBankSeq) > 100000:
                     ProtSeq6frames = ProtSeq6frames[0:99999]
 
