@@ -118,7 +118,7 @@ class Data_common_pipeline_params(BaseModel):
                                         description="MUSCLE gap extension panelty for aligning protein sequences.")
     ProtClustering_MCLInflation: int = Field(2, gt=0,
                                              description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
-    N_AlignmentMerging: Literal[-1, 0] = Query(0,    # RM < TODO Cull? # RM < I didn't understand the requirement here - re visit/check implementation
+    N_AlignmentMerging: Literal[-1, 0] = Query(0,    # RM < TODO Cull?
                                                description="Number of rounds of alignment merging. ROUND == 0 means no merging. ROUND == -1 means merging until exhausted.")
     PPHMMClustering_MCLInflation_ForAlnMerging: int = Field(5, gt=0,
                                                             description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
@@ -191,24 +191,24 @@ class E2e_data(Data_pl2_unique_params, Data_common_pipeline_params, Data_pl1_uni
 class Pipeline_i_data(Data_pl1_unique_params, Data_common_pipeline_params):
     GenomeDescTableFile: FilePath = Query('./data/latest_vmr.csv',
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
-    ShelveDir: str = Query('./output/Analysis/Ref/VII',
+    ShelveDir: str = Query('./output/myexperiment_pipeline_1',
                            description="Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")
     TaxoGroupingFile: Union[FilePath, None] = Query("{null} or {path to taxo grouping file}",
                                                     description="It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
-    GenomeSeqFile: str = Query('./output/GenomeSeqs.VII.gb',
+    GenomeSeqFile: str = Query('./output/ref_sequences.gb',
                                description="Full path to the genome sequence GenBank file. If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column")
 
 
 class Pipeline_ii_data(Data_pl2_unique_params, Data_common_pipeline_params):
     GenomeDescTableFile: FilePath = Query('data/latest_vmr.csv',
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint")
-    ShelveDir_UcfVirus: str = Query('output/unclassified_folder',
+    ShelveDir_UcfVirus: str = Query('output/myexperiment_pipeline_2',
                                     description="Full path to the shelve directory of unclassified viruses, storing GRAViTy outputs.")
-    ShelveDirs_RefVirus: str = Query('output/reference_folder1, output/reference_folder2',
+    ShelveDirs_RefVirus: str = Query('output/myexperiment_pipeline_1',
                                      description="Full path(s) to the shelve director(y/ies) of reference virus(es). For example: 'path/to/shelve/ref1, path/to/shelve/ref2, ...'")
-    GenomeSeqFile_UcfVirus: str = Query('output/unclassified_seq.gb',
+    GenomeSeqFile_UcfVirus: str = Query('output/unclassified_seqs.gb',
                                         description="Full path to the genome sequence GenBank file of unclassified viruses.")
-    GenomeSeqFiles_RefVirus: str = Query('output/ref_seq1, output/ref_seq_2.gb',
+    GenomeSeqFiles_RefVirus: str = Query('output/ref_sequences.gb',
                                          description="Full path(s) to the genome sequence GenBank file(s) of reference viruses. For example: 'path/to/GenBank/ref1, path/to/GenBank/ref2, ...' This cannot be 'None' if UseUcfVirusPPHMMs = True. ")
 
 
