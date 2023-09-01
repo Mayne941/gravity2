@@ -98,7 +98,6 @@ class Pipeline_I:
         rva = RefVirusAnnotator(
             GenomeSeqFile=self.options['GenomeSeqFile'],
             ShelveDir=self.options['ShelveDir'],
-            SeqLength_Cutoff=0,
             IncludeIncompleteGenomes=str2bool(
                 self.options['AnnotateIncompleteGenomes']),
             HMMER_N_CPUs=self.options['N_CPUs'],

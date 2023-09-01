@@ -32,12 +32,14 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
                         PPHMMSignature_i, PPHMMSignature_j))/np.sum(np.maximum(PPHMMSignature_i, PPHMMSignature_j))
                     PPHMMSignature_GJMat[j, i] = PPHMMSignature_GJMat[i, j]
 
+
                 if "G" in SimilarityMeasurementScheme:
                     GOMSignature_i = GOMSignatureTable[i]
                     GOMSignature_j = GOMSignatureTable[j]
                     GOMSignature_GJMat[i, j] = np.sum(np.minimum(
                         GOMSignature_i, GOMSignature_j))/np.sum(np.maximum(GOMSignature_i, GOMSignature_j))
                     GOMSignature_GJMat[j, i] = GOMSignature_GJMat[i, j]
+
 
                 if "L" in SimilarityMeasurementScheme:
                     PPHMMLocation_i = PPHMMLocationTable[i]

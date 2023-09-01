@@ -42,7 +42,6 @@ class VirusClassificationAndEvaluation:
                  UseUcfVirusPPHMMs=True,
                  GenomeSeqFile_UcfVirus=None,
                  GenomeSeqFiles_RefVirus=None,
-                 SeqLength_Cutoff=0,
                  HMMER_N_CPUs=20,
                  HMMER_C_EValue_Cutoff=1E-3,
                  HMMER_HitScore_Cutoff=0,
@@ -70,7 +69,6 @@ class VirusClassificationAndEvaluation:
         self.UseUcfVirusPPHMMs = UseUcfVirusPPHMMs
         self.GenomeSeqFile_UcfVirus = GenomeSeqFile_UcfVirus
         self.GenomeSeqFiles_RefVirus = GenomeSeqFiles_RefVirus
-        self.SeqLength_Cutoff = SeqLength_Cutoff
         self.HMMER_N_CPUs = HMMER_N_CPUs
         self.HMMER_C_EValue_Cutoff = HMMER_C_EValue_Cutoff
         self.HMMER_HitScore_Cutoff = HMMER_HitScore_Cutoff
@@ -134,7 +132,6 @@ class VirusClassificationAndEvaluation:
                                                                                  GenBankFile=self.GenomeSeqFile_UcfVirus,
                                                                                  TranslTableList=self.ucf_genomes[
                                                                                      "TranslTableList"],
-                                                                                 SeqLength_Cutoff=self.SeqLength_Cutoff,
                                                                                  HMMER_PPHMMDB=self.HMMER_PPHMMDB_UcfVirus,
                                                                                  HMMER_hmmscanDir=HMMER_hmmscanDir_UcfVirus,
                                                                                  HMMER_N_CPUs=self.HMMER_N_CPUs,
@@ -206,7 +203,6 @@ class VirusClassificationAndEvaluation:
                                                                                          GenBankFile=GenomeSeqFile_RefVirus,
                                                                                          TranslTableList=Parameters[
                                                                                              "TranslTableList"],
-                                                                                         SeqLength_Cutoff=self.SeqLength_Cutoff,
                                                                                          HMMER_PPHMMDB=self.HMMER_PPHMMDB_UcfVirus,
                                                                                          HMMER_hmmscanDir=HMMER_hmmscanDir_UcfVirus,
                                                                                          HMMER_N_CPUs=self.HMMER_N_CPUs,

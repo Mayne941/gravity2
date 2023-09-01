@@ -101,7 +101,6 @@ class Pipeline_II:
                 self.options['AnnotateIncompleteGenomes_UcfVirus']),
             IncludeIncompleteGenomes_RefVirus=str2bool(
                 self.options['UsingDatabaseIncludingIncompleteRefViruses']),
-            SeqLength_Cutoff=0,
             HMMER_N_CPUs=self.options['N_CPUs'],
             HMMER_C_EValue_Cutoff=self.options['HMMER_C_EValue_Cutoff'],
             HMMER_HitScore_Cutoff=self.options['HMMER_HitScore_Cutoff'],
@@ -123,7 +122,6 @@ class Pipeline_II:
             UseUcfVirusPPHMMs=str2bool(self.options['UseUcfVirusPPHMMs']),
             GenomeSeqFile_UcfVirus=self.options['GenomeSeqFile_UcfVirus'],
             GenomeSeqFiles_RefVirus=self.options['GenomeSeqFiles_RefVirus'],
-            SeqLength_Cutoff=0,
             HMMER_N_CPUs=int(self.options['N_CPUs']),
             HMMER_C_EValue_Cutoff=float(self.options['HMMER_C_EValue_Cutoff']),
             HMMER_HitScore_Cutoff=float(self.options['HMMER_HitScore_Cutoff']),
