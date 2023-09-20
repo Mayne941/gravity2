@@ -21,7 +21,7 @@ class ReadGenomeDescTable:
                  RefreshGenbank=False
                  ) -> None:
         self.GenomeDescTableFile = GenomeDescTableFile
-        self.VariableShelveDir = ShelveDir + "/Shelves"
+        self.VariableShelveDir = ShelveDir + "/output"
         if not os.path.exists(self.VariableShelveDir):
             os.makedirs(self.VariableShelveDir)
         self.Database = Database

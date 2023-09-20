@@ -22,7 +22,8 @@ from app.utils.gom_signature_table_constructor import GOMSignatureTable_Construc
 from app.utils.console_messages import section_header
 from app.utils.stdout_utils import clean_stdout, error_handler, progress_bar
 from app.utils.retrieve_pickle import retrieve_genome_vars
-
+from app.utils.orf_identifier import find_orfs
+from app.utils.error_handlers import raise_gravity_error
 
 class RefVirusAnnotator:
     def __init__(self,
@@ -93,7 +94,7 @@ class RefVirusAnnotator:
             ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for _ in range(10))
         os.makedirs(HMMER_hmmscanDir)
-        self.VariableShelveDir = f"{self.ShelveDir}/Shelves"
+        self.VariableShelveDir = f"{self.ShelveDir}/output"
 
         return HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir
 
@@ -134,42 +135,22 @@ class RefVirusAnnotator:
             for seq in GenBankSeqList:
                 GenBankSeq = GenBankSeq+seq
 
+            '''Do 6 frame translation'''
             GenBankID = "/".join(GenBankIDList)
-            ProtSeq1 = SeqRecord(GenBankSeq[0:].translate(
-                table=TranslTable), id=GenBankID+'_+1')
-            ProtSeq2 = SeqRecord(GenBankSeq[1:].translate(
-                table=TranslTable), id=GenBankID+'_+2')
-            ProtSeq3 = SeqRecord(GenBankSeq[2:].translate(
-                table=TranslTable), id=GenBankID+'_+3')
-            ProtSeqC1 = SeqRecord(GenBankSeq.reverse_complement()[
-                                    0:].translate(table=TranslTable), id=GenBankID+'_-1')
-            ProtSeqC2 = SeqRecord(GenBankSeq.reverse_complement()[
-                                    1:].translate(table=TranslTable), id=GenBankID+'_-2')
-            ProtSeqC3 = SeqRecord(GenBankSeq.reverse_complement()[
-                                    2:].translate(table=TranslTable), id=GenBankID+'_-3')
+            #RM < TODO HARMONISE WITH PPHMMDB CONSTRUCTOR FN
+            ### ATTEMPT 2: FIND ORFS
+            ProtList, ProtIDList = find_orfs(GenBankID, GenBankSeq, TranslTable)
 
-            ProtSeq6frames = ProtSeq1+ProtSeq2+ProtSeq3+ProtSeqC1+ProtSeqC2+ProtSeqC3
-            ProtSeq6frames.id = GenBankID
-
-            if len(ProtSeq6frames) > 100000:
-                '''If seq is too long for HMMSCAN to handle, curtail it'''
-                len_seq, chunksize = len(ProtSeq6frames), 19999
-                ProtSeq6frames = ProtSeq6frames[0:chunksize] + ProtSeq6frames[int(len_seq*0.2):int(len_seq*0.2)+chunksize] + \
-                                ProtSeq6frames[int(len_seq*0.4):int(len_seq*0.4)+chunksize] +ProtSeq6frames[int(len_seq*0.6):int(len_seq*0.6)+chunksize] + \
-                                ProtSeq6frames[int(len_seq*0.8):int(len_seq*0.8)+chunksize] + ProtSeq6frames[-chunksize]
-
-            with open(PPHMMQueryFile, "w") as PPHMMQuery_txt:
-                SeqIO.write(ProtSeq6frames, PPHMMQuery_txt, "fasta")
+            with open(PPHMMQueryFile, "w") as f:
+                for i in range(len(ProtIDList)):
+                    f.write(f">{ProtIDList[i]}\n{str(ProtList[i].seq)}\n")
 
             p = subprocess.Popen(f"hmmscan --cpu {self.HMMER_N_CPUs} --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDb} {PPHMMQueryFile}",
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             out, err = p.communicate()
+
             if len(err) > 0:
                 raise ValueError(f"Error running HMMScan: {err}. Please remedy fault before re-running.")
-                # p = subprocess.Popen(f"nhmmscan --cpu {self.HMMER_N_CPUs} --noali --nobias {PPHMMScanOutFile} {HMMER_PPHMMDb} {PPHMMQueryFile}",
-                #                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                # out, err = p.communicate()
-
 
             PPHMMIDList, PPHMMScoreList, FeatureFrameBestHitList, FeatureLocFromBestHitList, \
                 FeatureLocToBestHitList, FeatureDescList = [], [], [], [], [], []
@@ -446,7 +427,7 @@ class RefVirusAnnotator:
                 f"ffindex_build -s ../../HHsuite/HHsuite_PPHMMDB/HHsuite_PPHMMDB_msa.ffdata ../../HHsuite/HHsuite_PPHMMDB/HHsuite_PPHMMDB_msa.ffindex .", shell=True)
         except Exception as ex:
             error_handler("No stdout", ex, "Build of MSA DB.")
-        os.chdir(f"../../../../../../")
+        os.chdir(f"../../../../")
 
         '''Build a3m DB (scalable annotated alignment)'''
         try:
@@ -493,12 +474,15 @@ class RefVirusAnnotator:
                         '''Filter variable length Hit name'''
                         Line = re.sub(hit_match, "", Line)
                         Line = Line.replace("(", " ").replace(")", " ").split()
-                        PPHMM_j = int(Line[0])
-                        evalue = float(Line[2])
-                        pvalue = float(Line[3])
-                        PPHMMSimScore = float(Line[4])
-                        Col = float(Line[6])
-                        SubjectLength = int(Line[-1])
+                        try:
+                            PPHMM_j = int(Line[0])
+                            evalue = float(Line[2])
+                            pvalue = float(Line[3])
+                            PPHMMSimScore = float(Line[4])
+                            Col = float(Line[6])
+                            SubjectLength = int(Line[-1])
+                        except ValueError as ex:
+                            raise_gravity_error(f"Failed to extract PPHMM data from HHsearch output (ref virus annotator, sort PPHMMs function). This happens when HHsearch outputs malformed text files, check the output for the entry listed in this exception: {ex}")
                         qcovs = Col/QueryLength*100
                         scovs = Col/SubjectLength*100
                         if (evalue <= self.HHsuite_evalue_Cutoff and pvalue <= self.HHsuite_pvalue_Cutoff and qcovs >= self.HHsuite_QueryCoverage_Cutoff and scovs >= self.HHsuite_SubjectCoverage_Cutoff):

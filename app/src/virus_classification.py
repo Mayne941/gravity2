@@ -61,7 +61,7 @@ class VirusClassificationAndEvaluation:
         '''Fpaths'''
         self.ShelveDir_UcfVirus = ShelveDir_UcfVirus
         self.ShelveDirs_RefVirus = ShelveDirs_RefVirus.split(", ")
-        self.VariableShelveDir_UcfVirus = f"{ShelveDir_UcfVirus}/Shelves"
+        self.VariableShelveDir_UcfVirus = f"{ShelveDir_UcfVirus}/output"
         self.HMMERDir_UcfVirus = self.HMMER_PPHMMDB_UcfVirus = "placeholder"
         '''Parameters'''
         self.IncludeIncompleteGenomes_UcfVirus = IncludeIncompleteGenomes_UcfVirus

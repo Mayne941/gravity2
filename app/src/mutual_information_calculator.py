@@ -19,7 +19,7 @@ class MutualInformationCalculator:
                  SampleSizePerGroup=10,
                  ):
         self.ShelveDir = ShelveDir
-        self.VariableShelveDir = ShelveDir+"/Shelves"
+        self.VariableShelveDir = ShelveDir+"/output"
         self.IncludeIncompleteGenomes = IncludeIncompleteGenomes
         self.VirusGroupingFile = VirusGroupingFile
         self.N_Sampling = N_Sampling

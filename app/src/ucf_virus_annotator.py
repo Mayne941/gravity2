@@ -86,7 +86,6 @@ class UcfVirusAnnotator:
                 SeqIDLists=self.VariableShelveFile_UcfVirus["SeqIDLists"],
                 GenBankFile=self.GenomeSeqFile_UcfVirus,
                 TranslTableList=self.VariableShelveFile_UcfVirus["TranslTableList"],
-                SeqLength_Cutoff=self.SeqLength_Cutoff,
                 HMMER_PPHMMDB=HMMER_PPHMMDB_RefVirus,
                 HMMER_hmmscanDir=HMMER_hmmscanDir_RefVirus,
                 HMMER_N_CPUs=self.HMMER_N_CPUs,

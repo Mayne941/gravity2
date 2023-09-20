@@ -3,7 +3,9 @@ from Bio import SeqIO, AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import Counter
+from alive_progress import alive_it
 import numpy as np
+import time
 import subprocess
 import os
 import operator
@@ -11,15 +13,19 @@ import random
 import string
 import re
 import pickle
+import pandas as pd
 
 from app.utils.line_count import LineCount
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.download_genbank_file import DownloadGenBankFile
 from app.utils.console_messages import section_header
 from app.utils.orf_identifier import get_orf_trasl_table, no_orf_match
-from app.utils.stdout_utils import clean_stdout, progress_bar, error_handler
+from app.utils.stdout_utils import clean_stdout, progress_bar, error_handler, progress_msg
 from app.utils.retrieve_pickle import retrieve_genome_vars
-
+from app.utils.shell_cmds import shell
+from app.utils.mkdirs import mkdir_pphmmdbc
+from app.utils.hhr_parse import hhparse
+from app.utils.error_handlers import raise_gravity_error
 
 class PPHMMDBConstruction:
     def __init__(self,
@@ -70,85 +76,34 @@ class PPHMMDBConstruction:
         self.genbank_email = genbank_email
         self.orf_tranl_table = get_orf_trasl_table()
         self.orf_no_match = no_orf_match()
-
-    def mkdirs(self):
-        '''1/10: Return all directories for db storage'''
-        print("Generating directories")
-
-        '''Blast dirs'''
-        BLASTMainDir = self.ShelveDir+"/BLAST"
-        if os.path.exists(BLASTMainDir):
-            '''Clear previous results'''
-            _ = subprocess.call("rm -rf %s" % BLASTMainDir, shell=True)
-        os.makedirs(BLASTMainDir)
-
-        BLASTQueryFile = f"{BLASTMainDir}/Query.fasta"
-        BLASTSubjectFile = f"{BLASTMainDir}/Subjects.fasta"
-        BLASTOutputFile = f"{BLASTMainDir}/BLASTOutput.txt"
-        BLASTBitScoreFile = f"{BLASTMainDir}/BitScoreMat.txt"
-        BLASTProtClusterFile = f"{BLASTMainDir}/ProtClusters.txt"
-        ClustersDir = f"{BLASTMainDir}/Clusters"
-        os.makedirs(ClustersDir)
-
-        '''HMMER dirs'''
-        HMMERDir = f"{self.ShelveDir}/HMMER"
-
-        '''Delete existing HMMER libraries'''
-        if os.path.exists(HMMERDir):
-            '''Clear previous results'''
-            _ = subprocess.call("rm -rf %s" % HMMERDir, shell=True)
-        os.makedirs(HMMERDir)
-        HMMER_PPHMMDir = f"{HMMERDir}/HMMER_PPHMMs"
-        os.makedirs(HMMER_PPHMMDir)
-        HMMER_PPHMMDbDir = f"{HMMERDir}/HMMER_PPHMMDb"
-        os.makedirs(HMMER_PPHMMDbDir)
-        HMMER_PPHMMDb = f"{HMMER_PPHMMDbDir}/HMMER_PPHMMDb"
-
-        VariableShelveDir = f"{self.ShelveDir}/Shelves"
-
-        '''HHsuite dirs, regardless of if it's enabled'''
-        HHsuiteDir = f"{self.ShelveDir}/HHsuite"
-        if os.path.exists(HHsuiteDir):
-            '''Clear previous results'''
-            _ = subprocess.call(f"rm -rf {HHsuiteDir}", shell=True)
-        os.makedirs(HHsuiteDir)
-
-        HHsuite_PPHMMDir = f"{HHsuiteDir}/HHsuite_PPHMMs"
-        os.makedirs(HHsuite_PPHMMDir)
-        HHsuite_PPHMMDBDir = f"{HHsuiteDir}/HHsuite_PPHMMDB"
-        os.makedirs(HHsuite_PPHMMDBDir)
-        HHsuite_PPHMMDB = f"{HHsuite_PPHMMDBDir}/HHsuite_PPHMMDB"
-
-        return BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile, \
-            BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDbDir, \
-            HMMER_PPHMMDb, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB
+        self.BLASTp_outfmt = '"6 qseqid sseqid pident qcovs qlen slen evalue bitscore"'
 
     def get_genbank(self, genomes):
         '''3/10: Check if GenBank files exist; dl if needed. Index & transform.'''
         if not os.path.isfile(self.GenomeSeqFile):
-            print("- Download GenBank file\n GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s).")
+            progress_msg("Download GenBank file\n GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s).")
             DownloadGenBankFile(self.GenomeSeqFile,
                                 genomes["SeqIDLists"], self.genbank_email)
 
-        print("- Reading GenBank file")
+        progress_msg("Reading GenBank file")
         GenBankDict = SeqIO.index(self.GenomeSeqFile, "genbank")
         return {k.split(".")[0]: v for k, v in GenBankDict.items()}
 
     def sequence_extraction(self, genomes, GenBankDict):
         '''4/10: Extract protein sequences from VMR using GenBank data; manually annotate ORFs if needed'''
-        print(
+        progress_msg(
             f"- Extract/predict protein sequences from virus genomes, excluding proteins with lengthes <{self.ProteinLength_Cutoff} aa")
-        ProtList, ProtIDList, N_Viruses, Virus_i = [
-        ], [], len(genomes["SeqIDLists"]), 1
+        ProtList, ProtIDList, Virus_i = [
+        ], [], 1
 
-        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"]):
+        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"])):
             for SeqID in SeqIDList:
                 '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
                 try:
                     GenBankRecord = GenBankDict[SeqID]
                 except KeyError as ex:
                     raise SystemExit(f"{ex}\n"
-                                        f"Explanation: I couldn't extract a sequence ID from the input Genbank file.\n"
+                                        f"ERROR: I couldn't extract a sequence ID from the input Genbank file.\n"
                                         f"This usually happens when you've tried to re-run the experiment with an old .gb file.\n"
                                         f"Try deleting your input .gb file ({self.GenomeSeqFile}), then starting again.")
                 GenBankID = GenBankRecord.name
@@ -181,6 +136,7 @@ class PPHMMDBConstruction:
                             ProtIDList.append(GenBankID+"|"+ProtID)
 
                 '''If the genome isn't annotated with any ORFs'''
+                # RM < TODO break out into separate script in utils
                 if ContainProtAnnotation == 0:
                     '''Identifying ORFs'''
                     try:
@@ -237,9 +193,6 @@ class PPHMMDBConstruction:
                                     ProtIDList.append(
                                         f"{GenBankID}|ORF{ORF_i}")
                                     ORF_i += 1
-
-            progress_bar(
-                f"\033[K Extract protein sequences: [{'='*int(Virus_i/N_Viruses*20)}] {Virus_i}/{N_Viruses} viruses \r")
             Virus_i += 1
         clean_stdout()
 
@@ -247,66 +200,52 @@ class PPHMMDBConstruction:
 
     def make_blastp_db(self, BLASTSubjectFile, ProtList):
         '''5/10: Make BLAST DB'''
+        progress_msg("Building BLASTp DB")
         with open(BLASTSubjectFile, "w") as BLASTSubject_txt:
             SeqIO.write(ProtList, BLASTSubject_txt, "fasta")
-
-        _ = subprocess.Popen(f"makeblastdb -in {BLASTSubjectFile} -dbtype prot",
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        out, err = _.communicate()
-        error_handler(out, err, "makeblastdb")
+        shell(f"makeblastdb -in {BLASTSubjectFile} -dbtype prot", "PPHMMDB Construction: make BLASTp db")
 
     def blastp_analysis(self, ProtList, BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile):
         '''6/10: Perform ALL-VERSUS-ALL BLASTp analysis'''
-        print("Perform ALL-VERSUS-ALL BLASTp analysis")
+        progress_msg("Performing ALL-VERSUS-ALL BLASTp analysis")
         BitScoreMat, SeenPair, SeenPair_i, N_ProtSeqs = [
-        ], {}, 0, len(ProtList)
-        BLASTp_outfmt = '"6 qseqid sseqid pident qcovs qlen slen evalue bitscore"'
-        for ProtSeq_i in range(N_ProtSeqs):
+            ], {}, 0, len(ProtList)
+        for ProtSeq_i in alive_it(range(N_ProtSeqs)):
             '''BLAST query fasta file'''
             BLASTQuery = ProtList[ProtSeq_i]
-            with open(BLASTQueryFile, "w") as BLASTQuery_txt:
-                p = SeqIO.write(BLASTQuery, BLASTQuery_txt, "fasta")
+            with open(BLASTQueryFile, "w") as BLASTQuery_txt: _ = SeqIO.write(BLASTQuery, BLASTQuery_txt, "fasta")
 
-            '''Perform BLASTp'''
-            _ = subprocess.Popen(f'blastp -query {BLASTQueryFile} -db {BLASTSubjectFile} -out {BLASTOutputFile} -evalue {self.BLASTp_evalue_Cutoff} -outfmt {BLASTp_outfmt} -num_alignments {self.BLASTp_num_alignments} -num_threads {self.BLASTp_N_CPUs}',
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                 shell=True)
-            out, err = _.communicate()
-            error_handler(
-                out, err, f"blastp (protein ID = {ProtList[ProtSeq_i].id})")
+            '''Perform BLASTp, load output to dataframe'''
+            shell(f'blastp -query {BLASTQueryFile} -db {BLASTSubjectFile} -out {BLASTOutputFile} -evalue {self.BLASTp_evalue_Cutoff} -outfmt {self.BLASTp_outfmt} -num_alignments {self.BLASTp_num_alignments} -num_threads {self.BLASTp_N_CPUs}',
+                  f"PPHMMDB Construction: BLASTp (protein ID = {ProtList[ProtSeq_i].id})")
 
-            '''BitScoreMat conditioned on PIden, QCovs, and SCovs'''
-            if os.stat(BLASTOutputFile).st_size != 0:
-                '''if BLAST returns something...'''
-                with open(BLASTOutputFile, "r") as BLASTOutput_txt:
-                    for BLASTHit in BLASTOutput_txt.readlines():
-                        if BLASTHit == "\n":
-                            break
-                        Line = BLASTHit.split("\t")
-                        qseqid = Line[0]
-                        sseqid = Line[1]
-                        pident = float(Line[2]) # % identity
-                        qcovs = float(Line[3])  # query coverage
-                        qlen = float(Line[4])   # query length
-                        slen = float(Line[5])   # subject length
-                        bitscore = float(Line[7][:-1])
-                        [SeqID_I, SeqID_II] = sorted([qseqid, sseqid])
-                        Pair = ", ".join([SeqID_I, SeqID_II])
-                        if ((qseqid != sseqid) and (pident >= self.BLASTp_PercentageIden_Cutoff) and (qcovs >= self.BLASTp_QueryCoverage_Cutoff) and ((qcovs*qlen/slen) >= self.BLASTp_SubjectCoverage_Cutoff)):
-                            '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
-                            if Pair in SeenPair:
-                                '''If the pair has already been seen...'''
-                                if bitscore > BitScoreMat[SeenPair[Pair]][2]:
-                                    '''...and if the new bitscore is higher'''
-                                    BitScoreMat[SeenPair[Pair]][2] = bitscore
-                            else:
-                                SeenPair[Pair] = SeenPair_i
-                                BitScoreMat.append(
-                                    [SeqID_I, SeqID_II, bitscore])
-                                SeenPair_i = SeenPair_i+1
+            try:
+                blast_df = pd.read_csv(BLASTOutputFile, sep="\t", names=["qseqid", "sseqid", "pident", "qcovs", "qlen", "slen", "evalue", "bitscore"])
+            except Exception as e:
+                raise FileNotFoundError(f"Could not open BLASTp output with exception: {e}")
 
-            progress_bar(
-                f"\033[K BLASTp: [{'='*int(float(ProtSeq_i+1)/N_ProtSeqs*20)}] {ProtSeq_i+1}/{N_ProtSeqs} proteins \r")
+            if blast_df.empty:
+                '''If no hits in sequence, continue'''
+                continue
+
+            '''Load BLASTp results, collate bit scores for matches'''
+            blast_iter = blast_df.to_dict(orient="records")
+            for i in blast_iter:
+                pair = ", ".join(sorted([i["qseqid"], i["sseqid"]]))
+                if ((i["qseqid"] != i["sseqid"]) and (i["pident"] >= self.BLASTp_PercentageIden_Cutoff)
+                    and (i["qcovs"] >= self.BLASTp_QueryCoverage_Cutoff)
+                    and ((i["qcovs"]*i["qlen"]/i["slen"]) >= self.BLASTp_SubjectCoverage_Cutoff)):
+                    '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
+                    if pair in SeenPair:
+                        '''If the pair has already been seen...'''
+                        if i["bitscore"] > BitScoreMat[SeenPair[pair]][2]:
+                            '''...and if the new bitscore is higher'''
+                            BitScoreMat[SeenPair[pair]][2] = i["bitscore"]
+                    else:
+                        SeenPair[pair] = SeenPair_i
+                        BitScoreMat.append(
+                            [pair.split(", ")[0], pair.split(", ")[1], i["bitscore"]])
+                        SeenPair_i += 1
         clean_stdout()
 
         BitScoreMat = np.array(BitScoreMat)
@@ -320,11 +259,9 @@ class PPHMMDBConstruction:
 
     def mcl_clustering(self, ProtIDList, BLASTBitScoreFile, BLASTProtClusterFile):
         '''7/10: Use Mcl to do clustering on BLASTp bit scores'''
-        print("- Doing protein sequence clustering based on BLASTp bit scores, using the MCL algorithm")
-        _ = subprocess.Popen(f"mcl {BLASTBitScoreFile} --abc -o {BLASTProtClusterFile} -I {self.ProtClustering_MCLInflation}",
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        err, out = _.communicate()
-        error_handler(out, err, f"Something is wrong with mcl")
+        progress_msg("- Doing protein sequence clustering based on BLASTp bit scores, using the MCL algorithm")
+        shell(f"mcl {BLASTBitScoreFile} --abc -o {BLASTProtClusterFile} -I {self.ProtClustering_MCLInflation}",
+                    "PPHMMDB Contruction: mcl clustering, call mcl")
 
         '''For each cluster found, pull out seen proteins by ID'''
         SeenProtIDList = []
@@ -340,11 +277,11 @@ class PPHMMDBConstruction:
 
     def make_alignments(self, ProtList, ProtIDList, BLASTProtClusterFile, ClustersDir):
         '''8/10: Do protein alignments with muscle align, make cluster alignment annotations'''
-        print("- Make protein alignments")
-        N_Clusters, Cluster_i, Cluster_MetaDataDict = LineCount(
+        progress_msg("- Make protein alignments")
+        _, Cluster_i, Cluster_MetaDataDict = LineCount(
             BLASTProtClusterFile)+1, 0, {}
         with open(BLASTProtClusterFile, 'r') as BLASTProtCluster_txt:
-            for Cluster in BLASTProtCluster_txt.readlines():
+            for Cluster in alive_it(BLASTProtCluster_txt.readlines()):
                 HitList, TaxoLists, DescList, Cluster = [], [], [], Cluster.split("\n")[
                     0].split("\t")
                 for ProtID in Cluster:
@@ -359,18 +296,13 @@ class PPHMMDBConstruction:
                 with open(AlnClusterFile, "w") as UnAlnClusterTXT:
                     p = SeqIO.write(HitList, UnAlnClusterTXT, "fasta")
 
+                temp_aln_fname = f"{ClustersDir}/temp.fasta"
                 '''Align cluster using muscle'''
-                _ = subprocess.Popen(f"muscle -in {AlnClusterFile} -out {AlnClusterFile} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
-                                                        stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
-                err, out = _.communicate()
+                shell(f"mafft --thread {self.HHsuite_N_CPUs} --auto {AlnClusterFile} > {temp_aln_fname}",
+                        "PPHMMDB Construction: make alignments, main muscle call")
 
-                if "Segmentation fault" in str(out):
-                    _ = subprocess.Popen(f"muscle -in {AlnClusterFile} -out {AlnClusterFile} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost} -maxiters 2 -diags1 -sv",
-                                                        stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
-                    err, out = _.communicate()
-
-                error_handler(
-                    out, err, f"ERROR: Something is wrong with muscle (Cluster_{Cluster_i}):")
+                shell(f"rm {AlnClusterFile} && mv {temp_aln_fname} {AlnClusterFile}",
+                      "PPHMMDB COnstruction: move temp mafft file")
 
                 '''Cluster annotations'''
                 Cluster_MetaDataDict[Cluster_i] = {"Cluster": Cluster,
@@ -379,105 +311,123 @@ class PPHMMDBConstruction:
                                                 "AlignmentLength": AlignIO.read(AlnClusterFile, "fasta").get_alignment_length()
                                                 }
                 Cluster_i += 1
-                progress_bar(
-                    f"\033[K Make protein alignments: [{'='*int(float(Cluster_i)/N_Clusters*20)}] {Cluster_i}/{N_Clusters} alignments \r")
         clean_stdout()
-
         return Cluster_MetaDataDict
 
     def rebuild_hhsuite_db(self, HHsuite_PPHMMDB, HHsuite_PPHMMDir, hhsearchDir, AlignmentMerging_i_round):
         '''Rebuild the HHsuite PPHMM database'''
-        _ = subprocess.Popen(f"rm {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex",
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        out, err = _.communicate()
+        shell(f"rm {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex",
+                    "PPHMMDB Contruction: rebuild hhsite db, remove existing db")
 
         if list(set([f.split(".")[-1] for f in os.listdir(HHsuite_PPHMMDir)])) != ["hhm"]:
-            print(
+            progress_msg(
                 f"There are some other files/folders other than HHsuite PPHMMs in the folder {HHsuite_PPHMMDir}. Remove them first.")
 
-        _ = subprocess.Popen(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}",
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        out, err = _.communicate()
+        shell(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}",
+                    "PPHMMDB Contruction: rebuild hhsite db, rebuild ffindex")
 
-        _ = subprocess.Popen(
-            f"rm -rf {hhsearchDir}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        out, err = _.communicate()
+        shell(f"rm -rf {hhsearchDir}",
+                    "PPHMMDB Contruction: rebuild hhsite db, remove hhsuite intermediates")
         AlignmentMerging_i_round += 1
 
         return AlignmentMerging_i_round
 
-    def pphmm_and_merge_alignments(self,
-                                   Cluster_MetaDataDict,
-                                   ClustersDir,
-                                   HHsuite_PPHMMDir,
-                                   HMMER_PPHMMDir,
-                                   HMMER_PPHMMDbDir,
-                                   HHsuite_PPHMMDB,
-                                   HHsuiteDir,
-                                   ):
-        '''9/10: Make HHSuite PPHMMs and DB, merge & make protein alignmens'''
+    def pphmm_and_merge_alignments(self, Cluster_MetaDataDict, ClustersDir, HHsuite_PPHMMDir,
+                                   HMMER_PPHMMDir, HMMER_PPHMMDbDir, HHsuite_PPHMMDB, HHsuiteDir,
+                                   VariableShelveDir):
+        '''9/10 (OPTIONAL): Make HHSuite PPHMMs and DB, merge & make protein alignmens'''
         if self.N_AlignmentMerging > 0:
-            print(
+            progress_msg(
                 f"- Merge protein alignments, {self.N_AlignmentMerging} rounds of merging")
         elif self.N_AlignmentMerging < 0:
-            print("- Merge protein alignments until exhausted")
+            progress_msg("- Merge protein alignments until exhausted")
 
         '''Make HHsuite PPHMMs from protein alignments'''
-        for Cluster_i in range(len(Cluster_MetaDataDict)):
+        for Cluster_i in alive_it(range(len(Cluster_MetaDataDict))):
             AlnClusterFile = f"{ClustersDir}/Cluster_{Cluster_i}.fasta"
             HHsuite_PPHMMFile = f"{HHsuite_PPHMMDir}/PPHMM_{Cluster_i}.hhm"
-            _ = subprocess.Popen(f"hhmake -i {AlnClusterFile} -o {HHsuite_PPHMMFile} -seq {len(Cluster_MetaDataDict[Cluster_i]['Cluster'])+1} -name Cluster_{Cluster_i} -id 100 -M 50 -v 0",
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            out, err = _.communicate()
-            error_handler(
-                out, err, f"Something is wrong with turning Cluster_{Cluster_i} into a PPHMM by hhmake.")
-            progress_bar(
-                f"\033[K Make HHsuite PPHMMs: [{'='*int(float(Cluster_i+1)/len(Cluster_MetaDataDict)*20)}] {Cluster_i+1}/{len(Cluster_MetaDataDict)} PPHMMs \r")
+            shell(f"hhmake -i {AlnClusterFile} -o {HHsuite_PPHMMFile} -seq {len(Cluster_MetaDataDict[Cluster_i]['Cluster'])+1} -name Cluster_{Cluster_i} -id 100 -M 50 -v 0",
+                                 "PPHMMDB Construction: merge alignments, hhmake")
         clean_stdout()
 
         '''Make PPHMM DB'''
-        _ = subprocess.Popen(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}",
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        out, err = _.communicate()
+        shell(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}",
+                             "PPHMMDB Construction: merge alignments, ffindex build")
 
         '''Merge protein alignments'''
         AlignmentMerging_i_round = 0
         while True:
-            if AlignmentMerging_i_round >= self.N_AlignmentMerging and self.N_AlignmentMerging >= 0:
-                print("Alignment merging complete")
+            # if AlignmentMerging_i_round >= self.N_AlignmentMerging and self.N_AlignmentMerging >= 0: # RM < TODO
+            if AlignmentMerging_i_round >= 3:
+                progress_msg("Alignment merging complete")
                 break
 
             if self.HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging == True:
-                print(
-                    f"HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging == True. Make a HMMER PPHMM DB. (Round {AlignmentMerging_i_round})")
+                progress_msg(
+                    f"\t\t - Building HMMER PPHMM DB...")
                 _ = self.Make_HMMER_PPHMM_DB(HMMER_PPHMMDir=HMMER_PPHMMDir,
                                              HMMER_PPHMMDb=f"{HMMER_PPHMMDbDir}/HMMER_PPHMMDb_{AlignmentMerging_i_round}",
                                              ClustersDir=ClustersDir,
-                                             Cluster_MetaDataDict=Cluster_MetaDataDict)
+                                             Cluster_MetaDataDict=Cluster_MetaDataDict,
+                                             VariableShelveFile=f"{VariableShelveDir}/PPHMMDBConstruction.p")
 
-                _ = subprocess.Popen(f"find {HMMER_PPHMMDir} -type f -name '*.hmm' -delete",
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                out, err = _.communicate()
+                shell(f"find {HMMER_PPHMMDir} -type f -name '*.hmm' -delete",
+                        "PPHMMDB Construction: merge alignments, hhsearch")
 
             '''Inter-PPHMM similarity scoring'''
-            print(
-                f"\t\tRound {AlignmentMerging_i_round + 1}\n\t\t\tDetermine PPHMM-PPHMM similarity scores (ALL-VERSUS-ALL hhsearch)")
-            hhsearchDir = HHsuiteDir+"/hhsearch_" + \
-                "".join(random.choice(string.ascii_uppercase + string.digits)
-                        for _ in range(10))
+            progress_msg(f"\t - Round {AlignmentMerging_i_round + 1} - Determine PPHMM-PPHMM similarity scores (ALL-VERSUS-ALL hhsearch)")
+            hhsearchDir = f"{HHsuiteDir}/hhsearch_{''.join(random.choice(string.ascii_uppercase + string.digits)for _ in range(10))}"
             os.makedirs(hhsearchDir)
-            hhsearchOutFile = f"{hhsearchDir}/hhsearch.stdout.hhr"
+            # hhsearchOutFile = f"{hhsearchDir}/hhsearch.stdout.hhr"
+            hhsearchOutFile = f"{hhsearchDir}/hhsearch.txt"
             N_PPHMMs = LineCount(f"{HHsuite_PPHMMDB}_hhm.ffindex")
 
-            SeenPair, SeenPair_i, PPHMMSimScoreCondensedMat = {}, 0, []
-            for PPHMM_i in range(0, N_PPHMMs):
-                HHsuite_PPHMMFile = HHsuite_PPHMMDir + "/PPHMM_%s.hhm" % PPHMM_i
-                _ = subprocess.Popen(f"hhsearch -i {HHsuite_PPHMMFile} -d {HHsuite_PPHMMDB+'_hhm.ffdata'} -o {hhsearchOutFile} -e {self.HHsuite_evalue_Cutoff} -E {self.HHsuite_evalue_Cutoff} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.HHsuite_N_CPUs}",
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                out, err = _.communicate()
-                error_handler(
-                    out, err, f"Something is wrong with hhsearching PPHMM {PPHMM_i} againt the PPHMM database")
+            '''Build hhm DBs'''
+            progress_msg("\t\t - Building HMM Databases...")
+            shell(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}")
 
+            '''Build intermediate MSA DB'''
+            os.chdir(f"{ClustersDir}")
+            shell(f"ffindex_build -s ../../HHsuite/HHsuite_PPHMMDB/HHsuite_PPHMMDB_msa.ffdata ../../HHsuite/HHsuite_PPHMMDB/HHsuite_PPHMMDB_msa.ffindex .")
+            os.chdir(f"../../../../")
+
+            '''Build a3m DB (scalable annotated alignment)'''
+            shell(f"ffindex_apply {HHsuite_PPHMMDB}_msa.ffdata {HHsuite_PPHMMDB}_msa.ffindex -i {HHsuite_PPHMMDB}_a3m.ffindex -d {HHsuite_PPHMMDB}_a3m.ffdata -- hhconsensus -M 50 -i stdin -oa3m stdout -v 0")
+
+            '''Build cs_219 DB (column context specific pseudocounts)'''
+            shell(f"cstranslate -f -x 0.3 -c 4 -I a3m -i {HHsuite_PPHMMDB}_a3m -o {HHsuite_PPHMMDB}_cs219")
+
+            SeenPair, SeenPair_i, PPHMMSimScoreCondensedMat = {}, 0, []
+            for PPHMM_i in alive_it(range(0, N_PPHMMs)): # RM < TODO ###################
+            # for PPHMM_i in range(0, N_PPHMMs):
+                HHsuite_PPHMMFile = f'{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hhm'
+
+                #######################
+                # shell(f"hhsearch -i {HHsuite_PPHMMFile} -d {HHsuite_PPHMMDB} -blasttab {hhsearchOutFile} -e {self.HHsuite_evalue_Cutoff} -E {self.HHsuite_evalue_Cutoff} -cov {self.HHsuite_SubjectCoverage_Cutoff} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.HHsuite_N_CPUs}",
+                #                      "PPHMMDB Construction: merge alignments, hhsearch")
+                # hh_df = pd.read_csv(hhsearchOutFile, sep="\t", names=["qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore"])
+                # hh_df = hh_df[hh_df["pident"] * 100 >= self.HHsuite_QueryCoverage_Cutoff] # filter by query coverage
+
+                # if hh_df.empty:
+                #     continue
+
+                # else:
+                #     hits = hh_df.to_dict(orient="records")
+                #     for hit in hits:
+                #         pair = ", ".join(sorted([hit["qseqid"].split("_")[1], hit["sseqid"].split("_")[1]]))
+                #         if pair in SeenPair:
+                #             if hit["bitscore"] > PPHMMSimScoreCondensedMat[SeenPair[pair]][2]:
+                #                 PPHMMSimScoreCondensedMat[SeenPair[pair]][2] = hit["bitscore"]
+                #         else:
+                #             SeenPair[pair] = SeenPair_i
+                #             PPHMMSimScoreCondensedMat.append([hit["qseqid"].split("_")[1], hit["sseqid"].split("_")[1], hit["bitscore"]])
+                #             SeenPair_i = SeenPair_i+1
+                #######################
+                hit_match = re.compile(
+                    r"[A-Z0-9]+\|[A-Z0-9]+.[0-9]{1}\s[a-zA-Z0-9_ ]{0,10}")
+                # RM < TODO PARAMETERISE MAXMEM
+                shell(f"hhsearch -maxmem 9.0 -i {HHsuite_PPHMMFile} -d {HHsuite_PPHMMDB} -o {hhsearchOutFile} -e {self.HHsuite_evalue_Cutoff} -E {self.HHsuite_evalue_Cutoff} -cov {self.HHsuite_SubjectCoverage_Cutoff} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.HHsuite_N_CPUs}",
+                                     "PPHMMDB Construction: merge alignments, hhsearch")
                 with open(hhsearchOutFile, 'r') as hhsearchOut_txt:
                     Content = hhsearchOut_txt.readlines()
                     QueryLength = int(Content[1].split()[1])
@@ -485,17 +435,24 @@ class PPHMMDBConstruction:
                         if Line == "\n":
                             break
                         else:
-                            Line = Line.replace(
-                                "(", " ").replace(")", " ").split()
-                            PPHMM_j = int(Line[1].split("_")[1])
-                            evalue = float(Line[3])
-                            pvalue = float(Line[4])
-                            PPHMMSimScore = float(Line[5])
-                            Col = float(Line[7])
-                            SubjectLength = int(Line[10])
+                            '''Filter variable length Hit name'''
+                            Line = re.sub(hit_match, "", Line)
+                            Line = Line.replace("(", " ").replace(")", " ").split()
+                            try:
+                                PPHMM_j = int(Line[0])
+                                evalue = float(Line[2])
+                                pvalue = float(Line[3])
+                                PPHMMSimScore = float(Line[4])
+                                Col = float(Line[6])
+                                SubjectLength = int(Line[-1])
+                            except ValueError as ex:
+                                raise_gravity_error(f"Failed to extract PPHMM data from HHsearch output (pphmmdb construction, aln merging function). This happens when HHsearch outputs malformed text files, check the output for the entry listed in this exception: {ex}")
                             qcovs = Col/QueryLength*100
                             scovs = Col/SubjectLength*100
-                            if (evalue <= self.HHsuite_evalue_Cutoff and pvalue <= self.HHsuite_pvalue_Cutoff and qcovs >= self.HHsuite_QueryCoverage_Cutoff and scovs >= self.HHsuite_SubjectCoverage_Cutoff):
+                            if ( evalue <= self.HHsuite_evalue_Cutoff and # RM < TODO Why would we need these when in HHsuite search terms?
+                                 pvalue <= self.HHsuite_pvalue_Cutoff and # RM < TODO ... so check output
+                                 scovs >= self.HHsuite_SubjectCoverage_Cutoff and
+                                 qcovs >= self.HHsuite_QueryCoverage_Cutoff):
                                 Pair = ", ".join(
                                     sorted(map(str, [PPHMM_i, PPHMM_j])))
                                 if Pair in SeenPair:
@@ -510,23 +467,22 @@ class PPHMMDBConstruction:
                                         [PPHMM_i, PPHMM_j, PPHMMSimScore])
                                     SeenPair_i = SeenPair_i+1
 
-                _ = subprocess.Popen(
-                    f"rm {hhsearchOutFile}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                out, err = _.communicate()
-                progress_bar(
-                    f"\033[K hhsearch: [{'='*int(float(PPHMM_i+1)/N_PPHMMs*20)}] {PPHMM_i+1}/{N_PPHMMs} PPHMMs \r")
+                shell(f"rm {hhsearchOutFile}", "PPHMMDB Construction: merge alignments, remove hhsearch file")
             clean_stdout()
 
             '''Structure similarity score matrix for saving'''
             PPHMMSimScoreCondensedMat = np.array(PPHMMSimScoreCondensedMat)
+            if PPHMMSimScoreCondensedMat.shape[0] == 0:
+                raise ValueError(f"Failed on PPHMM Alignment Merging step: no alignments could be merged. Check your thresholds or disable this feature.")
+
             PPHMMSimScoreMat = np.zeros((N_PPHMMs, N_PPHMMs))
-            PPHMMSimScoreMat[list(map(int, PPHMMSimScoreCondensedMat[:, 0])), list(map(
+            PPHMMSimScoreMat[list(map(int, PPHMMSimScoreCondensedMat[:, 0])), list(map( # RM < TODO FAILS HERE WITH LARGE N MERGING??
                 int, PPHMMSimScoreCondensedMat[:, 1]))] = list(map(float, PPHMMSimScoreCondensedMat[:, 2]))
             PPHMMSimScoreMat[list(map(int, PPHMMSimScoreCondensedMat[:, 1])), list(map(
                 int, PPHMMSimScoreCondensedMat[:, 0]))] = list(map(float, PPHMMSimScoreCondensedMat[:, 2]))
             PPHMMSimScoreCondensedMat = np.array(
                 [PPHMMSimScorePair for PPHMMSimScorePair in PPHMMSimScoreCondensedMat if PPHMMSimScorePair[0] < PPHMMSimScorePair[1]])
-            PPHMMSimScoreCondensedMatFile = hhsearchDir+"/PPHMMSimScoreCondensedMat.txt"
+            PPHMMSimScoreCondensedMatFile = f"{hhsearchDir}/PPHMMSimScoreCondensedMat.txt"
             np.savetxt(fname=PPHMMSimScoreCondensedMatFile,
                        X=PPHMMSimScoreCondensedMat,
                        fmt='%s',
@@ -534,12 +490,11 @@ class PPHMMDBConstruction:
                        header="PPHMM_i\tPPHMM_j\tPPHMMSimScore")
 
             '''Cluster PPHMMs using Muscle'''
-            print(
-                "\t\t\tCluster PPHMMs based on hhsearch scores, using the MCL algorithm")
+            progress_msg(
+                "\t\t - Cluster PPHMMs based on hhsearch scores, using the MCL algorithm")
             PPHMMClustersFile = f"{hhsearchDir}/PPHMMClusters.txt"
-            _ = subprocess.Popen(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMMClustersFile} -I {self.PPHMMClustering_MCLInflation}",
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            _, out = _.communicate()
+            shell(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMMClustersFile} -I {self.PPHMMClustering_MCLInflation}",
+                                 "PPHMMDB Construction: merge alignments, mcl call")
 
             SeenProtIDList = []
             with open(PPHMMClustersFile, 'r') as PPHMMClusters_txt:
@@ -550,31 +505,35 @@ class PPHMMDBConstruction:
                 PPHMMClusters_txt.write("\n".join(list(
                     set(map(str, list(map(float, list(range(0, N_PPHMMs))))))-set(SeenProtIDList))))
 
-            print("\t\t\tCheck if there are alignments to be merged")
+            progress_msg("\t\t - Check if there are alignments to be merged")
             with open(PPHMMClustersFile, 'r') as PPHMMClusters_txt:
                 N_PPHMMs_AfterMerging = len(PPHMMClusters_txt.readlines())
 
             if N_PPHMMs_AfterMerging == N_PPHMMs:
-                print(
-                    "\t\t\t\tNo alignments to be merged. Stop alignment merging process")
-                _ = subprocess.Popen(
-                    f"rm -rf {hhsearchDir}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                out, err = _.communicate()
+                progress_msg(
+                    "\t\t\t - No alignments to be merged. Stop alignment merging process")
+                shell(f"rm -rf {hhsearchDir}", "PPHMMDB Construction: merge alignments, rm hhsearch dir")
                 break
             else:
-                print(
-                    f"\t\t\t\tMerge {N_PPHMMs} alignments to make {N_PPHMMs_AfterMerging} alignments")
+                progress_msg(
+                    f"\t\t\t - Merge {N_PPHMMs} alignments to make {N_PPHMMs_AfterMerging} alignments")
 
             '''Merge alignments, remake PPHMMs'''
-            print("\t\t\tMerge protein alignments and remake HHsuite PPHMMs")
+            progress_msg("\t\t - Merge protein alignments and remake HHsuite PPHMMs")
+            # RM < TODO This can never have worked... replace with soln from virus classifier
             SelfSimScoreList = PPHMMSimScoreMat.diagonal()
-            PPHMMDissimScoreMat = 1 - \
-                np.transpose(PPHMMSimScoreMat**2 /
-                             SelfSimScoreList)/SelfSimScoreList
+            PPHMMDissimScoreMat = 1 - np.transpose( PPHMMSimScoreMat**2 / SelfSimScoreList ) / SelfSimScoreList # ORIGINAL
+            PPHMMDissimScoreMat = 1 - np.nan_to_num(np.transpose(PPHMMSimScoreMat**2 / SelfSimScoreList) / SelfSimScoreList) # RM FIX
+            ########
+            ## RM < TODO BODGE. Look into the np.divide() arg "where" to avoid nans/infs from zero division?
+            # PPHMMDissimScoreMat = PPHMMSimScoreMat.copy()
+            # PPHMMDissimScoreMat = 1 - PPHMMDissimScoreMat
+            #######
             PPHMMDissimScoreMat[PPHMMDissimScoreMat < 0] = 0
             AfterMergingPPHMM_IndexList, AfterMergingPPHMM_i = [], 1
 
             with open(PPHMMClustersFile, 'r') as PPHMMClusters_txt:
+                # for PPHMMCluster in alive_it(PPHMMClusters_txt.readlines()):
                 for PPHMMCluster in PPHMMClusters_txt.readlines():
                     PPHMMCluster = list(
                         map(int, list(map(float, PPHMMCluster.split("\n")[0].split("\t")))))
@@ -585,19 +544,20 @@ class PPHMMDBConstruction:
                     elif len(PPHMMCluster) >= 2:
                         PPHMMDissimScoreMat_Subset = PPHMMDissimScoreMat[PPHMMCluster][:, PPHMMCluster]
                         PPHMMTreeNewick = DistMat2Tree(DistMat=PPHMMDissimScoreMat_Subset,
-                                                       LeafList=PPHMMCluster,
-                                                       Dendrogram_LinkageMethod="average")
+                                                    LeafList=PPHMMCluster,
+                                                    Dendrogram_LinkageMethod="average")
                         PPHMMTreeNewick = Tree(PPHMMTreeNewick)
                         _ = PPHMMTreeNewick.ladderize()
                         PPHMMTreeNewick = PPHMMTreeNewick.write(format=9)
 
                         while True:
                             m = re.search(r"\((\d+),(\d+)\)", PPHMMTreeNewick)
+                            mafft_temp_fname = f"{self.ShelveDir}/temp.fasta"
                             if not m:
-                                _ = subprocess.Popen(f"muscle -in {ClusterFile_i} -out {ClusterFile_i} -refine",
-                                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-
-                                err, out = _.communicate()
+                                shell(f"mafft --auto {ClusterFile_i} > {mafft_temp_fname}"
+                                        "PPHMMDB Construction: merge alignments, mafft refine")
+                                shell(f"rm {ClusterFile_i} && mv {mafft_temp_fname} {ClusterFile_i}",
+                                        "PPHMMDB Construction: merge alignments, rm mafft intermediates")
                                 break
 
                             PPHMM_i, PPHMM_j = sorted(
@@ -605,19 +565,21 @@ class PPHMMDBConstruction:
                             PPHMMTreeNewick = re.sub(
                                 r"\((\d+),(\d+)\)", str(PPHMM_i), PPHMMTreeNewick, count=1)
 
-                            ClusterFile_i = ClustersDir + \
-                                f"/Cluster_{PPHMM_i}.fasta"
-                            ClusterFile_j = ClustersDir + \
-                                f"/Cluster_{PPHMM_j}.fasta"
-                            HHsuite_PPHMMFile_j = HHsuite_PPHMMDir + \
-                                f"/PPHMM_{PPHMM_j}.hhm"
-                            _ = subprocess.Popen(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {ClusterFile_i} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
-                                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                            err, out = _.communicate()
+                            ClusterFile_i = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta"
+                            ClusterFile_j = f"{ClustersDir}/Cluster_{PPHMM_j}.fasta"
+                            HHsuite_PPHMMFile_j = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_j}.hhm"
 
-                            _ = subprocess.Popen(
-                                f"rm {ClusterFile_j} {HHsuite_PPHMMFile_j}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                            out, err = _.communicate()
+                            # RM < TODO BP HERE AND REPLACe WITH MAFFT
+                            # shell(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {ClusterFile_i} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
+                            shell(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {mafft_temp_fname} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
+                                                 "PPHMMDB Construction: merge alignments, muscle profile")
+                            # breakpoint() ##############################
+                            # RM < DISABLE THIS FIRST ↓ AS MAFFT MIGHT BE FAILING SILENTLY
+                            # shell(f"rm {ClusterFile_i} && mv {mafft_temp_fname} {ClusterFile_i}",
+                            #         "PPHMMDB Construction: merge alignments, rm mafft intermediates")
+
+                            shell(f"rm {ClusterFile_j} {HHsuite_PPHMMFile_j}",
+                                  "PPHMMDB Construction: merge alignments, rm hhsuite muscle intermediate")
 
                             Cluster_MetaDataDict[PPHMM_i]["Cluster"] = Cluster_MetaDataDict[PPHMM_i]["Cluster"] + \
                                 Cluster_MetaDataDict[PPHMM_j]["Cluster"]
@@ -627,18 +589,11 @@ class PPHMMDBConstruction:
                                 Cluster_MetaDataDict[PPHMM_j]["TaxoLists"]
                             del Cluster_MetaDataDict[PPHMM_j]
 
-                        HHsuite_PPHMMFile_i = HHsuite_PPHMMDir + \
-                            f"/PPHMM_{PPHMM_i}.hhm"
+                        HHsuite_PPHMMFile_i = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hhm"
                         Cluster_MetaDataDict[PPHMM_i]["AlignmentLength"] = AlignIO.read(
                             ClusterFile_i, "fasta").get_alignment_length()
-                        _ = subprocess.Popen(f"hhmake -i {ClusterFile_i} -o {HHsuite_PPHMMFile_i} -v 0 -seq {len(Cluster_MetaDataDict[PPHMM_i]['Cluster'])+1} -name Cluster_{PPHMM_i} -id 100 -M 50",
-                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                        out, err = _.communicate()
-                        error_handler(
-                            out, err, f"Something is wrong with constructing a PPHMM from cluster {PPHMM_i}")
-
-                    progress_bar(
-                        f"\033[K Merge alignments and make new PPHMMs: [{'='*int(AfterMergingPPHMM_i/N_PPHMMs_AfterMerging*20)}] {AfterMergingPPHMM_i}/{N_PPHMMs_AfterMerging} PPHHMs \r")
+                        shell(f"hhmake -i {ClusterFile_i} -o {HHsuite_PPHMMFile_i} -v 0 -seq {len(Cluster_MetaDataDict[PPHMM_i]['Cluster'])+1} -name Cluster_{PPHMM_i} -id 100 -M 50",
+                                             "PPHMMDB Construction: merge alignments, hhmake")
                     AfterMergingPPHMM_i += 1
             clean_stdout()
 
@@ -651,15 +606,13 @@ class PPHMMDBConstruction:
 
                 ClusterFile_i = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta"
                 ClusterFile_j = f"{ClustersDir}/Cluster_{AfterMergingPPHMM_i}.fasta"
-                _ = subprocess.Popen(f"mv {ClusterFile_i} {ClusterFile_j}",
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                out, err = _.communicate()
+                shell(f"mv {ClusterFile_i} {ClusterFile_j}",
+                            "PPHMMDB Construction: merge alignments, move cluster files")
 
                 HHsuite_PPHMMFile_i = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hhm"
                 HHsuite_PPHMMFile_j = f"{HHsuite_PPHMMDir}/PPHMM_{AfterMergingPPHMM_i}.hhm"
-                _ = subprocess.Popen(f"mv {HHsuite_PPHMMFile_i} {HHsuite_PPHMMFile_j}",
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                out, err = _.communicate()
+                shell(f"mv {HHsuite_PPHMMFile_i} {HHsuite_PPHMMFile_j}",
+                            "PPHMMDB Construction: merge alignments, move hhsuite files")
 
                 with open(HHsuite_PPHMMFile_j, "r+") as HHsuite_PPHMM_txt:
                     contents = HHsuite_PPHMM_txt.readlines()
@@ -674,44 +627,35 @@ class PPHMMDBConstruction:
             AlignmentMerging_i_round = self.rebuild_hhsuite_db(
                 HHsuite_PPHMMDB, HHsuite_PPHMMDir, hhsearchDir, AlignmentMerging_i_round)
 
-        print("\tAlignment merging is done.")
+        progress_msg("\tAlignment merging is done.")
         '''Delete dir'''
-        _ = subprocess.Popen(
-            f"rm -rf {HHsuiteDir}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        out, err = _.communicate()
+        shell(f"rm -rf {HHsuiteDir}",
+              "PPHMMDB Construction: merge alignments, remove hhsuite dir")
 
     def Make_HMMER_PPHMM_DB(self, HMMER_PPHMMDir, HMMER_PPHMMDb, ClustersDir, Cluster_MetaDataDict, VariableShelveFile):
         '''10/10: Build HMMER DB of PPHMMs, create and save summary file'''
-        print("- Make HMMER PPHMMDB and its summary file")
+        progress_msg("- Make HMMER PPHMMDB and its summary file")
+        ClusterSizeList, ClusterSizeByTaxoGroupingList, ClusterSizeByProtList, ClusterTaxoList, ClusterProtSeqIDList, ClusterDescList, N_PPHMMs, pphhmmdb_construction_out = [
+            ], [], [], [], [], [], len(Cluster_MetaDataDict), {}
 
-        ClusterSizeList, ClusterSizeByTaxoGroupingList, ClusterSizeByProtList, ClusterTaxoList, ClusterProtSeqIDList, ClusterDescList = [], [], [], [], [], []
-        N_PPHMMs = len(Cluster_MetaDataDict)
-
-        for PPHMM_i in range(N_PPHMMs):
+        for PPHMM_i in alive_it(range(N_PPHMMs)):
+            '''Iterate over each cluster, build annotations'''
             Cluster = Cluster_MetaDataDict[PPHMM_i]["Cluster"]
             DescList = Cluster_MetaDataDict[PPHMM_i]["DescList"]
             TaxoLists = Cluster_MetaDataDict[PPHMM_i]["TaxoLists"]
-
-            '''Cluster annotations'''
             ClusterSizeList.append(len(Cluster))
             ClusterSizeByTaxoGroupingList.append(", ".join([f"{TaxoGrouping}: {N_ProtSeqsInTheTaxoGroup}" for TaxoGrouping, N_ProtSeqsInTheTaxoGroup in sorted(list(Counter(list(zip(*TaxoLists))[-1]).items()),
-                                                                                                                                                               key=operator.itemgetter(
-                                                                                                                                                                   1),
+                                                                                                                                                               key=operator.itemgetter(1),
                                                                                                                                                                reverse=True
-                                                                                                                                                               )]
-                                                           )
+                                                                                                                                                               )])
                                                  )
             ClusterSizeByProtList.append(", ".join([f"{Desc}: {N_ProtSeqsWithDesc}" for Desc, N_ProtSeqsWithDesc in sorted(list(Counter(DescList).items()),
-                                                                                                                           key=operator.itemgetter(
-                                                                                                                               1),
+                                                                                                                           key=operator.itemgetter(1),
                                                                                                                            reverse=True
-                                                                                                                           )]
-                                                   )
+                                                                                                                           )])
                                          )
-
             ClusterTaxo_UniqueBaltimoreGroup, ClusterTaxo_UniqueOrder, ClusterTaxo_UniqueFamily, \
-                ClusterTaxo_UniqueSubFam, ClusterTaxo_UniqueGenus, ClusterTaxo_UniqueVirusName, \
-                ClusterTaxo_UniqueTaxoGroup = [
+                ClusterTaxo_UniqueSubFam, ClusterTaxo_UniqueGenus, _, _ = [
                     list(set(TaxoList)) for TaxoList in zip(*TaxoLists)]
             ClusterTaxo = []
 
@@ -730,7 +674,7 @@ class PPHMMDBConstruction:
             ClusterDescCount = sorted(
                 list(Counter(DescList).items()), key=operator.itemgetter(1), reverse=True)
             for ClusterDesc in ClusterDescCount:
-                ClusterDesc = ClusterDesc[0]
+                ClusterDesc = ClusterDesc[0] # RM < TODO check in clustedesc.lower()
                 if (("Hypothetical" not in ClusterDesc) and ("hypothetical" not in ClusterDesc)):
                     break
 
@@ -739,9 +683,7 @@ class PPHMMDBConstruction:
             '''Make a PPHMM using HMMER hmmbuild'''
             AlnClusterFile = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta"
             HMMER_PPHMMFile = f"{HMMER_PPHMMDir}/PPHMM_{PPHMM_i}.hmm"
-            _ = subprocess.Popen(f"hmmbuild {HMMER_PPHMMFile} {AlnClusterFile}",
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            out, err = _.communicate()
+            shell(f"hmmbuild {HMMER_PPHMMFile} {AlnClusterFile}", "PPHMMDB Construction: make HMMER PPHMMDB, hmmbuild")
 
             '''Modify the DESC line in the HMM file to ClusterDesc|ClusterTaxo'''
             with open(HMMER_PPHMMFile, "r+") as HMMER_PPHMM_txt:
@@ -751,18 +693,11 @@ class PPHMMDBConstruction:
                 HMMER_PPHMM_txt.seek(0)
                 HMMER_PPHMM_txt.write(contents)
                 HMMER_PPHMM_txt.truncate()
-
-            progress_bar(
-                f"\033[K Make HMMER PPHMMs: [{'='*int(float(PPHMM_i + 1)/N_PPHMMs*20)}] {PPHMM_i+1}/{N_PPHMMs} PPHHMs \r")
         clean_stdout()
 
         '''Make a HMMER HMM DB with hmmpress'''
-        _ = subprocess.Popen(f"find {HMMER_PPHMMDir} -name '*.hmm' -exec cat {{}} \; > {HMMER_PPHMMDb}",
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        out, err = _.communicate()
-        _ = subprocess.Popen(
-            f"hmmpress {HMMER_PPHMMDb}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        out, err = _.communicate()
+        shell(f"find {HMMER_PPHMMDir} -name '*.hmm' -exec cat {{}} \; > {HMMER_PPHMMDb}", "PPHMMDB Construction: make HMMER PPHMMDB, find db")
+        shell(f"hmmpress {HMMER_PPHMMDb}", "PPHMMDB Construction: make HMMER PPHMMDB, HMMPress")
 
         '''Make a PPHMMDBSummary file'''
         ClusterIDList = [
@@ -779,7 +714,6 @@ class PPHMMDBConstruction:
                    header="# Cluster ID\tCluster desc\tSequence number\tProtein ID\tNumber of sequences by class\tNumber of sequences by protein")
 
         '''Prepare output and save as pickle file'''
-        pphhmmdb_construction_out = {}
         pphhmmdb_construction_out["ClusterIDList"] = np.array(ClusterIDList)
         pphhmmdb_construction_out["ClusterDescList"] = np.array(
             ClusterDescList)
@@ -791,7 +725,6 @@ class PPHMMDBConstruction:
             ClusterSizeByTaxoGroupingList)
         pphhmmdb_construction_out["ClusterSizeByProtList"] = np.array(
             ClusterSizeByProtList)
-
         pickle.dump(pphhmmdb_construction_out, open(VariableShelveFile, "wb"))
 
     def main(self):
@@ -802,7 +735,7 @@ class PPHMMDBConstruction:
         '''1/10: Build db dirs'''
         BLASTQueryFile, BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile, \
             BLASTProtClusterFile, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDbDir, \
-            HMMER_PPHMMDb, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB = self.mkdirs()
+            HMMER_PPHMMDb, VariableShelveDir, HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB = mkdir_pphmmdbc(self.ShelveDir)
 
         '''2/10: Retrieve Variables'''
         genomes = retrieve_genome_vars(
@@ -817,7 +750,7 @@ class PPHMMDBConstruction:
         '''5/10: Make BLAST DB'''
         self.make_blastp_db(BLASTSubjectFile, ProtList)
 
-        # '''6/10: Do BLASTp analysis, save output'''
+        '''6/10: Do BLASTp analysis, save output'''
         self.blastp_analysis(ProtList, BLASTQueryFile,
                              BLASTSubjectFile, BLASTOutputFile, BLASTBitScoreFile)
 
@@ -832,7 +765,7 @@ class PPHMMDBConstruction:
         '''9/10: Make PPHMMs, DB and Merge Alignments'''
         if self.N_AlignmentMerging != 0:
             self.pphmm_and_merge_alignments(Cluster_MetaDataDict, ClustersDir, HHsuite_PPHMMDir,
-                                            HMMER_PPHMMDir, HMMER_PPHMMDbDir, HHsuite_PPHMMDB, HHsuiteDir)
+                                            HMMER_PPHMMDir, HMMER_PPHMMDbDir, HHsuite_PPHMMDB, HHsuiteDir, VariableShelveDir)
 
         '''10/10: Make HMMER DB, save to persistent storage'''
         self.Make_HMMER_PPHMM_DB(HMMER_PPHMMDir, HMMER_PPHMMDb, ClustersDir,

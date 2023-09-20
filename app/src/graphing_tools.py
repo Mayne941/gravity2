@@ -55,7 +55,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         self.VirusGrouping = VirusGrouping
         '''Fpaths'''
         self.ShelveDir = ShelveDir
-        self.VariableShelveDir = self.ShelveDir+"/Shelves"
+        self.VariableShelveDir = self.ShelveDir+"/output"
         self.VirusDendrogramFile = "placeholder"
         '''Empties'''
         self.genomes, self.ref_annotations = {}, {}

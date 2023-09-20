@@ -12,3 +12,4 @@ requests==2.28.1
 openpyxl==3.0.10
 scipy==1.11.1
 dendropy==4.6.1
+alive-bar==3.1.4

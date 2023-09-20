@@ -1,4 +1,9 @@
-def get_orf_trasl_table():   
+import numpy as np
+from Bio import SeqIO, AlignIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
+def get_orf_trasl_table():
     return {1: "---M------**--*----M---------------M----------------------------",
             2: "----------**--------------------MMMM----------**---M------------",
             3: "----------**----------------------MM----------------------------",
@@ -34,3 +39,67 @@ def get_orf_trasl_table():
 
 def no_orf_match():
     return "---M------**--*----M---------------M----------------------------"
+
+
+def find_orfs(seq_id, GenBankSeq, TranslTable):
+    orf_tranl_table = get_orf_trasl_table()
+    orf_no_match = no_orf_match()
+    ProtList, ProtIDList = [], []
+
+    '''Identifying ORFs'''
+    try:
+        Starts = orf_tranl_table[TranslTable]
+    except KeyError:
+        '''No ORF found, use standard code'''
+        Starts = orf_no_match
+
+    '''Generate start and stop codon lists'''
+    CodonList = [
+        Base1+Base2+Base3 for Base1 in "TCAG" for Base2 in "TCAG" for Base3 in "TCAG"]
+    StartCodonList, StopCodonList = [], []
+    for i, j in enumerate(Starts):
+        if j == "M":
+            StartCodonList.append(CodonList[i])
+        if j == "*":
+            StopCodonList.append(CodonList[i])
+
+    SeqLength, ORF_i = len(GenBankSeq), 0
+    for _, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
+        '''Split into multople of 3, get in-frame nucleotide seq, split sequence into codons'''
+        for frame in range(3):
+            length = 3 * ((SeqLength-frame) // 3)
+            nuc_inframe = nuc[frame:(frame+length)]
+            nuc_codonList = [str(nuc_inframe[i:i+3])
+                                for i in range(0, length, 3)]
+
+            '''Find stop codons'''
+            StopCodon_indices = [i for i, codon in enumerate(
+                nuc_codonList) if codon in StopCodonList]
+            Coding_Start_IndexList = np.array(
+                [-1]+StopCodon_indices)+1
+            Coding_End_IndexList = np.array(
+                StopCodon_indices+[len(nuc_codonList)])
+
+            ProtSeqList = []
+            for i, j in zip(Coding_Start_IndexList, Coding_End_IndexList):
+                for k, codon in enumerate(nuc_codonList[i:j]):
+                    if codon in StartCodonList:
+                        ProtSeqList.append(
+                            Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
+                        break
+
+            for ProtSeq in ProtSeqList:
+                '''Exclude protein sequences with <'ProteinLength_Cutoff' aa'''
+                if len(ProtSeq) >= 100: # RM < HARD CODED
+                    ProtRecord = SeqRecord(ProtSeq,
+                                            id=f"{seq_id}|ORF{ORF_i}",
+                                            name=f"{seq_id}|ORF{ORF_i}",
+                                            description="Hypothetical protein",
+                                            # annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
+                                            annotations={'taxonomy': ["RM", "to", "update"]}) # RM < TODO ###
+                    ProtList.append(ProtRecord)
+                    ProtIDList.append(
+                        f"{seq_id}|ORF{ORF_i}")
+                    ORF_i += 1
+
+    return ProtList, ProtIDList

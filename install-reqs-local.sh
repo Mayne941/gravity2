@@ -12,7 +12,8 @@ apt-get install hmmer -y
 # blast installation. Assumes Linux x64 build!
 apt install ncbi-blast+
 
-# hhsuite installation
+# RM < TODO Install MAFFT
+# hhsuite installation # RM < TODO deprecate for conda install as some users have issues
 mkdir -p ~/programs/hh-suite && cd ~/programs/hh-suite
 git clone https://github.com/soedinglab/hh-suite.git .
 mkdir build && cd build
