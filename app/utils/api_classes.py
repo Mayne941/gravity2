@@ -118,8 +118,8 @@ class Data_common_pipeline_params(BaseModel):
                                         description="MUSCLE gap extension panelty for aligning protein sequences.")
     ProtClustering_MCLInflation: int = Field(2, gt=0,
                                              description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
-    N_AlignmentMerging: Literal[-1, 0] = Query(0,    # RM < TODO Cull?
-                                               description="Number of rounds of alignment merging. ROUND == 0 means no merging. ROUND == -1 means merging until exhausted.")
+    N_AlignmentMerging: int = Query(0,    # RM < TODO Cull?
+                                               description="Number of rounds of alignment merging. ROUND == 0 means no merging. ROUND == -1 means merging until exhausted, ROUND int = n rounds.")
     PPHMMClustering_MCLInflation_ForAlnMerging: int = Field(5, gt=0,
                                                             description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
     HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging: bool = Query(True,

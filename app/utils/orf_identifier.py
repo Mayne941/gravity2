@@ -41,7 +41,9 @@ def no_orf_match():
     return "---M------**--*----M---------------M----------------------------"
 
 
-def find_orfs(seq_id, GenBankSeq, TranslTable):
+def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, taxonomy_annots=[
+            "None", "None", "None", "None", "None", "None", "None"
+        ]):
     orf_tranl_table = get_orf_trasl_table()
     orf_no_match = no_orf_match()
     ProtList, ProtIDList = [], []
@@ -90,13 +92,12 @@ def find_orfs(seq_id, GenBankSeq, TranslTable):
 
             for ProtSeq in ProtSeqList:
                 '''Exclude protein sequences with <'ProteinLength_Cutoff' aa'''
-                if len(ProtSeq) >= 100: # RM < HARD CODED
+                if len(ProtSeq) >= protein_length_cutoff:
                     ProtRecord = SeqRecord(ProtSeq,
                                             id=f"{seq_id}|ORF{ORF_i}",
                                             name=f"{seq_id}|ORF{ORF_i}",
-                                            description="Hypothetical protein",
-                                            # annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
-                                            annotations={'taxonomy': ["RM", "to", "update"]}) # RM < TODO ###
+                                            description="~",
+                                            annotations={'taxonomy': taxonomy_annots})
                     ProtList.append(ProtRecord)
                     ProtIDList.append(
                         f"{seq_id}|ORF{ORF_i}")

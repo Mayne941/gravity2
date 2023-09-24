@@ -23,3 +23,6 @@ def error_handler(out, err, name): # RM < TODO Deprecate, migrate to error_handl
 
 def progress_msg(msg):
     print(f"{colored('INFO:', 'green')} {msg}")
+
+def warning_msg(msg):
+    print(f"{colored('WARNING:', 'yellow')} {msg}")

@@ -11,20 +11,20 @@ def retrieve_genome_vars(VariableShelveDir, IncludeIncompleteGenomes) -> dict:
 
     f = pickle.load(open(VariableShelveFile, "rb"))
     if len(f["VirusNameList"]) == 0:
-        raise_gravity_error("The list of processed genomes I retrieved is empty!\nThis usually results from errors reading the VMR or genomes in your VMR being incomplete (try enabling AnnotateIncompleteGenomes).")
+        raise_gravity_error("The list of processed genomes I retrieved is empty!\nThis usually results from errors reading the VMR or you're working with incomplete genomes with AnnotateIncompleteGenomes=false (set to true).")
 
     return f
 
 def retrieve_ref_virus_vars(VariableShelveDir, IncludeIncompleteGenomes) -> dict:
-    '''Read pickle file to dict containing annotated ref viruses'''
+    '''Read pickle file to dict containing annotated ref viruses > graphing tools'''
     if IncludeIncompleteGenomes == True:
         VariableShelveFile = f"{VariableShelveDir}/RefVirusAnnotator.AllGenomes.p"
     elif IncludeIncompleteGenomes == False:
         VariableShelveFile = f"{VariableShelveDir}/RefVirusAnnotator.CompleteGenomes.p"
 
     f = pickle.load(open(VariableShelveFile, "rb"))
-    if f["ClusterIDList"].shape[0] == 0:
-        raise_gravity_error("The list of processed genomes I retrieved is empty!\nThis usually results from errors reading the VMR or genomes in your VMR being incomplete (try enabling AnnotateIncompleteGenomes).")
+    # if f["ClusterIDList"].shape[0] == 0: # RM < TODO WHY DOES THIS SOMETIMES RETURN A LIST?
+    #     raise_gravity_error("The list of processed genomes I retrieved is empty!\nThis usually results from errors reading the VMR or genomes in your VMR being incomplete (try enabling AnnotateIncompleteGenomes).")
 
     return f
 

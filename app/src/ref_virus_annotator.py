@@ -1,9 +1,9 @@
 from Bio import Phylo, AlignIO, SeqIO
-from Bio.SeqRecord import SeqRecord
 from io import StringIO
 from collections import Counter
 from copy import copy
 from scipy.sparse import coo_matrix
+from alive_progress import alive_it
 import numpy as np
 import subprocess
 import os
@@ -24,11 +24,14 @@ from app.utils.stdout_utils import clean_stdout, error_handler, progress_bar
 from app.utils.retrieve_pickle import retrieve_genome_vars
 from app.utils.orf_identifier import find_orfs
 from app.utils.error_handlers import raise_gravity_error
+from app.utils.shell_cmds import shell
+from app.utils.mkdirs import mkdir_ref_annotator
 
 class RefVirusAnnotator:
     def __init__(self,
                  GenomeSeqFile,
                  ShelveDir,
+                 ProteinLength_Cutoff=100,
                  IncludeIncompleteGenomes=False,
                  HMMER_N_CPUs=20,
                  HMMER_C_EValue_Cutoff=1E-3,
@@ -46,7 +49,9 @@ class RefVirusAnnotator:
         '''Params'''
         self.GenomeSeqFile = GenomeSeqFile
         self.ShelveDir = ShelveDir
+        self.VariableShelveDir = f"{self.ShelveDir}/output"
         self.IncludeIncompleteGenomes = IncludeIncompleteGenomes
+        self.ProteinLength_Cutoff = ProteinLength_Cutoff
         self.HMMER_N_CPUs = HMMER_N_CPUs
         self.HMMER_C_EValue_Cutoff = HMMER_C_EValue_Cutoff
         self.HMMER_HitScore_Cutoff = HMMER_HitScore_Cutoff
@@ -60,45 +65,11 @@ class RefVirusAnnotator:
         self.HHsuite_SubjectCoverage_Cutoff = HHsuite_SubjectCoverage_Cutoff
         self.PPHMMClustering_MCLInflation = PPHMMClustering_MCLInflation
         '''Placehodler dirs & objects'''
-        self.VariableShelveDir = ""
         self.genomes = {}
         self.PPHMMSignatureTable, self.PPHMMLocationTable = [], []
 
-    def mkdirs(self):
-        '''1/8: Return all dirs for db storage and retrieval'''
-        HMMERDir = f"{self.ShelveDir}/HMMER"
-        HMMER_PPHMMDir = f"{HMMERDir}/HMMER_PPHMMs"
-        HMMER_PPHMMDbDir = f"{HMMERDir}/HMMER_PPHMMDb"
-        HMMER_PPHMMDb = f"{HMMER_PPHMMDbDir}/HMMER_PPHMMDb"
-
-        if self.RemoveSingletonPPHMMs == True:
-            ClustersDir = f"{self.ShelveDir}/BLAST/Clusters"
-        else:
-            ClustersDir = ""
-
-        if self.PPHMMSorting == True:
-            ClustersDir = f"{self.ShelveDir}/BLAST/Clusters"
-            HHsuiteDir = f"{self.ShelveDir}/HHsuite"
-            if os.path.exists(HHsuiteDir):
-                _ = subprocess.call(f"rm -rf {HHsuiteDir}", shell=True)
-                os.makedirs(HHsuiteDir)
-            HHsuite_PPHMMDir = f"{HHsuiteDir}/HHsuite_PPHMMs"
-            os.makedirs(HHsuite_PPHMMDir)
-            HHsuite_PPHMMDBDir = f"{HHsuiteDir}/HHsuite_PPHMMDB"
-            os.makedirs(HHsuite_PPHMMDBDir)
-            HHsuite_PPHMMDB = f"{HHsuite_PPHMMDBDir}/HHsuite_PPHMMDB"
-        else:
-            HHsuiteDir, HHsuite_PPHMMDir, HHsuite_PPHMMDB = "", "", ""
-
-        HMMER_hmmscanDir = HMMERDir+"/hmmscan_" + \
-            ''.join(random.choice(string.ascii_uppercase + string.digits)
-                    for _ in range(10))
-        os.makedirs(HMMER_hmmscanDir)
-        self.VariableShelveDir = f"{self.ShelveDir}/output"
-
-        return HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir
-
-    def PPHMMSignatureTable_Constructor(self, HMMER_hmmscanDir, HMMER_PPHMMDb):
+    def PPHMMSignatureTable_Constructor_OLD(self, HMMER_hmmscanDir, HMMER_PPHMMDb):
+        from Bio.SeqRecord import SeqRecord
         '''2/8: Create PPHMM signature and location tables'''
         print("- Generate PPHMM signature table and PPHMM location table")
         '''Load GenBank record'''
@@ -135,22 +106,194 @@ class RefVirusAnnotator:
             for seq in GenBankSeqList:
                 GenBankSeq = GenBankSeq+seq
 
-            '''Do 6 frame translation'''
+            '''limit the sequence by length; 0=include sequences of all lengths'''
             GenBankID = "/".join(GenBankIDList)
-            #RM < TODO HARMONISE WITH PPHMMDB CONSTRUCTOR FN
-            ### ATTEMPT 2: FIND ORFS
-            ProtList, ProtIDList = find_orfs(GenBankID, GenBankSeq, TranslTable)
+            ProtSeq1 = SeqRecord(GenBankSeq[0:].translate(
+                table=TranslTable), id=GenBankID+'_+1')
+            ProtSeq2 = SeqRecord(GenBankSeq[1:].translate(
+                table=TranslTable), id=GenBankID+'_+2')
+            ProtSeq3 = SeqRecord(GenBankSeq[2:].translate(
+                table=TranslTable), id=GenBankID+'_+3')
+            ProtSeqC1 = SeqRecord(GenBankSeq.reverse_complement()[
+                                    0:].translate(table=TranslTable), id=GenBankID+'_-1')
+            ProtSeqC2 = SeqRecord(GenBankSeq.reverse_complement()[
+                                    1:].translate(table=TranslTable), id=GenBankID+'_-2')
+            ProtSeqC3 = SeqRecord(GenBankSeq.reverse_complement()[
+                                    2:].translate(table=TranslTable), id=GenBankID+'_-3')
 
-            with open(PPHMMQueryFile, "w") as f:
-                for i in range(len(ProtIDList)):
-                    f.write(f">{ProtIDList[i]}\n{str(ProtList[i].seq)}\n")
+            ProtSeq6frames = ProtSeq1+ProtSeq2+ProtSeq3+ProtSeqC1+ProtSeqC2+ProtSeqC3
+            ProtSeq6frames.id = GenBankID
+
+            # RM TEST <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            if len(GenBankSeq) > 100000:
+                ProtSeq6frames = ProtSeq6frames[0:99999]
+
+            with open(PPHMMQueryFile, "w") as PPHMMQuery_txt:
+                SeqIO.write(ProtSeq6frames, PPHMMQuery_txt, "fasta")
 
             p = subprocess.Popen(f"hmmscan --cpu {self.HMMER_N_CPUs} --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDb} {PPHMMQueryFile}",
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             out, err = p.communicate()
 
             if len(err) > 0:
-                raise ValueError(f"Error running HMMScan: {err}. Please remedy fault before re-running.")
+                print(f"Error running HMMScan: {err}")
+                p = subprocess.Popen(f"nhmmscan --cpu {self.HMMER_N_CPUs} --noali --nobias {PPHMMScanOutFile} {HMMER_PPHMMDb} {PPHMMQueryFile}",
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                out, err = p.communicate()
+
+
+            PPHMMIDList, PPHMMScoreList, FeatureFrameBestHitList, FeatureLocFromBestHitList, \
+                FeatureLocToBestHitList, FeatureDescList = [], [], [], [], [], []
+            with open(PPHMMScanOutFile, "r") as PPHMMScanOut_txt:
+                for Line in PPHMMScanOut_txt:
+                    if Line[0] != "#":
+                        Line = Line.split()
+                        '''Concatenate the cluster description back'''
+                        Line[22] = " ".join(Line[22:])
+                        Line = Line[:23]
+                        C_EValue = float(Line[11])
+                        HitScore = float(Line[7])
+                        OriAASeqlen = float(len(GenBankSeq))/3
+
+                        if C_EValue < self.HMMER_C_EValue_Cutoff and HitScore > self.HMMER_HitScore_Cutoff:
+                            '''Determine the frame and the location of the hit'''
+                            iden = int(Line[0].split('_')[-1])
+                            HitFrom = int(Line[17])
+                            HitTo = int(Line[18])
+                            HitMid = float(HitFrom+HitTo)/2
+                            if np.ceil(HitMid/OriAASeqlen) <= 3:
+                                Frame = int(np.ceil(HitMid/OriAASeqlen))
+                            else:
+                                Frame = int(-(np.ceil(HitMid/OriAASeqlen)-3))
+                            LocFrom = int(HitFrom % OriAASeqlen)
+                            if LocFrom == 0:
+                                '''if the hit occurs preciously from the end of the sequence'''
+                                LocFrom = int(OriAASeqlen)
+                            LocTo = int(HitTo % OriAASeqlen)
+                            if LocTo == 0:
+                                '''if the hit occurs preciously to the end of the sequence'''
+                                LocTo = int(OriAASeqlen)
+                            if LocTo < LocFrom:
+                                '''The hit (falsely) spans across sequences of different frames'''
+                                if np.ceil(HitFrom/OriAASeqlen) <= 3:
+                                    HitFrom_Frame = int(
+                                        np.ceil(HitFrom/OriAASeqlen))
+                                else:
+                                    HitFrom_Frame = int(
+                                        -(np.ceil(HitFrom/OriAASeqlen)-3))
+
+                                if np.ceil(HitTo/OriAASeqlen) <= 3:
+                                    HitTo_Frame = int(
+                                        np.ceil(HitTo/OriAASeqlen))
+                                else:
+                                    HitTo_Frame = int(-(np.ceil(HitTo/OriAASeqlen)-3))
+
+                                if Frame == HitFrom_Frame:
+                                    LocTo = int(OriAASeqlen)
+                                elif Frame == HitTo_Frame:
+                                    LocFrom = int(1)
+                                elif HitFrom_Frame != Frame and Frame != HitTo_Frame:
+                                    LocFrom = int(1)
+                                    LocTo = int(OriAASeqlen)
+                                else:
+                                    print(
+                                        "Something is wrong with the his location determination")
+
+                            if iden not in PPHMMIDList:
+                                Best_C_EValue = C_EValue
+                                PPHMMIDList.append(iden)
+                                PPHMMScoreList.append(HitScore)
+                                FeatureDescList.append(
+                                    Line[22].split('|')[0])
+                                FeatureFrameBestHitList.append(Frame)
+                                FeatureLocFromBestHitList.append(LocFrom*3)
+                                FeatureLocToBestHitList.append(LocTo*3)
+
+                            else:
+                                if C_EValue < Best_C_EValue:
+                                    Best_C_EValue = C_EValue
+                                    FeatureFrameBestHitList[-1] = Frame
+                                    FeatureLocFromBestHitList[-1] = LocFrom*3
+                                    FeatureLocToBestHitList[-1] = LocTo*3
+
+                '''Absolute coordinate with orientation info encoded into it: +ve if the gene is present on the (+)strand, otherwise -ve'''
+                FeatureLocMiddleBestHitList = np.zeros(N_PPHMMs)
+                FeatureLocMiddleBestHitList[PPHMMIDList] = np.mean(np.array([FeatureLocFromBestHitList, FeatureLocToBestHitList]), axis=0)*(
+                    np.array(FeatureFrameBestHitList)/abs(np.array(FeatureFrameBestHitList)))
+                PPHMMLocMiddleBestHitTable = np.vstack(
+                    (PPHMMLocMiddleBestHitTable, FeatureLocMiddleBestHitList))
+                FeatureValueList = np.zeros(N_PPHMMs)
+                FeatureValueList[PPHMMIDList] = PPHMMScoreList
+                PPHMMSignatureTable = np.vstack(
+                    (PPHMMSignatureTable, FeatureValueList))
+
+            Seq_i += 1
+            progress_bar(
+                f"\033[K Generate PPHMM signature and location profiles: [{'='*int(Seq_i/N_Seq*20)}] {Seq_i}/{N_Seq} profiles \r")
+        clean_stdout()
+
+        '''Delete HMMER_hmmscanDir'''
+        _ = subprocess.call(f"rm -rf {HMMER_hmmscanDir}", shell=True)
+        return PPHMMSignatureTable, PPHMMLocMiddleBestHitTable
+
+
+    def PPHMMSignatureTable_Constructor(self, HMMER_hmmscanDir, HMMER_PPHMMDb):
+        '''2/8: Create PPHMM signature and location tables'''
+        print("- Generate PPHMM signature table and PPHMM location table")
+        '''Load GenBank record'''
+        _, file_extension = os.path.splitext(self.GenomeSeqFile)
+        if file_extension in [".fas", ".fasta"]:
+            Records_dict = SeqIO.index(self.GenomeSeqFile, "fasta")
+        elif file_extension in [".gb"]:
+            Records_dict = SeqIO.index(self.GenomeSeqFile, "genbank")
+
+        Records_dict = {k.split(".")[0]: v for k, v in Records_dict.items()}
+        N_Seq = len(self.genomes["SeqIDLists"])
+
+        '''Specify PPHMMQueryFile and PPHMMScanOutFile'''
+        PPHMMDB_Summary = f"{HMMER_PPHMMDb}_Summary.txt"
+        N_PPHMMs = LineCount(PPHMMDB_Summary)-1
+        PPHMMQueryFile = f"{HMMER_hmmscanDir}/QProtSeqs.fasta"
+        PPHMMScanOutFile = f"{HMMER_hmmscanDir}/PPHMMScanOut.txt"
+        PPHMMSignatureTable = np.empty((0, N_PPHMMs))
+        PPHMMLocMiddleBestHitTable = np.empty((0, N_PPHMMs))
+
+        Seq_i = 1
+        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]):
+            GenBankSeqList, GenBankIDList, GenBankDescList = [], [], []
+            for SeqID in SeqIDList:
+                GenBankRecord = Records_dict[SeqID]
+                GenBankSeqList.append(GenBankRecord.seq)
+                GenBankIDList.append(GenBankRecord.id)
+                GenBankDescList.append(GenBankRecord.description)
+
+            '''sort lists by sequence/segment lengths'''
+            _, GenBankSeqList, GenBankIDList, GenBankDescList = list(zip(
+                *sorted(zip(list(map(len, list(map(str, GenBankSeqList)))), GenBankSeqList, GenBankIDList, GenBankDescList), reverse=True)))
+
+            # GenBankSeq = ""
+            # for seq in GenBankSeqList:
+            #     GenBankSeq = GenBankSeq+seq ## RM < TODO AAHHHH IS THIS BREAKING IT?
+            # GenBankID = "/".join(GenBankIDList)
+
+            '''Do 6 frame translation'''
+            ## RM < TODO IS NEW ORF FINDER ACTUALLY REPLACING 6 FRAME TRA?
+            ## RM < TODO DO WE NEED TO ITERATE OVER THESE BASTARDS AND CONCAT THE LIST (CF PPHMMD C), OR HANDLE IN 1??
+            ProtList, ProtIDList = [
+                ], []
+
+            for GenBankSeq, GenBankID in zip(GenBankSeqList, GenBankIDList):
+                prot, prot_id = find_orfs(GenBankID, GenBankSeq, TranslTable, self.ProteinLength_Cutoff,
+                                             taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+                ProtList += prot
+                ProtIDList += prot_id
+
+            with open(PPHMMQueryFile, "w") as f:
+                for i in range(len(ProtIDList)):
+                    f.write(f">{ProtIDList[i]}\n{str(ProtList[i].seq)}\n")
+
+            shell(f"hmmscan --cpu {self.HMMER_N_CPUs} --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDb} {PPHMMQueryFile}",
+                                "Ref virus annotator: signature table constructor, HMMScan call")
 
             PPHMMIDList, PPHMMScoreList, FeatureFrameBestHitList, FeatureLocFromBestHitList, \
                 FeatureLocToBestHitList, FeatureDescList = [], [], [], [], [], []
@@ -415,7 +558,7 @@ class RefVirusAnnotator:
                 f"There are some other files/folders other than HHsuite PPHMMs in the folder {HHsuite_PPHMMDir}. Remove them first.")
             raise SystemExit()
 
-        '''Build hhm DBs'''
+        '''Build hhm DBs''' # RM < TODO Break into separate function, harmonise with pphmmdb construction
         _ = subprocess.Popen(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}",
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         out, err = _.communicate()
@@ -692,7 +835,7 @@ class RefVirusAnnotator:
             "Generate PPHMM signature & loc tables, GOM database & GOM sig table")
 
         '''1/8 : Make directories'''
-        HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir = self.mkdirs()
+        HMMER_hmmscanDir, ClustersDir, HMMER_PPHMMDir, HMMER_PPHMMDb, HHsuite_PPHMMDB, HHsuite_PPHMMDir, HHsuite_PPHMMDB, HHsuiteDir = mkdir_ref_annotator(self.ShelveDir, self.RemoveSingletonPPHMMs, self.PPHMMSorting)
 
         '''2/8 : Retrieve variables'''
         self.genomes = retrieve_genome_vars(

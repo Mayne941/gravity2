@@ -5,8 +5,6 @@ from Bio.SeqRecord import SeqRecord
 from collections import Counter
 from alive_progress import alive_it
 import numpy as np
-import time
-import subprocess
 import os
 import operator
 import random
@@ -20,12 +18,13 @@ from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.download_genbank_file import DownloadGenBankFile
 from app.utils.console_messages import section_header
 from app.utils.orf_identifier import get_orf_trasl_table, no_orf_match
-from app.utils.stdout_utils import clean_stdout, progress_bar, error_handler, progress_msg
+from app.utils.stdout_utils import clean_stdout, progress_bar, error_handler, progress_msg, warning_msg
 from app.utils.retrieve_pickle import retrieve_genome_vars
 from app.utils.shell_cmds import shell
 from app.utils.mkdirs import mkdir_pphmmdbc
 from app.utils.hhr_parse import hhparse
 from app.utils.error_handlers import raise_gravity_error
+from app.utils.orf_identifier import find_orfs
 
 class PPHMMDBConstruction:
     def __init__(self,
@@ -135,67 +134,14 @@ class PPHMMDBConstruction:
                             ProtList.append(ProtRecord)
                             ProtIDList.append(GenBankID+"|"+ProtID)
 
-                '''If the genome isn't annotated with any ORFs'''
-                # RM < TODO break out into separate script in utils
+                '''If the genome isn't annotated with any ORFs, find some'''
                 if ContainProtAnnotation == 0:
-                    '''Identifying ORFs'''
-                    try:
-                        Starts = self.orf_tranl_table[TranslTable]
-                    except KeyError:
-                        '''No ORF found, use standard code'''
-                        Starts = self.orf_no_match
-
-                    '''Generate start and stop codon lists'''
-                    CodonList = [
-                        Base1+Base2+Base3 for Base1 in "TCAG" for Base2 in "TCAG" for Base3 in "TCAG"]
-                    StartCodonList, StopCodonList = [], []
-                    for i, j in enumerate(Starts):
-                        if j == "M":
-                            StartCodonList.append(CodonList[i])
-                        if j == "*":
-                            StopCodonList.append(CodonList[i])
-
-                    GenBankSeq = GenBankRecord.seq
-                    SeqLength, ORF_i = len(GenBankSeq), 0
-                    for _, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
-                        '''Split into multople of 3, get in-frame nucleotide seq, split sequence into codons'''
-                        for frame in range(3):
-                            length = 3 * ((SeqLength-frame) // 3)
-                            nuc_inframe = nuc[frame:(frame+length)]
-                            nuc_codonList = [str(nuc_inframe[i:i+3])
-                                             for i in range(0, length, 3)]
-
-                            '''Find stop codons'''
-                            StopCodon_indices = [i for i, codon in enumerate(
-                                nuc_codonList) if codon in StopCodonList]
-                            Coding_Start_IndexList = np.array(
-                                [-1]+StopCodon_indices)+1
-                            Coding_End_IndexList = np.array(
-                                StopCodon_indices+[len(nuc_codonList)])
-
-                            ProtSeqList = []
-                            for i, j in zip(Coding_Start_IndexList, Coding_End_IndexList):
-                                for k, codon in enumerate(nuc_codonList[i:j]):
-                                    if codon in StartCodonList:
-                                        ProtSeqList.append(
-                                            Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
-                                        break
-
-                            for ProtSeq in ProtSeqList:
-                                '''Exclude protein sequences with <'ProteinLength_Cutoff' aa'''
-                                if len(ProtSeq) >= self.ProteinLength_Cutoff:
-                                    ProtRecord = SeqRecord(ProtSeq,
-                                                           id=f"{GenBankID}|ORF{ORF_i}",
-                                                           name=f"{GenBankID}|ORF{ORF_i}",
-                                                           description="Hypothetical protein",
-                                                           annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
-                                    ProtList.append(ProtRecord)
-                                    ProtIDList.append(
-                                        f"{GenBankID}|ORF{ORF_i}")
-                                    ORF_i += 1
+                    prots, prot_ids = find_orfs(GenBankID, GenBankRecord.seq, TranslTable, self.ProteinLength_Cutoff,
+                                                    taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+                    ProtList += prots
+                    ProtIDList += prot_ids
             Virus_i += 1
         clean_stdout()
-
         return ProtList, np.array(ProtIDList)
 
     def make_blastp_db(self, BLASTSubjectFile, ProtList):
@@ -298,12 +244,11 @@ class PPHMMDBConstruction:
 
                 temp_aln_fname = f"{ClustersDir}/temp.fasta"
                 '''Align cluster using muscle'''
-                shell(f"mafft --thread {self.HHsuite_N_CPUs} --auto {AlnClusterFile} > {temp_aln_fname}",
+                shell(f"mafft --thread {self.HHsuite_N_CPUs} --localpair --maxiterate 1000  {AlnClusterFile} > {temp_aln_fname}",
                         "PPHMMDB Construction: make alignments, main muscle call")
 
                 shell(f"rm {AlnClusterFile} && mv {temp_aln_fname} {AlnClusterFile}",
                       "PPHMMDB COnstruction: move temp mafft file")
-
                 '''Cluster annotations'''
                 Cluster_MetaDataDict[Cluster_i] = {"Cluster": Cluster,
                                                 "DescList": DescList,
@@ -313,24 +258,6 @@ class PPHMMDBConstruction:
                 Cluster_i += 1
         clean_stdout()
         return Cluster_MetaDataDict
-
-    def rebuild_hhsuite_db(self, HHsuite_PPHMMDB, HHsuite_PPHMMDir, hhsearchDir, AlignmentMerging_i_round):
-        '''Rebuild the HHsuite PPHMM database'''
-        shell(f"rm {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex",
-                    "PPHMMDB Contruction: rebuild hhsite db, remove existing db")
-
-        if list(set([f.split(".")[-1] for f in os.listdir(HHsuite_PPHMMDir)])) != ["hhm"]:
-            progress_msg(
-                f"There are some other files/folders other than HHsuite PPHMMs in the folder {HHsuite_PPHMMDir}. Remove them first.")
-
-        shell(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}",
-                    "PPHMMDB Contruction: rebuild hhsite db, rebuild ffindex")
-
-        shell(f"rm -rf {hhsearchDir}",
-                    "PPHMMDB Contruction: rebuild hhsite db, remove hhsuite intermediates")
-        AlignmentMerging_i_round += 1
-
-        return AlignmentMerging_i_round
 
     def pphmm_and_merge_alignments(self, Cluster_MetaDataDict, ClustersDir, HHsuite_PPHMMDir,
                                    HMMER_PPHMMDir, HMMER_PPHMMDbDir, HHsuite_PPHMMDB, HHsuiteDir,
@@ -342,26 +269,24 @@ class PPHMMDBConstruction:
         elif self.N_AlignmentMerging < 0:
             progress_msg("- Merge protein alignments until exhausted")
 
+        AlignmentMerging_i_round = 0
+        wdir = f'{"/".join(HHsuite_PPHMMDB.split("/")[:-2])}/HHSuiteDB/'
+        fname = f"{wdir}/mycluster"
+        shell(f"mkdir {wdir}")
+
         '''Make HHsuite PPHMMs from protein alignments'''
         for Cluster_i in alive_it(range(len(Cluster_MetaDataDict))):
             AlnClusterFile = f"{ClustersDir}/Cluster_{Cluster_i}.fasta"
-            HHsuite_PPHMMFile = f"{HHsuite_PPHMMDir}/PPHMM_{Cluster_i}.hhm"
+            HHsuite_PPHMMFile = f"{HHsuite_PPHMMDir}/PPHMM_{Cluster_i}.hmm"
             shell(f"hhmake -i {AlnClusterFile} -o {HHsuite_PPHMMFile} -seq {len(Cluster_MetaDataDict[Cluster_i]['Cluster'])+1} -name Cluster_{Cluster_i} -id 100 -M 50 -v 0",
                                  "PPHMMDB Construction: merge alignments, hhmake")
-        clean_stdout()
 
         '''Make PPHMM DB'''
-        shell(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}",
-                             "PPHMMDB Construction: merge alignments, ffindex build")
+        AlignmentMerging_i_round = self.rebuild_hhsuite_db(
+            HHsuite_PPHMMDB, HHsuite_PPHMMDir, AlignmentMerging_i_round, ClustersDir, fname, first=True)
 
         '''Merge protein alignments'''
-        AlignmentMerging_i_round = 0
         while True:
-            # if AlignmentMerging_i_round >= self.N_AlignmentMerging and self.N_AlignmentMerging >= 0: # RM < TODO
-            if AlignmentMerging_i_round >= 3:
-                progress_msg("Alignment merging complete")
-                break
-
             if self.HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging == True:
                 progress_msg(
                     f"\t\t - Building HMMER PPHMM DB...")
@@ -378,80 +303,54 @@ class PPHMMDBConstruction:
             progress_msg(f"\t - Round {AlignmentMerging_i_round + 1} - Determine PPHMM-PPHMM similarity scores (ALL-VERSUS-ALL hhsearch)")
             hhsearchDir = f"{HHsuiteDir}/hhsearch_{''.join(random.choice(string.ascii_uppercase + string.digits)for _ in range(10))}"
             os.makedirs(hhsearchDir)
-            # hhsearchOutFile = f"{hhsearchDir}/hhsearch.stdout.hhr"
             hhsearchOutFile = f"{hhsearchDir}/hhsearch.txt"
-            N_PPHMMs = LineCount(f"{HHsuite_PPHMMDB}_hhm.ffindex")
 
             '''Build hhm DBs'''
             progress_msg("\t\t - Building HMM Databases...")
-            shell(f"ffindex_build -s {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex {HHsuite_PPHMMDir}")
-
-            '''Build intermediate MSA DB'''
-            os.chdir(f"{ClustersDir}")
-            shell(f"ffindex_build -s ../../HHsuite/HHsuite_PPHMMDB/HHsuite_PPHMMDB_msa.ffdata ../../HHsuite/HHsuite_PPHMMDB/HHsuite_PPHMMDB_msa.ffindex .")
-            os.chdir(f"../../../../")
-
-            '''Build a3m DB (scalable annotated alignment)'''
-            shell(f"ffindex_apply {HHsuite_PPHMMDB}_msa.ffdata {HHsuite_PPHMMDB}_msa.ffindex -i {HHsuite_PPHMMDB}_a3m.ffindex -d {HHsuite_PPHMMDB}_a3m.ffdata -- hhconsensus -M 50 -i stdin -oa3m stdout -v 0")
-
-            '''Build cs_219 DB (column context specific pseudocounts)'''
-            shell(f"cstranslate -f -x 0.3 -c 4 -I a3m -i {HHsuite_PPHMMDB}_a3m -o {HHsuite_PPHMMDB}_cs219")
-
             SeenPair, SeenPair_i, PPHMMSimScoreCondensedMat = {}, 0, []
-            for PPHMM_i in alive_it(range(0, N_PPHMMs)): # RM < TODO ###################
-            # for PPHMM_i in range(0, N_PPHMMs):
-                HHsuite_PPHMMFile = f'{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hhm'
-
-                #######################
-                # shell(f"hhsearch -i {HHsuite_PPHMMFile} -d {HHsuite_PPHMMDB} -blasttab {hhsearchOutFile} -e {self.HHsuite_evalue_Cutoff} -E {self.HHsuite_evalue_Cutoff} -cov {self.HHsuite_SubjectCoverage_Cutoff} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.HHsuite_N_CPUs}",
-                #                      "PPHMMDB Construction: merge alignments, hhsearch")
-                # hh_df = pd.read_csv(hhsearchOutFile, sep="\t", names=["qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore"])
-                # hh_df = hh_df[hh_df["pident"] * 100 >= self.HHsuite_QueryCoverage_Cutoff] # filter by query coverage
-
-                # if hh_df.empty:
-                #     continue
-
-                # else:
-                #     hits = hh_df.to_dict(orient="records")
-                #     for hit in hits:
-                #         pair = ", ".join(sorted([hit["qseqid"].split("_")[1], hit["sseqid"].split("_")[1]]))
-                #         if pair in SeenPair:
-                #             if hit["bitscore"] > PPHMMSimScoreCondensedMat[SeenPair[pair]][2]:
-                #                 PPHMMSimScoreCondensedMat[SeenPair[pair]][2] = hit["bitscore"]
-                #         else:
-                #             SeenPair[pair] = SeenPair_i
-                #             PPHMMSimScoreCondensedMat.append([hit["qseqid"].split("_")[1], hit["sseqid"].split("_")[1], hit["bitscore"]])
-                #             SeenPair_i = SeenPair_i+1
-                #######################
+            N_PPHMMs = LineCount(f"{fname}_hhm.ffindex")
+            # for PPHMM_i in alive_it(range(0, N_PPHMMs)):
+            for PPHMM_i in range(0, N_PPHMMs):
+                HHsuite_PPHMMFile = f'{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hmm'
                 hit_match = re.compile(
                     r"[A-Z0-9]+\|[A-Z0-9]+.[0-9]{1}\s[a-zA-Z0-9_ ]{0,10}")
                 # RM < TODO PARAMETERISE MAXMEM
-                shell(f"hhsearch -maxmem 9.0 -i {HHsuite_PPHMMFile} -d {HHsuite_PPHMMDB} -o {hhsearchOutFile} -e {self.HHsuite_evalue_Cutoff} -E {self.HHsuite_evalue_Cutoff} -cov {self.HHsuite_SubjectCoverage_Cutoff} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.HHsuite_N_CPUs}",
+                shell(f"hhsearch -maxmem 9.0 -i {HHsuite_PPHMMFile} -d {fname} -o {hhsearchOutFile} -e {self.HHsuite_evalue_Cutoff} -E {self.HHsuite_evalue_Cutoff} -cov {self.HHsuite_SubjectCoverage_Cutoff} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.HHsuite_N_CPUs}",
                                      "PPHMMDB Construction: merge alignments, hhsearch")
                 with open(hhsearchOutFile, 'r') as hhsearchOut_txt:
                     Content = hhsearchOut_txt.readlines()
                     QueryLength = int(Content[1].split()[1])
-                    for Line in Content[9:]:
-                        if Line == "\n":
+                    for line in Content[9:]:
+                        if line == "\n":
                             break
                         else:
                             '''Filter variable length Hit name'''
-                            Line = re.sub(hit_match, "", Line)
-                            Line = Line.replace("(", " ").replace(")", " ").split()
+                            line_fil = re.sub(hit_match, "", line)
+                            line_fil = re.sub(r" ~", "-", line_fil)
+                            line_fil = line_fil.replace("(", " ").replace(")", " ").split()
                             try:
-                                PPHMM_j = int(Line[0])
-                                evalue = float(Line[2])
-                                pvalue = float(Line[3])
-                                PPHMMSimScore = float(Line[4])
-                                Col = float(Line[6])
-                                SubjectLength = int(Line[-1])
+                                PPHMM_j = int(line_fil[0])
+                                evalue = float(line_fil[3])
+                                pvalue = float(line_fil[4])
+                                PPHMMSimScore = float(line_fil[5])
+                                Col = float(line_fil[7])
+                                # SubjectLength = int(line_fil[-1])
                             except ValueError as ex:
-                                raise_gravity_error(f"Failed to extract PPHMM data from HHsearch output (pphmmdb construction, aln merging function). This happens when HHsearch outputs malformed text files, check the output for the entry listed in this exception: {ex}")
+                                warning_msg(f"Error parsing HHSuite output. Attempting to correct...")
+                                try:
+                                    line_fil = line.split()
+                                    PPHMM_j = int(line_fil[0])
+                                    evalue = float(line_fil[4])
+                                    pvalue = float(line_fil[5])
+                                    PPHMMSimScore = float(line_fil[6])
+                                    Col = float(line_fil[8])
+                                    print(f"...corrected successfully!")
+                                except:
+                                    raise_gravity_error(f"Failed to extract PPHMM data from HHsearch output (pphmmdb construction, aln merging function). This happens when HHsearch outputs malformed text files, check the output for the entry listed in this exception: {ex}")
                             qcovs = Col/QueryLength*100
-                            scovs = Col/SubjectLength*100
+                            #scovs = Col/SubjectLength*100
                             if ( evalue <= self.HHsuite_evalue_Cutoff and # RM < TODO Why would we need these when in HHsuite search terms?
                                  pvalue <= self.HHsuite_pvalue_Cutoff and # RM < TODO ... so check output
-                                 scovs >= self.HHsuite_SubjectCoverage_Cutoff and
                                  qcovs >= self.HHsuite_QueryCoverage_Cutoff):
                                 Pair = ", ".join(
                                     sorted(map(str, [PPHMM_i, PPHMM_j])))
@@ -464,7 +363,7 @@ class PPHMMDBConstruction:
                                 else:
                                     SeenPair[Pair] = SeenPair_i
                                     PPHMMSimScoreCondensedMat.append(
-                                        [PPHMM_i, PPHMM_j, PPHMMSimScore])
+                                        [PPHMM_i, PPHMM_j - 1 , PPHMMSimScore]) # -1 added for zero indedxing
                                     SeenPair_i = SeenPair_i+1
 
                 shell(f"rm {hhsearchOutFile}", "PPHMMDB Construction: merge alignments, remove hhsearch file")
@@ -476,7 +375,7 @@ class PPHMMDBConstruction:
                 raise ValueError(f"Failed on PPHMM Alignment Merging step: no alignments could be merged. Check your thresholds or disable this feature.")
 
             PPHMMSimScoreMat = np.zeros((N_PPHMMs, N_PPHMMs))
-            PPHMMSimScoreMat[list(map(int, PPHMMSimScoreCondensedMat[:, 0])), list(map( # RM < TODO FAILS HERE WITH LARGE N MERGING??
+            PPHMMSimScoreMat[list(map(int, PPHMMSimScoreCondensedMat[:, 0])), list(map(
                 int, PPHMMSimScoreCondensedMat[:, 1]))] = list(map(float, PPHMMSimScoreCondensedMat[:, 2]))
             PPHMMSimScoreMat[list(map(int, PPHMMSimScoreCondensedMat[:, 1])), list(map(
                 int, PPHMMSimScoreCondensedMat[:, 0]))] = list(map(float, PPHMMSimScoreCondensedMat[:, 2]))
@@ -509,7 +408,7 @@ class PPHMMDBConstruction:
             with open(PPHMMClustersFile, 'r') as PPHMMClusters_txt:
                 N_PPHMMs_AfterMerging = len(PPHMMClusters_txt.readlines())
 
-            if N_PPHMMs_AfterMerging == N_PPHMMs:
+            if N_PPHMMs_AfterMerging == N_PPHMMs or AlignmentMerging_i_round == self.N_AlignmentMerging:
                 progress_msg(
                     "\t\t\t - No alignments to be merged. Stop alignment merging process")
                 shell(f"rm -rf {hhsearchDir}", "PPHMMDB Construction: merge alignments, rm hhsearch dir")
@@ -520,21 +419,13 @@ class PPHMMDBConstruction:
 
             '''Merge alignments, remake PPHMMs'''
             progress_msg("\t\t - Merge protein alignments and remake HHsuite PPHMMs")
-            # RM < TODO This can never have worked... replace with soln from virus classifier
             SelfSimScoreList = PPHMMSimScoreMat.diagonal()
-            PPHMMDissimScoreMat = 1 - np.transpose( PPHMMSimScoreMat**2 / SelfSimScoreList ) / SelfSimScoreList # ORIGINAL
-            PPHMMDissimScoreMat = 1 - np.nan_to_num(np.transpose(PPHMMSimScoreMat**2 / SelfSimScoreList) / SelfSimScoreList) # RM FIX
-            ########
-            ## RM < TODO BODGE. Look into the np.divide() arg "where" to avoid nans/infs from zero division?
-            # PPHMMDissimScoreMat = PPHMMSimScoreMat.copy()
-            # PPHMMDissimScoreMat = 1 - PPHMMDissimScoreMat
-            #######
+            PPHMMDissimScoreMat = 1 - np.nan_to_num(np.transpose(PPHMMSimScoreMat**2 / SelfSimScoreList) / SelfSimScoreList)
             PPHMMDissimScoreMat[PPHMMDissimScoreMat < 0] = 0
             AfterMergingPPHMM_IndexList, AfterMergingPPHMM_i = [], 1
 
             with open(PPHMMClustersFile, 'r') as PPHMMClusters_txt:
-                # for PPHMMCluster in alive_it(PPHMMClusters_txt.readlines()):
-                for PPHMMCluster in PPHMMClusters_txt.readlines():
+                for PPHMMCluster in alive_it(PPHMMClusters_txt.readlines()):
                     PPHMMCluster = list(
                         map(int, list(map(float, PPHMMCluster.split("\n")[0].split("\t")))))
                     AfterMergingPPHMM_IndexList.append(min(PPHMMCluster))
@@ -551,11 +442,12 @@ class PPHMMDBConstruction:
                         PPHMMTreeNewick = PPHMMTreeNewick.write(format=9)
 
                         while True:
+                            '''Iterate over tree looking for pairs'''
                             m = re.search(r"\((\d+),(\d+)\)", PPHMMTreeNewick)
                             mafft_temp_fname = f"{self.ShelveDir}/temp.fasta"
                             if not m:
-                                shell(f"mafft --auto {ClusterFile_i} > {mafft_temp_fname}"
-                                        "PPHMMDB Construction: merge alignments, mafft refine")
+                                shell(f"mafft --thread {self.HHsuite_N_CPUs} --localpair --maxiterate 1000  {ClusterFile_i} > {mafft_temp_fname}",
+                                        calling_fn="PPHMMDB Construction: merge alignments, mafft refine")
                                 shell(f"rm {ClusterFile_i} && mv {mafft_temp_fname} {ClusterFile_i}",
                                         "PPHMMDB Construction: merge alignments, rm mafft intermediates")
                                 break
@@ -567,19 +459,13 @@ class PPHMMDBConstruction:
 
                             ClusterFile_i = f"{ClustersDir}/Cluster_{PPHMM_i}.fasta"
                             ClusterFile_j = f"{ClustersDir}/Cluster_{PPHMM_j}.fasta"
-                            HHsuite_PPHMMFile_j = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_j}.hhm"
+                            HHsuite_PPHMMFile_j = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_j}.hmm"
 
                             # RM < TODO BP HERE AND REPLACe WITH MAFFT
-                            # shell(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {ClusterFile_i} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
                             shell(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {mafft_temp_fname} -gapopen {self.MUSCLE_GapOpenCost} -gapextend {self.MUSCLE_GapExtendCost}",
                                                  "PPHMMDB Construction: merge alignments, muscle profile")
-                            # breakpoint() ##############################
-                            # RM < DISABLE THIS FIRST ↓ AS MAFFT MIGHT BE FAILING SILENTLY
-                            # shell(f"rm {ClusterFile_i} && mv {mafft_temp_fname} {ClusterFile_i}",
-                            #         "PPHMMDB Construction: merge alignments, rm mafft intermediates")
-
-                            shell(f"rm {ClusterFile_j} {HHsuite_PPHMMFile_j}",
-                                  "PPHMMDB Construction: merge alignments, rm hhsuite muscle intermediate")
+                            shell(f"rm {ClusterFile_i} {ClusterFile_j} {HHsuite_PPHMMFile_j} && mv {mafft_temp_fname} {ClusterFile_i}",
+                                    "PPHMMDB Construction: merge alignments, rm mafft intermediates")
 
                             Cluster_MetaDataDict[PPHMM_i]["Cluster"] = Cluster_MetaDataDict[PPHMM_i]["Cluster"] + \
                                 Cluster_MetaDataDict[PPHMM_j]["Cluster"]
@@ -589,13 +475,12 @@ class PPHMMDBConstruction:
                                 Cluster_MetaDataDict[PPHMM_j]["TaxoLists"]
                             del Cluster_MetaDataDict[PPHMM_j]
 
-                        HHsuite_PPHMMFile_i = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hhm"
+                        HHsuite_PPHMMFile_i = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hmm"
                         Cluster_MetaDataDict[PPHMM_i]["AlignmentLength"] = AlignIO.read(
                             ClusterFile_i, "fasta").get_alignment_length()
                         shell(f"hhmake -i {ClusterFile_i} -o {HHsuite_PPHMMFile_i} -v 0 -seq {len(Cluster_MetaDataDict[PPHMM_i]['Cluster'])+1} -name Cluster_{PPHMM_i} -id 100 -M 50",
                                              "PPHMMDB Construction: merge alignments, hhmake")
                     AfterMergingPPHMM_i += 1
-            clean_stdout()
 
             '''Rename protein alignments and their associated PPHMMs'''
             AfterMergingPPHMM_IndexList, AfterMergingPPHMM_i = sorted(
@@ -609,8 +494,8 @@ class PPHMMDBConstruction:
                 shell(f"mv {ClusterFile_i} {ClusterFile_j}",
                             "PPHMMDB Construction: merge alignments, move cluster files")
 
-                HHsuite_PPHMMFile_i = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hhm"
-                HHsuite_PPHMMFile_j = f"{HHsuite_PPHMMDir}/PPHMM_{AfterMergingPPHMM_i}.hhm"
+                HHsuite_PPHMMFile_i = f"{HHsuite_PPHMMDir}/PPHMM_{PPHMM_i}.hmm"
+                HHsuite_PPHMMFile_j = f"{HHsuite_PPHMMDir}/PPHMM_{AfterMergingPPHMM_i}.hmm"
                 shell(f"mv {HHsuite_PPHMMFile_i} {HHsuite_PPHMMFile_j}",
                             "PPHMMDB Construction: merge alignments, move hhsuite files")
 
@@ -625,12 +510,37 @@ class PPHMMDBConstruction:
 
             '''Rebuild the HHsuite PPHMM database'''
             AlignmentMerging_i_round = self.rebuild_hhsuite_db(
-                HHsuite_PPHMMDB, HHsuite_PPHMMDir, hhsearchDir, AlignmentMerging_i_round)
+                HHsuite_PPHMMDB, HHsuite_PPHMMDir, AlignmentMerging_i_round, ClustersDir, fname)
+            shell(f"rm -rf {hhsearchDir}",
+                        "PPHMMDB Contruction: rebuild hhsite db, remove hhsuite intermediates")
 
         progress_msg("\tAlignment merging is done.")
         '''Delete dir'''
         shell(f"rm -rf {HHsuiteDir}",
               "PPHMMDB Construction: merge alignments, remove hhsuite dir")
+
+    def rebuild_hhsuite_db(self, HHsuite_PPHMMDB, HHsuite_PPHMMDir, AlignmentMerging_i_round, ClustersDir, fname, first=False):
+        '''Rebuild the HHsuite PPHMM database'''
+        shell(f"rm {HHsuite_PPHMMDB}_hhm.ffdata {HHsuite_PPHMMDB}_hhm.ffindex",
+                    "PPHMMDB Contruction: rebuild hhsite db, remove existing db")
+        shell(f"ffindex_build -s {fname}_msa.ffdata {fname}_msa.index {ClustersDir}")
+        shell(f"ffindex_apply {fname}_msa.ffdata {fname}_msa.index -i {fname}_a3m.ffindex -d {fname}_a3m.ffdata -- hhconsensus -M 50 -maxres 65535 -i stdin -oa3m stdout -v 0")
+        shell(f"rm {fname}_msa.ffdata {fname}_msa.index")
+        shell(f"ffindex_apply {fname}_a3m.ffdata {fname}_a3m.ffindex -i {fname}_hhm.ffindex -d {fname}_hhm.ffdata -- hhmake -i stdin -o stdout -v 0")
+        shell(f"cstranslate -f -x 0.3 -c 4 -I a3m -i {fname}_a3m -o {fname}_cs219")
+        shell(f"sort -k3 -n -r {fname}_cs219.ffindex | cut -f1 > sorting.dat") # Parameterise sorting file
+        shell(f"ffindex_order sorting.dat {fname}_hhm.ff{{data,index}} {fname}_hhm_ordered.ffdata {fname}_hhm_ordered.ffindex")
+        shell(f"mv {fname}_hhm_ordered.ffindex {fname}_hhm.ffindex")
+        shell(f"mv {fname}_hhm_ordered.ffdata {fname}_hhm.ffdata")
+        shell(f"ffindex_order sorting.dat {fname}_a3m.ffdata {fname}_a3m.ffindex {fname}_a3m_ordered.ffdata {fname}_a3m_ordered.ffindex")
+        shell(f"mv {fname}_a3m_ordered.ffindex {fname}_a3m.ffindex")
+        shell(f"mv {fname}_a3m_ordered.ffdata {fname}_a3m.ffdata")
+
+        if not first:
+            AlignmentMerging_i_round += 1
+
+        return AlignmentMerging_i_round
+
 
     def Make_HMMER_PPHMM_DB(self, HMMER_PPHMMDir, HMMER_PPHMMDb, ClustersDir, Cluster_MetaDataDict, VariableShelveFile):
         '''10/10: Build HMMER DB of PPHMMs, create and save summary file'''
@@ -674,8 +584,8 @@ class PPHMMDBConstruction:
             ClusterDescCount = sorted(
                 list(Counter(DescList).items()), key=operator.itemgetter(1), reverse=True)
             for ClusterDesc in ClusterDescCount:
-                ClusterDesc = ClusterDesc[0] # RM < TODO check in clustedesc.lower()
-                if (("Hypothetical" not in ClusterDesc) and ("hypothetical" not in ClusterDesc)):
+                ClusterDesc = ClusterDesc[0] # RM < TODO check in clustedesc.lower() after changing name of hypothetical clusters
+                if (("Hypothetical" not in ClusterDesc) and ("hypothetical" not in ClusterDesc) and ("~" not in ClusterDesc)):
                     break
 
             ClusterDescList.append(f"{ClusterDesc}|{ClusterTaxoList[-1]}")
