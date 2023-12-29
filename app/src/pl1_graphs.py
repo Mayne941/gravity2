@@ -8,8 +8,10 @@ from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
 from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
 from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
-from app.utils.stdout_utils import error_handler
-import re
+from app.utils.stdout_utils import warning_msg, progress_msg
+from app.utils.generate_fnames import generate_file_names
+from app.utils.mkdirs import mkdir_pl1_graphs
+
 import os
 import numpy as np
 import plotly.express as px
@@ -22,104 +24,30 @@ matplotlib.use('agg')
 
 class GRAViTyDendrogramAndHeatmapConstruction:
     def __init__(self,
-                 ShelveDir,
-                 IncludeIncompleteGenomes=False,
-                 SimilarityMeasurementScheme="PG",
-                 p=1,
-                 Dendrogram=True,
-                 Dendrogram_LinkageMethod="average",
-                 Bootstrap=True,
-                 N_Bootstrap=10,
-                 Bootstrap_method="booster",
-                 Bootstrap_N_CPUs=20,
-                 Heatmap=False,
-                 Heatmap_VirusOrderScheme=None,
-                 Heatmap_WithDendrogram=True,
-                 Heatmap_DendrogramFile=None,
-                 Heatmap_DendrogramSupport_Cutoff=0.75,
-                 VirusGrouping=True,
+                 payload,
+                 ExpDir,
                  ) -> None:
         '''Parameters'''
-        self.IncludeIncompleteGenomes = IncludeIncompleteGenomes
-        self.SimilarityMeasurementScheme = SimilarityMeasurementScheme
-        self.p = p
-        self.Dendrogram = Dendrogram
-        self.Dendrogram_LinkageMethod = Dendrogram_LinkageMethod
-        self.Bootstrap = Bootstrap
-        self.N_Bootstrap = N_Bootstrap
-        self.Bootstrap_method = Bootstrap_method
-        self.Bootstrap_N_CPUs = Bootstrap_N_CPUs
-        self.Heatmap = Heatmap
-        self.Heatmap_VirusOrderScheme = Heatmap_VirusOrderScheme
-        self.Heatmap_WithDendrogram = Heatmap_WithDendrogram
-        self.Heatmap_DendrogramFile = Heatmap_DendrogramFile
-        self.Heatmap_DendrogramSupport_Cutoff = Heatmap_DendrogramSupport_Cutoff
-        self.VirusGrouping = VirusGrouping
-        '''Fpaths'''
-        self.ShelveDir = ShelveDir
-        self.VariableShelveDir = f"{self.ShelveDir}/output"
-        self.VirusDendrogramFile = "placeholder"
-        '''Empties'''
-        self.genomes, self.ref_annotations = {}, {}
-
-    def mkdirs(self):
-        '''1/7: Return all dirs for db storage and retrieval'''
-        VirusDendrogramDistFile, BootstrappedVirusDendrogramFile, HeatmapFile, HeatmapWithDendrogramFile, \
-            VirusGroupingFile = "", "", "", "", ""
-
-        if self.Dendrogram == True:
-            '''Virus dendrogram'''
-            self.VirusDendrogramFile = f"{self.VariableShelveDir}/Dendrogram.IncompleteGenomes={str(int(self.IncludeIncompleteGenomes))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.nwk"
-
-            if self.Bootstrap == True:
-                '''Dendrogram distribution'''
-                VirusDendrogramDistFile = f"{self.VariableShelveDir}/DendrogramDist.IncompleteGenomes={str(int(self.IncludeIncompleteGenomes))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.nwk"
-                if os.path.isfile(VirusDendrogramDistFile):
-                    os.remove(VirusDendrogramDistFile)
-
-                '''Bootstrapped Virus dendrogram'''
-                # BootstrappedVirusDendrogramFile = f"{self.VariableShelveDir}/BootstrappedDendrogram.IncompleteGenomes=%s.Scheme=%s.Method=%s.p=%s.nwk" % (
-                #     str(int(self.IncludeIncompleteGenomes)), self.SimilarityMeasurementScheme, self.Dendrogram_LinkageMethod, self.p)
-                BootstrappedVirusDendrogramFile = f"{self.VariableShelveDir}/BootstrappedDendrogram.nwk"
-                if os.path.isfile(BootstrappedVirusDendrogramFile):
-                    os.remove(BootstrappedVirusDendrogramFile)
-
-        if self.Heatmap == True:
-            HeatmapFile = f"{self.VariableShelveDir}/Heatmap.IncompleteGenomes={str(int(self.IncludeIncompleteGenomes))}.Scheme={self.SimilarityMeasurementScheme}.p={self.p}.pdf"
-
-        if self.Heatmap_WithDendrogram == True:
-            # HeatmapWithDendrogramFile = f"{self.VariableShelveDir}/HeatmapWithDendrogram.IncompleteGenomes={str(int(self.IncludeIncompleteGenomes))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.support_cutoff={self.Heatmap_DendrogramSupport_Cutoff}.pdf"
-            HeatmapWithDendrogramFile = f"{self.VariableShelveDir}/HeatmapWithDendrogram.pdf"
-            if self.Heatmap_DendrogramFile == None:
-                if self.Dendrogram == True:
-                    if self.Bootstrap == True:
-                        self.Heatmap_DendrogramFile = BootstrappedVirusDendrogramFile
-                    else:
-                        self.Heatmap_DendrogramFile = self.VirusDendrogramFile
-                else:
-                    raise SystemExit("The dendrogram file is missing.")
-            elif not os.path.isfile(self.Heatmap_DendrogramFile):
-                raise SystemExit(f"Can't find {self.Heatmap_DendrogramFile}.")
-
-        if self.VirusGrouping == True:
-            VirusGroupingFile = f"{self.VariableShelveDir}/VirusGrouping.IncompleteGenomes={str(int(self.IncludeIncompleteGenomes))}.Scheme={self.SimilarityMeasurementScheme}.p={self.p}.txt"
-
-        return VirusDendrogramDistFile, BootstrappedVirusDendrogramFile, HeatmapFile, HeatmapWithDendrogramFile, VirusGroupingFile
+        self.payload = payload
+        self.fnames = generate_file_names(payload, ExpDir)
+        self.genomes = retrieve_genome_vars(self.fnames['ReadGenomeDescTablePickle'])
+        self.ref_annotations = retrieve_pickle(self.fnames['RefAnnotatorPickle'])
 
     def est_pairwise_dists(self):
         '''3/7: Estimate pairwise distances between viruses, return distance matrix (recip. sim matrix)'''
         SimMat = SimilarityMat_Constructor(PPHMMSignatureTable=self.ref_annotations["PPHMMSignatureTable"],
                                            GOMSignatureTable=self.ref_annotations["GOMSignatureTable"],
                                            PPHMMLocationTable=self.ref_annotations["PPHMMLocationTable"],
-                                           SimilarityMeasurementScheme=self.SimilarityMeasurementScheme,
-                                           p=self.p
+                                           SimilarityMeasurementScheme=self.payload['SimilarityMeasurementScheme'],
+                                           p=self.payload['p']
                                            )
         DistMat = 1 - SimMat
         DistMat[DistMat < 0] = 0
         return DistMat
 
-    def dendrogram(self, DistMat, VirusDendrogramDistFile, BootstrappedVirusDendrogramFile):
+    def dendrogram(self, DistMat):
         '''4/7: Build dendrogram'''
+        progress_msg("Constructing Dendrogram")
         '''Make TaxoLabelList'''
         TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
                                               FamilyList=self.genomes["FamilyList"],
@@ -129,15 +57,16 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         '''Make dendrogram'''
         VirusDendrogram = DistMat2Tree(DistMat=DistMat,
                                        LeafList=TaxoLabelList,
-                                       Dendrogram_LinkageMethod=self.Dendrogram_LinkageMethod
+                                       Dendrogram_LinkageMethod=self.payload['Dendrogram_LinkageMethod']
                                        )
-        with open(self.VirusDendrogramFile, "w") as VirusDendrogram_txt:
+        with open(self.fnames['Heatmap_DendrogramFile'], "w") as VirusDendrogram_txt:
             VirusDendrogram_txt.write(VirusDendrogram)
 
-        if self.Bootstrap == True:
+        if self.payload['Bootstrap'] == True:
             '''Compute bootstrap support'''
+            progress_msg("Computing Dendrogram Bootstrap Support")
             N_PPHMMs = self.ref_annotations["PPHMMSignatureTable"].shape[1]
-            for Bootstrap_i in range(0, self.N_Bootstrap):
+            for Bootstrap_i in range(0, self.payload['N_Bootstrap']):
                 '''Construct bootstrapped PPHMMSignatureTable and PPHMMLocationTable'''
                 PPHMM_IndexList = np.random.choice(
                     list(range(N_PPHMMs)), N_PPHMMs, replace=True)
@@ -147,7 +76,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                     "PPHMMSignatureTable"][:, PPHMM_IndexList]
                 BootstrappedGOMSignatureTable = None
 
-                if "G" in self.SimilarityMeasurementScheme:
+                if "G" in self.payload['SimilarityMeasurementScheme']:
                     '''Construct bootstrapped GOMSignatureTable'''
                     BootstrappedGOMDB = GOMDB_Constructor(TaxoGroupingList=self.genomes["TaxoGroupingList"],
                                                           PPHMMLocationTable=BootstrappedPPHMMLocationTable,
@@ -155,15 +84,16 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                                           )
                     BootstrappedGOMSignatureTable = GOMSignatureTable_Constructor(PPHMMLocationTable=BootstrappedPPHMMLocationTable,
                                                                                   GOMDB=BootstrappedGOMDB,
-                                                                                  GOMIDList=self.ref_annotations["GOMIDList"]
+                                                                                  GOMIDList=self.ref_annotations["GOMIDList"],
+                                                                                  bootstrap=Bootstrap_i
                                                                                   )
 
                 '''Construct a dendrogram from the bootstrapped data'''
                 BootstrappedSimMat = SimilarityMat_Constructor(PPHMMSignatureTable=BootstrappedPPHMMSignatureTable,
                                                                GOMSignatureTable=BootstrappedGOMSignatureTable,
                                                                PPHMMLocationTable=BootstrappedPPHMMLocationTable,
-                                                               SimilarityMeasurementScheme=self.SimilarityMeasurementScheme,
-                                                               p=self.p
+                                                               SimilarityMeasurementScheme=self.payload['SimilarityMeasurementScheme'],
+                                                               p=self.payload['p']
                                                                )
                 BootstrappedDistMat = 1 - BootstrappedSimMat
                 BootstrappedDistMat[BootstrappedDistMat < 0] = 0
@@ -171,129 +101,34 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                 '''Generate bs dist matrix tree'''
                 BootstrappedVirusDendrogram = DistMat2Tree(DistMat=BootstrappedDistMat,
                                                            LeafList=TaxoLabelList,
-                                                           Dendrogram_LinkageMethod=self.Dendrogram_LinkageMethod
+                                                           Dendrogram_LinkageMethod=self.payload['Dendrogram_LinkageMethod']
                                                            )
-                with open(VirusDendrogramDistFile, "a") as VirusDendrogramDist_txt:
+                with open(self.fnames['VirusDendrogramDistFile'], "a") as VirusDendrogramDist_txt:
                     VirusDendrogramDist_txt.write(
                         BootstrappedVirusDendrogram+"\n")
 
+            if os.path.isfile(self.fnames['BootstrappedDendrogramFile']):
+                '''Bootstrap gets really upset if trying to overwrite'''
+                os.remove(self.fnames['BootstrappedDendrogramFile'])
+
             '''Create bootstrapped dendrogram. N.b. No error handler as successful output goes to stderr'''
-            if self.Bootstrap_method == "booster":
-                shell(f"./booster_linux64 -i {self.VirusDendrogramFile} -b {VirusDendrogramDistFile} -o {BootstrappedVirusDendrogramFile} -@ {self.Bootstrap_N_CPUs}")
+            if self.payload['Bootstrap_method'] == "booster":
+                shell(f"./booster_linux64 -i {self.fnames['Heatmap_DendrogramFile']} -b {self.fnames['VirusDendrogramDistFile']} -o {self.fnames['BootstrappedDendrogramFile']} -@ {self.payload['N_CPUs']}")
 
-            elif self.Bootstrap_method == "sumtrees":
-                shell(f"sumtrees.py --decimals=2 --no-annotations --preserve-underscores --force-rooted --output-tree-format=newick --output-tree-filepath={BootstrappedVirusDendrogramFile} --target={self.VirusDendrogramFile} {VirusDendrogramDistFile}")
+            elif self.payload['Bootstrap_method'] == "sumtrees":
+                shell(f"sumtrees.py --decimals=2 --no-annotations --preserve-underscores --force-rooted --output-tree-format=newick --output-tree-filepath={self.fnames['BootstrappedDendrogramFile']} --target={self.fnames['Heatmap_DendrogramFile']} {self.fnames['VirusDendrogramDistFile']}")
             else:
-                print(
-                    f"WARNING: 'Bootstrap_method' can either be 'booster' or 'sumtrees', but you gave me {self.Bootstrap_method}.")
+                warning_msg(
+                    f"WARNING: 'Bootstrap_method' can either be 'booster' or 'sumtrees', but you gave me {self.payload['Bootstrap_method']}.")
 
-    def heatmap(self, DistMat, HeatmapFile):
-        '''5/7: (OPT) Construct and save heatmap as pdf'''
-        '''Determine virus order'''
-        N_Viruses = len(DistMat)
-        if self.Heatmap_VirusOrderScheme == None:
-            VirusOrder = list(range(N_Viruses))
-        elif os.path.isfile(self.Heatmap_VirusOrderScheme):
-            with open(self.Heatmap_VirusOrderScheme, "r") as Heatmap_VirusOrderScheme_txt:
-                VirusOrder = [int(Virus_i.split("\r\n")[0].split("\n")[0])
-                              for Virus_i in Heatmap_VirusOrderScheme_txt]
-        else:
-            VirusOrder = list(range(N_Viruses))
-
-        '''Re-order the distance matrix'''
-        OrderedDistMat = DistMat[VirusOrder][:, VirusOrder]
-
-        '''Labels, label positions, and ticks'''
-        ClassLabelList = np.array([re.split("_|\*", TaxoGrouping)[1] if TaxoGrouping.startswith(
-            ("_", "*")) else TaxoGrouping for TaxoGrouping in self.genomes["TaxoGroupingList"][VirusOrder]])
-        LineList = np.where(ClassLabelList[0:-1] != ClassLabelList[1:])[0]
-        ClassLabelList = np.hstack(
-            (ClassLabelList[LineList], ClassLabelList[-1]))
-        LineList = LineList + 0.5
-        TickLocList = np.array(list(map(np.mean, (list(zip(np.hstack(
-            ([-0.5], LineList)), np.hstack((LineList, [len(self.genomes["TaxoGroupingList"])-0.5]))))))))
-
-        '''Plot configuration'''
-        Heatmap_width = float(12)
-        Heatmap_height = Heatmap_width
-        TaxoLable_space = 1.00
-
-        CBar_Heatmap_gap = 0.05
-        CBar_width = Heatmap_width
-        CBar_height = 0.25
-        CBarLable_space = 0.25
-
-        Outer_margin = 0.5
-        FontSize = 6
-
-        Fig_width = Outer_margin + Heatmap_width + TaxoLable_space + Outer_margin
-        Fig_height = Outer_margin + CBarLable_space + CBar_height + \
-            CBar_Heatmap_gap + Heatmap_height + TaxoLable_space + Outer_margin
-
-        ax_Heatmap_L = (Outer_margin + TaxoLable_space)/Fig_width
-        ax_Heatmap_B = (Outer_margin + CBarLable_space +
-                        CBar_height + CBar_Heatmap_gap)/Fig_height
-        ax_Heatmap_W = Heatmap_width/Fig_width
-        ax_Heatmap_H = Heatmap_height/Fig_height
-
-        ax_CBar_L = (Outer_margin + TaxoLable_space)/Fig_width
-        ax_CBar_B = (Outer_margin + CBarLable_space)/Fig_height
-        ax_CBar_W = CBar_width/Fig_width
-        ax_CBar_H = CBar_height/Fig_height
-
-        '''Plot the heat map'''
-        fig = plt.figure(figsize=(Fig_width, Fig_height), dpi=300)
-
-        ax_Heatmap = fig.add_axes(
-            [ax_Heatmap_L, ax_Heatmap_B, ax_Heatmap_W, ax_Heatmap_H], frame_on=True, facecolor="white")
-        Heatmap_Graphic = ax_Heatmap.imshow(
-            OrderedDistMat, cmap='magma', aspect='auto', vmin=0, vmax=1, interpolation='none')
-        for l in LineList:
-            ax_Heatmap.axvline(l, color='k', lw=0.2)
-            ax_Heatmap.axhline(l, color='k', lw=0.2)
-
-        ax_Heatmap		.set_xticks(TickLocList)
-        ax_Heatmap		.set_xticklabels(
-            ClassLabelList, rotation=90, size=FontSize)
-        ax_Heatmap		.set_yticks(TickLocList)
-        ax_Heatmap		.set_yticklabels(ClassLabelList, rotation=0, size=FontSize)
-        ax_Heatmap		.tick_params(top=True,
-                                 bottom=False,
-                                 left=False,
-                                 right=True,
-                                 labeltop=True,
-                                 labelbottom=False,
-                                 labelleft=False,
-                                 labelright=True,
-                                 direction='out')
-
-        ax_CBar = fig.add_axes(
-            [ax_CBar_L, ax_CBar_B, ax_CBar_W, ax_CBar_H], frame_on=True, facecolor="white")
-        CBar_Graphic = fig.colorbar(
-            Heatmap_Graphic, cax=ax_CBar, orientation="horizontal", ticks=[0, 0.25, 0.50, 0.75, 1])
-        CBar_Graphic	.ax.set_xticklabels(
-            ['0.00', '0.25', '0.50', '0.75', '1.00'], size=FontSize)
-        CBar_Graphic	.ax.set_xlabel('Distance', rotation=0, size=FontSize+2)
-        CBar_Graphic	.ax.tick_params(top=False,
-                                     bottom=True,
-                                     left=False,
-                                     right=False,
-                                     labeltop=False,
-                                     labelbottom=True,
-                                     labelleft=False,
-                                     labelright=False,
-                                     direction='out')
-
-        '''Save img'''
-        plt.savefig(HeatmapFile, format="pdf")
-
-    def heatmap_with_dendro(self, DistMat, HeatmapWithDendrogramFile):
+    def heatmap_with_dendro(self, DistMat):
         '''6/7: (OPT) Construct GRAViTy heat map with dendrogram, save as pdf.
         Needs to be independent of stage 4 as user may provide pre-computer dendrogram file'''
+        progress_msg("Generating GRAViTy Heatmap")
         N_Viruses = len(DistMat)
 
         '''Load tree'''
-        VirusDendrogram = Phylo.read(self.Heatmap_DendrogramFile, "newick")
+        VirusDendrogram = Phylo.read(self.fnames['BootstrappedDendrogramFile'], "newick")
 
         '''Determine virus order'''
         TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
@@ -315,7 +150,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         N_InternalNodes = len(VirusDendrogram.get_nonterminals())
         for InternalNode_i in range(N_InternalNodes):
             try:
-                if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.Heatmap_DendrogramSupport_Cutoff or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
+                if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff'] or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
                     continue
                 else:
                     VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
@@ -325,8 +160,8 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 
         '''Labels, label positions, and ticks'''
         ClassDendrogram_grp = VirusDendrogram
-        ClassDendrogram_label = Phylo.read(  # Needs to be separate read as Bio entities are linked
-            self.Heatmap_DendrogramFile, "newick")
+        ClassDendrogram_label = Phylo.read(  # Needs to be separately read in as Bio entities are linked
+            self.fnames['BootstrappedDendrogramFile'], "newick")
 
         '''Construct taxo labels in ordered list for heatmap axis labels'''
         _, LineList_major = make_labels(ClassDendrogram_grp, zip(
@@ -495,16 +330,16 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                       direction='out')
 
         '''Save fig'''
-        plt	.savefig(HeatmapWithDendrogramFile, format="pdf", bbox_inches = "tight", dpi=dpi)
+        plt.savefig(self.fnames['HeatmapWithDendrogramFile'], format="pdf", bbox_inches = "tight", dpi=dpi)
         return VirusOrder
 
-    def virus_grouping(self, DistMat, VirusGroupingFile):
+    def virus_grouping(self, DistMat):
         '''7/7: (OPT) Group viruses via Thiels-U and other metrics; save as txt.'''
-
+        progress_msg("Calculating virus groupings")
         VirusGroupingList, OptDistance_Cutoff, CorrelationScore, Theils_u_TaxoGroupingListGivenPred, \
             Theils_u_PredGivenTaxoGroupingList = VirusGrouping_Estimator(
-                DistMat, self.Dendrogram_LinkageMethod, self.genomes["TaxoGroupingList"])
-        np.savetxt(fname=VirusGroupingFile,
+                DistMat, self.payload['Dendrogram_LinkageMethod'], self.genomes["TaxoGroupingList"])
+        np.savetxt(fname=self.fnames['VirusGroupingFile'],
                    X=np.column_stack((list(map(", ".join, self.genomes["SeqIDLists"])),
                                       self.genomes["FamilyList"],
                                       self.genomes["GenusList"],
@@ -516,7 +351,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                    delimiter="\t",
                    header="Sequence identifier\tFamily\tGenus\tVirus name\tClass\tGrouping")
 
-        with open(VirusGroupingFile, "a") as VirusGrouping_txt:
+        with open(self.fnames['VirusGroupingFile'], "a") as VirusGrouping_txt:
             VirusGrouping_txt.write(
                 f"\n"
                 f"Distance cut off: {OptDistance_Cutoff}\n"
@@ -529,63 +364,31 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 
     def main(self):
         '''Generate GRAViTy dendrogram and heat map	'''
-        section_header("# Generate GRAViTy dendrogram and heat map #")
+        section_header("Generate GRAViTy dendrogram and heat map")
         '''1/7: Make fpaths'''
-        VirusDendrogramDistFile, BootstrappedVirusDendrogramFile, HeatmapFile, HeatmapWithDendrogramFile, VirusGroupingFile = self.mkdirs()
-
-        '''2/7: Retrieve variables'''
-        self.genomes = retrieve_genome_vars(
-            self.VariableShelveDir)
-        self.ref_annotations = retrieve_pickle(self.VariableShelveDir) # TODO ref pickle
-        if "PPHMMSignatureTable_coo" in self.ref_annotations.keys():
-            self.ref_annotations["PPHMMSignatureTable_coo"] = self.ref_annotations["PPHMMSignatureTable_coo"].toarray(
-            )
-        if "PPHMMLocationTable_coo" in self.ref_annotations.keys():
-            self.ref_annotations["PPHMMLocationTable_coo"] = self.ref_annotations["PPHMMLocationTable_coo"].toarray(
-            )
+        mkdir_pl1_graphs(self.fnames, self.payload)
 
         '''3/7: Estimate virus pairwise distances'''
         DistMat = self.est_pairwise_dists()
 
-        if self.Dendrogram == True:
-            '''4/7: (OPT) Estimate dendrogram'''
-            self.dendrogram(DistMat, VirusDendrogramDistFile,
-                            BootstrappedVirusDendrogramFile)
+        '''X/7: Do plotting'''
+        self.dendrogram(DistMat)
+        label_order = self.heatmap_with_dendro(DistMat)
 
-        if self.Heatmap == True:
-            '''5/7: (OPT) Construct heatmap'''
-            self.heatmap(DistMat, HeatmapFile)
-
-        label_order = self.heatmap_with_dendro(DistMat, HeatmapWithDendrogramFile)
-
-        if self.VirusGrouping == True:
+        if self.payload['VirusGrouping'] == True:
             '''7/7: (OPT) Group viruses'''
-            self.virus_grouping(DistMat, VirusGroupingFile)
+            self.virus_grouping(DistMat)
 
-        # self.norm_n_clusters_graph(label_order)
+        ########################################################################################
+        ################## New feats in development
+
         self.shared_pphmm_ratio(label_order)
         self.shared_norm_pphmm_ratio(label_order)
 
-    def norm_n_clusters_graph(self, label_order):
-        # Not sure this really shows anything over other new graphs
-        out_fname = f"{self.VariableShelveDir}/norm_n_pphmm_clusters.png"
-        df = pd.read_csv(f"{self.VariableShelveDir}/PPHMMandGOMsignatures.csv", index_col=0)
-        df = df.drop(columns=["Virus name", "Accession", "Order", "Family", "Subfamily", "Genus", "Class", df.columns[-1]])
-        df = df.apply(pd.to_numeric)
-        df["sim_idx"] = df.apply(lambda row: row[row == 0].shape[0] / row.count(), axis=1)
-        df["n_clust"] = df.apply(lambda row: row[row == 0].shape[0], axis=1)
-        vals = np.asarray(df["sim_idx"])[label_order]
-        m = []
-        for h in range(len(vals)):
-            m.append([min([v,vals[h]])/max([v,vals[h]]) for v in vals])
-
-        fig = px.imshow(m, x=self.genomes["VirusNameList"][label_order],y=list([i[0] for i in self.genomes["SeqIDLists"][label_order]]),title="Normalised N PPHMM Clusters (pairwise: n PPHMMs per genome / total n PPHMMs)")
-        fig.layout.height=1000; fig.layout.width=1000
-        fig.write_image(out_fname)
 
     def shared_pphmm_ratio(self, label_order):
-        out_fname = f"{self.VariableShelveDir}/shared_pphmms.png"
-        df = pd.read_csv(f"{self.VariableShelveDir}/PPHMMandGOMsignatures.csv", index_col=0)
+        out_fname = f"{self.fnames['OutputDir']}/shared_pphmms.png" # TODO Parameterise
+        df = pd.read_csv(f"{self.fnames['OutputDir']}/PPHMMandGOMsignatures.csv", index_col=0) # TODO Parameterise
         df = df.drop(columns=["Virus name", "Accession", "Order", "Family", "Subfamily", "Genus", "Class", df.columns[-1]])
         df = df.apply(pd.to_numeric)
         arr = np.asarray(df.reindex(label_order))
@@ -608,8 +411,8 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         fig.write_image(out_fname)
 
     def shared_norm_pphmm_ratio(self, label_order):
-        out_fname = f"{self.VariableShelveDir}/shared_norm_pphmm_ratio.png"
-        df = pd.read_csv(f"{self.VariableShelveDir}/PPHMMandGOMsignatures.csv", index_col=0)
+        out_fname = f"{self.fnames['OutputDir']}/shared_norm_pphmm_ratio.png" # TODO Parameterise
+        df = pd.read_csv(f"{self.fnames['OutputDir']}/PPHMMandGOMsignatures.csv", index_col=0) # TODO Parameterise
         df = df.drop(columns=["Virus name", "Accession", "Order", "Family", "Subfamily", "Genus", "Class", df.columns[-1]])
         df = df.apply(pd.to_numeric)
         arr = np.asarray(df.reindex(label_order))
@@ -627,3 +430,12 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         fig = px.imshow(shared_pphmm_ratio, x=self.genomes["VirusNameList"][label_order],y=list([i[0] for i in self.genomes["SeqIDLists"][label_order]]),title="Shared Normalised PPHMM Ratio (pairwise: n common PPHMMs / n PPHMMs)")
         fig.layout.height=1000; fig.layout.width=1000
         fig.write_image(out_fname)
+
+        # RM < TODO probably don't need these now it's all in ref annots? FROM MAIN LOOP
+        # '''2/7: Retrieve additional sparse coordinate matrices, if present'''
+        # if "PPHMMSignatureTable_coo" in self.ref_annotations.keys():
+        #     self.ref_annotations["PPHMMSignatureTable_coo"] = self.ref_annotations["PPHMMSignatureTable_coo"].toarray(
+        #     )
+        # if "PPHMMLocationTable_coo" in self.ref_annotations.keys():
+        #     self.ref_annotations["PPHMMLocationTable_coo"] = self.ref_annotations["PPHMMLocationTable_coo"].toarray(
+        #     )

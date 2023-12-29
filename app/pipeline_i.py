@@ -8,7 +8,7 @@ import shutil
 from app.src.read_genome_desc_table import ReadGenomeDescTable
 from app.src.pphmmdb_construction import PPHMMDBConstruction
 from app.src.ref_virus_annotator import RefVirusAnnotator
-from app.src.graphing_tools import GRAViTyDendrogramAndHeatmapConstruction
+from app.src.pl1_graphs import GRAViTyDendrogramAndHeatmapConstruction
 from app.src.mutual_information_calculator import MutualInformationCalculator
 from app.utils.str_to_bool import str2bool
 from app.utils.generate_logs import Log_Generator_Pl1
@@ -84,24 +84,8 @@ class Pipeline_I:
         '''IV: Fire Heatmap and Dendrogram Constructors'''
         [print(log_text) for log_text in self.logs[3]]
         ghm = GRAViTyDendrogramAndHeatmapConstruction(
+            payload=self.options,
             ExpDir=self.options['ExpDir'],
-            IncludeIncompleteGenomes=str2bool(
-                self.options['AnnotateIncompleteGenomes']),
-            SimilarityMeasurementScheme=self.options['SimilarityMeasurementScheme'],
-            p=self.options['p'],
-            Dendrogram=str2bool(self.options['Dendrogram']),
-            Dendrogram_LinkageMethod=self.options['Dendrogram_LinkageMethod'],
-            Bootstrap=str2bool(self.options['Bootstrap']),
-            N_Bootstrap=self.options['N_Bootstrap'],
-            Bootstrap_method=self.options['Bootstrap_method'],
-            Bootstrap_N_CPUs=self.options['N_CPUs'],
-            Heatmap=str2bool(self.options['Heatmap']),
-            Heatmap_VirusOrderScheme=self.options['Heatmap_VirusOrderScheme'],
-            Heatmap_WithDendrogram=str2bool(
-                self.options['Heatmap_WithDendrogram']),
-            Heatmap_DendrogramFile=self.options['Heatmap_DendrogramFile'],
-            Heatmap_DendrogramSupport_Cutoff=self.options['Heatmap_DendrogramSupport_Cutoff'],
-            VirusGrouping=str2bool(self.options['VirusGrouping']),
         )
         ghm.main()
         self.mutual_info_calculator()

@@ -40,3 +40,14 @@ def mkdir_ref_annotator(fnames, PPHMMSorting):
         os.makedirs(fnames['HHsuite_PPHMMDBDir'])
     else:
         pass
+
+def mkdir_pl1_graphs(fnames, payload):
+    '''Clean dirs for pl1 graph generator if already exists'''
+    if payload['Bootstrap'] == True:
+        '''Dendrogram distribution'''
+        if os.path.isfile(fnames['VirusDendrogramDistFile']):
+            os.remove(fnames['VirusDendrogramDistFile'])
+
+        '''Bootstrapped Virus dendrogram'''
+        if os.path.isfile(fnames['Heatmap_DendrogramFile']):
+            os.remove(fnames['Heatmap_DendrogramFile'])

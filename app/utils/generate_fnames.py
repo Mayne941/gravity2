@@ -1,4 +1,4 @@
-import random, string
+import random, string, os
 
 def generate_file_names(payload, ExpDir):
     '''Generate dictionary of file and folder names'''
@@ -15,6 +15,9 @@ def generate_file_names(payload, ExpDir):
 
     '''Ref Virus Annotator'''
     fnames = generate_ref_annotator_fnames(fnames)
+
+    '''PL1 Graphs & MI'''
+    fnames = generate_pl1_graph_fnames(fnames,payload)
 
     return fnames
 
@@ -50,7 +53,20 @@ def generate_ref_annotator_fnames(fnames):
     fnames['PPHMMDB_Summary'] = f"{fnames['HMMER_PPHMMDb']}_Summary.txt"
     fnames['PPHMMQueryFile'] = f"{fnames['HMMER_hmmscanDir']}/QProtSeqs.fasta"
     fnames['PPHMMScanOutFile'] = f"{fnames['HMMER_hmmscanDir']}/PPHMMScanOut.txt"
-
     '''Misc'''
     fnames['RefAnnotatorPickle'] = f'{fnames["OutputDir"]}/RefVirusAnnotator.p'
+    return fnames
+
+def generate_pl1_graph_fnames(fnames, payload):
+    '''Generate filenames for graphical and tree output'''
+    '''Mandatory files'''
+    fnames['HeatmapWithDendrogramFile'] = f"{fnames['OutputDir']}/GRAViTy_heatmap.pdf"
+    fnames['VirusGroupingFile'] = f"{fnames['OutputDir']}/virus_grouping.txt"
+    '''Dendro files'''
+    if payload['Bootstrap'] == True:
+        fnames['VirusDendrogramDistFile'] = f"{fnames['OutputDir']}/dendrogram_dist.nwk"
+        fnames['Heatmap_DendrogramFile'] = f"{fnames['OutputDir']}/dendrogram_for_heatmap.nwk"
+        fnames['BootstrappedDendrogramFile'] = f"{fnames['OutputDir']}/dendrogram_bootstrapped.nwk"
+    else:
+        fnames['Heatmap_DendrogramFile'] = f"{fnames['OutputDir']}/dendrogram.nwk"
     return fnames

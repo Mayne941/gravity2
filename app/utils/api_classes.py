@@ -67,12 +67,6 @@ class Data_pl1_unique_params(BaseModel):
                                description="Sort PPHMMs if True.")
     PPHMMClustering_MCLInflation_ForPPHMMSorting: int = Field(2, gt=0,
                                                               description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
-    Heatmap: bool = Query(False, # RM < TODO Cull?
-                          description="GRAViTy can generate a heatmap (with the dendrogram) to represent the pairwise (dis)similarity matrix")
-    Heatmap_VirusOrderScheme: Union[FilePath, None] = Query(None, # RM < TODO Cull?
-                                                            description="Full path to the virus order file. The indices of the genome entries start from 0")
-    Heatmap_DendrogramFile: Union[FilePath, None] = Query(None, # RM < TODO Cull?
-                                                          description="Full path to the dendrogram file. If 'None', the dendrogram will be estimated by GRAViTy")
     VirusGroupingFile: Union[FilePath, None] = Query(None, # RM < TODO Cull?
                                                      description="Fill path to the virus grouping scheme file. The file contains column(s) of arbitrary taxonomic grouping scheme(s) that users want to investigate. Note that file must contain headers, see docs for further info. If 'None', the taxonomic grouping as specified in 'Taxonomic grouping' column in the VMR will be used.")
     N_Sampling: int = Field(10, gt=0,
@@ -136,8 +130,6 @@ class Data_common_pipeline_params(BaseModel):
                                        description="Threshold for HMM-protein similarity detection. A hit with a score < SCORE will be ignored.")
     p: float = Field(1, ge=0,
                      description="Distance transformation P coefficient, 0 <= P. D = 1 - S**P. If P = 1, no distance transformation is applied. If P > 1, shallow branches will be stretched out so shallow splits can be seen more clearly. If p < 1, deep branches are stretch out so that deep splits can be seen more clearly. If p = 0, the entire dendrogram will be reduced to a single branch (root), with all taxa forming a polytomy clade at the tip of the dendrogram. If p = Inf, the resultant dendrogram will be star-like, with all taxa forming a polytomy clade at the root.")
-    Dendrogram: bool = Query(True,
-                             description="Construct dendrogram if True.")
     Dendrogram_LinkageMethod: Literal["single", "complete", "average", "weighted", "centroid", "median", "ward"] = Query('average',
                                                                                                                          description="LINKAGE for dendrogram construction. If LINKAGE = 'single', the nearest point algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'complete', the farthest point algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'average', the UPGMA algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'weighted', the WPGMA algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'centroid', the UPGMC algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'median', the WPGMC algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'ward', the incremental algorithm is used to cluster viruses and compute cluster distances.")
     Bootstrap: bool = Query(True,

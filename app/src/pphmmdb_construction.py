@@ -617,7 +617,7 @@ class PPHMMDBConstruction:
     def main(self):
         '''Entrypoint to PPHMMDB construction functions'''
         section_header(
-            "#Build a database of virus protein profile hidden Markov models (PPHMMs) #")
+            "Build a database of virus protein profile hidden Markov models (PPHMMs)")
 
         '''1/10: Build db dirs'''
         mkdir_pphmmdbc(self.fnames)

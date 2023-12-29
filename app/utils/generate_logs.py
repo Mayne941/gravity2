@@ -12,7 +12,7 @@ class Log_Generator_Pl1:
 
     def text_gen_pre_read(self) -> list:
         return ["Input for ReadGenomeDescTable:",
-                "="*100,
+                "="*80,
                 "Main input",
                 "-"*50,
                 f"GenomeDescTableFile: {self.options['GenomeDescTableFile']}",
@@ -21,12 +21,12 @@ class Log_Generator_Pl1:
                 f"Database_Header: {self.options['Database_Header']}",
                 f"TaxoGrouping_Header: {self.options['TaxoGrouping_Header']}",
                 f"TaxoGroupingFile: {self.options['TaxoGroupingFile']}",
-                "="*100
+                "="*80
                 ]
 
     def text_gen_pre_pphmdb(self) -> list:
         return ["Input for PPHMMDBConstruction:",
-                "="*100,
+                "="*80,
                 "Main input",
                 "-"*50,
                 f"GenomeSeqFile: {self.options['GenomeSeqFile']}",
@@ -50,12 +50,12 @@ class Log_Generator_Pl1:
                 f"HHsuite_SubjectCoverage_Cutoff: {self.options['HHsuite_SubjectCoverage_Cutoff']}",
                 f"PPHMMClustering_MCLInflation_ForAlnMerging: {self.options['PPHMMClustering_MCLInflation_ForAlnMerging']}",
                 f"HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging: {self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']}",
-                "="*100
+                "="*80
                 ]
 
     def text_gen_pre_refvirusannotator(self) -> list:
         return ["Input for RefVirusAnnotator:",
-                "="*100,
+                "="*80,
                 "Main input",
                 "-"*50,
                 f"GenomeSeqFile: {self.options['GenomeSeqFile']}",
@@ -78,12 +78,12 @@ class Log_Generator_Pl1:
                 f"HHsuite_QueryCoverage_Cutoff: {self.options['HHsuite_QueryCoverage_Cutoff']}",
                 f"HHsuite_SubjectCoverage_Cutoff: {self.options['HHsuite_SubjectCoverage_Cutoff']}",
                 f"PPHMMClustering_MCLInflation_ForPPHMMSorting: {self.options['PPHMMClustering_MCLInflation_ForPPHMMSorting']}",
-                "="*100
+                "="*80
                 ]
 
     def text_gen_pre_dendrogram(self) -> list:
         return ["Input for GRAViTyDendrogramAndHeatmapConstruction:",
-                "="*100,
+                "="*80,
                 "Main input",
                 "-"*50,
                 f"ExpDir: {self.options['ExpDir']}",
@@ -94,7 +94,6 @@ class Log_Generator_Pl1:
                 f"p: {self.options['p']}",
                 "Dendrogram construction options",
                 "-"*50,
-                f"Dendrogram: {self.options['Dendrogram']}",
                 f"Dendrogram_LinkageMethod: {self.options['Dendrogram_LinkageMethod']}",
                 f"Bootstrap: {self.options['Bootstrap']}",
                 f"N_Bootstrap: {self.options['N_Bootstrap']}",
@@ -102,20 +101,17 @@ class Log_Generator_Pl1:
                 f"N_CPUs: {self.options['N_CPUs']}",
                 "Heatmap construction options",
                 "-"*50,
-                f"Heatmap: {self.options['Heatmap']}",
-                f"Heatmap_VirusOrderScheme: {self.options['Heatmap_VirusOrderScheme']}",
                 f"Heatmap_WithDendrogram: {self.options['Heatmap_WithDendrogram']}",
-                f"Heatmap_DendrogramFile: {self.options['Heatmap_DendrogramFile']}",
                 f"Heatmap_DendrogramSupport_Cutoff: {self.options['Heatmap_DendrogramSupport_Cutoff']}",
                 "Virus grouping options",
                 "-"*50,
                 f"VirusGrouping: {self.options['VirusGrouping']}",
-                "="*100
+                "="*80
                 ]
 
     def text_gen_pre_mutalinfo(self) -> list:
         return ["Input for MutualInformationCalculator:",
-                "="*100,
+                "="*80,
                 "Main input",
                 "-"*50,
                 f"ExpDir: {self.options['ExpDir']}",
@@ -128,7 +124,7 @@ class Log_Generator_Pl1:
                 f"N_Sampling: {self.options['N_Sampling']}",
                 f"SamplingStrategy: {self.options['SamplingStrategy']}",
                 f"SampleSizePerGroup: {self.options['SampleSizePerGroup']}",
-                "="*100
+                "="*80
                 ]
 
     def entrypoint(self) -> list:
@@ -161,19 +157,19 @@ class Log_Generator_Pl2:
 
     def text_gen_pre_read(self) -> list:
         return ["Input for ReadGenomeDescTable:",
-                "="*100,
+                "="*80,
                 "Main input",
                 "-"*50,
                 f"GenomeDescTableFile_UcfVirus: {self.options['GenomeDescTableFile_UcfVirus']}",
                 f"ShelveDir_UcfVirus: {self.options['ShelveDir_UcfVirus']}",
                 f"Database: {self.options['Database']}",
                 f"Database_Header: {self.options['Database_Header']}",
-                "="*100
+                "="*80
                 ]
 
     def text_gen_pre_pphmdb(self) -> list:
         return ["Input for PPHMMDBConstruction:",
-                "="*100,
+                "="*80,
                 "Main input",
                 "-"*50,
                 f"GenomeSeqFile_UcfVirus: {self.options['GenomeSeqFile_UcfVirus']}",
@@ -202,12 +198,12 @@ class Log_Generator_Pl2:
                 f"HHsuite_SubjectCoverage_Cutoff: {self.options['HHsuite_SubjectCoverage_Cutoff']}",
                 f"PPHMMClustering_MCLInflation_ForAlnMerging: {self.options['PPHMMClustering_MCLInflation_ForAlnMerging']}",
                 f"HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging: {self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']}",
-                "="*100
+                "="*80
                 ]
 
     def text_gen_pre_ucfvirusannotator(self) -> list:
         return [f"Input for UcfVirusAnnotator:",
-                "="*100,
+                "="*80,
                 "Main input",
                 "-"*50,
                 f"GenomeSeqFile_UcfVirus: {self.options['GenomeSeqFile_UcfVirus']}",
@@ -220,12 +216,12 @@ class Log_Generator_Pl2:
                 f"N_CPUs: {self.options['N_CPUs']}",
                 f"HMMER_C_EValue_Cutoff: {self.options['HMMER_C_EValue_Cutoff']}",
                 f"HMMER_HitScore_Cutoff: {self.options['HMMER_HitScore_Cutoff']}",
-                "="*100
+                "="*80
                 ]
 
     def text_gen_pre_classifier(self) -> list:
         return ["Input for VirusClassificationAndEvaluation:",
-                "="*100,
+                "="*80,
                 "Main input",
                 "-"*50,
                 f"ShelveDir_UcfVirus: {self.options['ShelveDir_UcfVirus']}",
@@ -259,8 +255,8 @@ class Log_Generator_Pl2:
                 "Virus grouping options",
                 "-"*50,
                 f"VirusGrouping: {self.options['VirusGrouping']}",
-                "="*100,
-                "&"*100
+                "="*80,
+                "&"*80
                 ]
 
     def entrypoint(self) -> list:
