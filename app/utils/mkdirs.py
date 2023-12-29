@@ -51,3 +51,8 @@ def mkdir_pl1_graphs(fnames, payload):
         '''Bootstrapped Virus dendrogram'''
         if os.path.isfile(fnames['Heatmap_DendrogramFile']):
             os.remove(fnames['Heatmap_DendrogramFile'])
+
+def mkdir_mi_scorer(fnames):
+    '''Make MI Score dir'''
+    if not os.path.exists(fnames['MutualInformationScoreDir']):
+        os.makedirs(fnames['MutualInformationScoreDir'])

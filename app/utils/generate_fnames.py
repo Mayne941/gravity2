@@ -9,6 +9,7 @@ def generate_file_names(payload, ExpDir):
 
     '''Read Genome Desc Table'''
     fnames["ReadGenomeDescTablePickle"] = f'{fnames["OutputDir"]}/ReadGenomeDescTable.p'
+    # If PL2 run (mandatory UCF file key is in payload)... make these too. << New fn
 
     '''PPHMMDB Cosntruction'''
     fnames = generate_pphmmdb_fnames(fnames)
@@ -18,7 +19,7 @@ def generate_file_names(payload, ExpDir):
 
     '''PL1 Graphs & MI'''
     fnames = generate_pl1_graph_fnames(fnames,payload)
-
+    fnames = generate_mi_scorer_fnames(fnames)
     return fnames
 
 def generate_pphmmdb_fnames(fnames):
@@ -44,6 +45,7 @@ def generate_pphmmdb_fnames(fnames):
     '''Misc'''
     fnames['RefSeqFile'] = f"{fnames['OutputDir']}/ref_seqs.fasta"
     fnames["PphmmdbPickle"] = f'{fnames["OutputDir"]}/PPHMMDBConstruction.p'
+    # If PL2 run (mandatory UCF file key is in payload)... make these too.
     return fnames
 
 def generate_ref_annotator_fnames(fnames):
@@ -61,7 +63,7 @@ def generate_pl1_graph_fnames(fnames, payload):
     '''Generate filenames for graphical and tree output'''
     '''Mandatory files'''
     fnames['HeatmapWithDendrogramFile'] = f"{fnames['OutputDir']}/GRAViTy_heatmap.pdf"
-    fnames['VirusGroupingFile'] = f"{fnames['OutputDir']}/virus_grouping.txt"
+    fnames['VirusGroupingFile'] = f"{fnames['OutputDir']}/virus_grouping.txt" # Kill api arg?
     '''Dendro files'''
     if payload['Bootstrap'] == True:
         fnames['VirusDendrogramDistFile'] = f"{fnames['OutputDir']}/dendrogram_dist.nwk"
@@ -69,4 +71,10 @@ def generate_pl1_graph_fnames(fnames, payload):
         fnames['BootstrappedDendrogramFile'] = f"{fnames['OutputDir']}/dendrogram_bootstrapped.nwk"
     else:
         fnames['Heatmap_DendrogramFile'] = f"{fnames['OutputDir']}/dendrogram.nwk"
+    return fnames
+
+def generate_mi_scorer_fnames(fnames):
+    fnames['MutualInformationScoreDir'] = fnames['OutputDir']+"/MutualInformationScore"
+    fnames['MiScorePickle'] = f'{fnames["OutputDir"]}/MutualInformationCalculator.p'
+    fnames['MutualInformationScoreFile'] = f"{fnames['MutualInformationScoreDir']}/MIScore.txt"
     return fnames

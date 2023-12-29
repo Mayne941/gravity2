@@ -39,6 +39,7 @@ class PPHMMDBConstruction:
         self.orf_tranl_table = get_orf_trasl_table()
         self.orf_no_match = no_orf_match()
         self.genomes = retrieve_genome_vars(self.fnames["ReadGenomeDescTablePickle"])
+        mkdir_pphmmdbc(self.fnames)
 
     def get_genbank(self):
         '''3/10: Check if GenBank files exist; dl if needed. Index & transform.'''
@@ -618,9 +619,6 @@ class PPHMMDBConstruction:
         '''Entrypoint to PPHMMDB construction functions'''
         section_header(
             "Build a database of virus protein profile hidden Markov models (PPHMMs)")
-
-        '''1/10: Build db dirs'''
-        mkdir_pphmmdbc(self.fnames)
 
         '''3/10: Get GenBank files if not exists'''
         GenBankDict = self.get_genbank()

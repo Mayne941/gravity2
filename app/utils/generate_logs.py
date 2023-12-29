@@ -115,7 +115,6 @@ class Log_Generator_Pl1:
                 "Main input",
                 "-"*50,
                 f"ExpDir: {self.options['ExpDir']}",
-                f"AnnotateIncompleteGenomes: {self.options['AnnotateIncompleteGenomes']}",
                 "Virus grouping for mutual information calculation options",
                 "-"*50,
                 f"VirusGroupingFile: {self.options['VirusGroupingFile']}",

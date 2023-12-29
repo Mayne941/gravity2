@@ -38,6 +38,7 @@ class RefVirusAnnotator:
         self.fnames = generate_file_names(payload,ExpDir)
         self.GenomeSeqFile = GenomeSeqFile
         self.genomes = retrieve_genome_vars(self.fnames["ReadGenomeDescTablePickle"])
+        mkdir_ref_annotator(self.fnames, self.payload['PPHMMSorting'])
         '''Placehodler dirs & objects'''
         self.PPHMMSignatureTable, self.PPHMMLocationTable = [], []
 
@@ -567,9 +568,6 @@ class RefVirusAnnotator:
         '''
         section_header(
             "Generate PPHMM signature & loc tables, GOM database & GOM sig table")
-
-        '''1/8 : Make directories'''
-        mkdir_ref_annotator(self.fnames, self.payload['PPHMMSorting'])
 
         # TODO Swap out for utils ver - keep self var update
         '''3/8 : Generate PPHMMSignatureTable and PPHMMLocationTable'''

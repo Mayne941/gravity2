@@ -10,7 +10,6 @@ import pickle
 
 class ReadGenomeDescTable:
     '''Parse, transform and load input VMR to GRAViTy compatible format, store as shelve'''
-
     def __init__(self,
                  payload,
                  GenomeDescTableFile,

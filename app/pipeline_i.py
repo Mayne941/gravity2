@@ -95,13 +95,8 @@ class Pipeline_I:
         '''V: Fire Mutal Info Calculator'''
         [print(log_text) for log_text in self.logs[4]]
         mic = MutualInformationCalculator(
+            payload=self.options,
             ExpDir=self.options['ExpDir'],
-            IncludeIncompleteGenomes=str2bool(
-                self.options['AnnotateIncompleteGenomes']),
-            VirusGroupingFile=self.options['VirusGroupingFile'],
-            N_Sampling=self.options['N_Sampling'],
-            SamplingStrategy=self.options['SamplingStrategy'],
-            SampleSizePerGroup=self.options['SampleSizePerGroup'],
         )
         mic.main()
 

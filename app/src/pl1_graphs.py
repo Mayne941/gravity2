@@ -32,6 +32,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         self.fnames = generate_file_names(payload, ExpDir)
         self.genomes = retrieve_genome_vars(self.fnames['ReadGenomeDescTablePickle'])
         self.ref_annotations = retrieve_pickle(self.fnames['RefAnnotatorPickle'])
+        mkdir_pl1_graphs(self.fnames, self.payload)
 
     def est_pairwise_dists(self):
         '''3/7: Estimate pairwise distances between viruses, return distance matrix (recip. sim matrix)'''
@@ -365,8 +366,6 @@ class GRAViTyDendrogramAndHeatmapConstruction:
     def main(self):
         '''Generate GRAViTy dendrogram and heat map	'''
         section_header("Generate GRAViTy dendrogram and heat map")
-        '''1/7: Make fpaths'''
-        mkdir_pl1_graphs(self.fnames, self.payload)
 
         '''3/7: Estimate virus pairwise distances'''
         DistMat = self.est_pairwise_dists()
@@ -430,12 +429,3 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         fig = px.imshow(shared_pphmm_ratio, x=self.genomes["VirusNameList"][label_order],y=list([i[0] for i in self.genomes["SeqIDLists"][label_order]]),title="Shared Normalised PPHMM Ratio (pairwise: n common PPHMMs / n PPHMMs)")
         fig.layout.height=1000; fig.layout.width=1000
         fig.write_image(out_fname)
-
-        # RM < TODO probably don't need these now it's all in ref annots? FROM MAIN LOOP
-        # '''2/7: Retrieve additional sparse coordinate matrices, if present'''
-        # if "PPHMMSignatureTable_coo" in self.ref_annotations.keys():
-        #     self.ref_annotations["PPHMMSignatureTable_coo"] = self.ref_annotations["PPHMMSignatureTable_coo"].toarray(
-        #     )
-        # if "PPHMMLocationTable_coo" in self.ref_annotations.keys():
-        #     self.ref_annotations["PPHMMLocationTable_coo"] = self.ref_annotations["PPHMMLocationTable_coo"].toarray(
-        #     )
