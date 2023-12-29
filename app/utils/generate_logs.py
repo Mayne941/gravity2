@@ -16,7 +16,7 @@ class Log_Generator_Pl1:
                 "Main input",
                 "-"*50,
                 f"GenomeDescTableFile: {self.options['GenomeDescTableFile']}",
-                f"ShelveDir: {self.options['ShelveDir']}",
+                f"ExpDir: {self.options['ExpDir']}",
                 f"Database: {self.options['Database']}",
                 f"Database_Header: {self.options['Database_Header']}",
                 f"TaxoGrouping_Header: {self.options['TaxoGrouping_Header']}",
@@ -30,18 +30,15 @@ class Log_Generator_Pl1:
                 "Main input",
                 "-"*50,
                 f"GenomeSeqFile: {self.options['GenomeSeqFile']}",
-                f"ShelveDir: {self.options['ShelveDir']}",
+                f"ExpDir: {self.options['ExpDir']}",
                 "Protein extraction options",
                 "-"*50,
                 f"ProteinLength_Cutoff: {self.options['ProteinLength_Cutoff']}",
                 f"IncludeProteinsFromIncompleteGenomes: {self.options['IncludeProteinsFromIncompleteGenomes']}",
                 f"Protein clustering options",
                 "-"*50,
-                f"BLASTp_evalue_Cutoff: {self.options['BLASTp_evalue_Cutoff']}",
-                f"BLASTp_PercentageIden_Cutoff: {self.options['BLASTp_PercentageIden_Cutoff']}",
-                f"BLASTp_QueryCoverage_Cutoff: {self.options['BLASTp_QueryCoverage_Cutoff']}",
-                f"BLASTp_SubjectCoverage_Cutoff: {self.options['BLASTp_SubjectCoverage_Cutoff']}",
-                f"BLASTp_num_alignments: {self.options['BLASTp_num_alignments']}",
+                f"Mash_p_val_cutoff: {self.options['Mash_p_val_cutoff']}",
+                f"Mash_sim_score_cutoff: {self.options['Mash_sim_score_cutoff']}",
                 f"N_CPUs: {self.options['N_CPUs']}",
                 f"MUSCLE_GapOpenCost: {self.options['MUSCLE_GapOpenCost']}",
                 f"MUSCLE_GapExtendCost: {self.options['MUSCLE_GapExtendCost']}",
@@ -64,7 +61,7 @@ class Log_Generator_Pl1:
                 "Main input",
                 "-"*50,
                 f"GenomeSeqFile: {self.options['GenomeSeqFile']}",
-                f"ShelveDir: {self.options['ShelveDir']}",
+                f"ExpDir: {self.options['ExpDir']}",
                 "Reference virus annotation options",
                 "-"*50,
                 f"AnnotateIncompleteGenomes: {self.options['AnnotateIncompleteGenomes']}",
@@ -91,7 +88,7 @@ class Log_Generator_Pl1:
                 "="*100,
                 "Main input",
                 "-"*50,
-                f"ShelveDir: {self.options['ShelveDir']}",
+                f"ExpDir: {self.options['ExpDir']}",
                 f"AnnotateIncompleteGenomes: {self.options['AnnotateIncompleteGenomes']}",
                 "Virus (dis)similarity measurement options",
                 "-"*50,
@@ -123,7 +120,7 @@ class Log_Generator_Pl1:
                 "="*100,
                 "Main input",
                 "-"*50,
-                f"ShelveDir: {self.options['ShelveDir']}",
+                f"ExpDir: {self.options['ExpDir']}",
                 f"AnnotateIncompleteGenomes: {self.options['AnnotateIncompleteGenomes']}",
                 "Virus grouping for mutual information calculation options",
                 "-"*50,
@@ -286,7 +283,7 @@ class Log_Generator_Pl2:
 def print_title():
     print('''
    _____ _____       __      ___ _______     __      _____
-  / ____|  __ \     /\ \    / (_)__   __|    \ \    / /__ \
+  / ____|  __ \     /\ \    / (_)__   __|    \ \    / /__ \\
  | |  __| |__) |   /  \ \  / / _   | |_   _   \ \  / /   ) |
  | | |_ |  _  /   / /\ \ \/ / | |  | | | | |   \ \/ /   / /
  | |__| | | \ \  / ____ \  /  | |  | | |_| |    \  /   / /_

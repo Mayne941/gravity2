@@ -30,7 +30,7 @@ class UcfVirusAnnotator:
         self.GenomeSeqFile_UcfVirus = GenomeSeqFile_UcfVirus
         self.ShelveDir_UcfVirus = ShelveDir_UcfVirus
         self.ShelveDirs_RefVirus = ShelveDirs_RefVirus.split(", ")
-        self.VariableShelveDir_UcfVirus = f"{ShelveDir_UcfVirus}/Shelves"
+        self.VariableShelveDir_UcfVirus = f"{ShelveDir_UcfVirus}/output"
         self.IncludeIncompleteGenomes_UcfVirus = IncludeIncompleteGenomes_UcfVirus
         self.IncludeIncompleteGenomes_RefVirus = IncludeIncompleteGenomes_RefVirus
         self.SeqLength_Cutoff = SeqLength_Cutoff
@@ -70,7 +70,7 @@ class UcfVirusAnnotator:
 
             '''Retrieve variables related to the reference viruses'''
             Parameters = retrieve_ref_virus_vars(
-                f"{ShelveDir_RefVirus}/Shelves", self.IncludeIncompleteGenomes_RefVirus)
+                f"{ShelveDir_RefVirus}/output")
             if "GOMDB_coo" in Parameters.keys():
                 Parameters["GOMDB"] = {GOMID: GOM_coo.toarray(
                 ) for GOMID, GOM_coo in Parameters["GOMDB_coo"].items()}
@@ -105,21 +105,6 @@ class UcfVirusAnnotator:
             PPHMMLocationTable_Dict[RefVirusGroup] = PPHMMLocationTable
             GOMSignatureTable_Dict[RefVirusGroup] = GOMSignatureTable
 
-        '''Generate out fpaths'''
-        if self.IncludeIncompleteGenomes_UcfVirus == True:
-            if self.IncludeIncompleteGenomes_RefVirus == True:
-                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/UcfVirusAnnotator.AllUcfGenomes.AllRefGenomes.p"
-
-            elif self.IncludeIncompleteGenomes_RefVirus == False:
-                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/UcfVirusAnnotator.AllUcfGenomes.CompleteRefGenomes.p"
-
-        elif self.IncludeIncompleteGenomes_UcfVirus == False:
-            if self.IncludeIncompleteGenomes_RefVirus == True:
-                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/UcfVirusAnnotator.CompleteUcfGenomes.AllRefGenomes.p"
-
-            elif self.IncludeIncompleteGenomes_RefVirus == False:
-                VariableShelveFile_UcfVirus = f"{self.VariableShelveDir_UcfVirus}/UcfVirusAnnotator.CompleteUcfGenomes.CompleteRefGenomes.p"
-
         '''Construct out dict, dump to pickle'''
         all_ucf_genomes = {}
         all_ucf_genomes["PPHMMSignatureTable_Dict_coo"] = {RefVirusGroup: coo_matrix(
@@ -128,7 +113,7 @@ class UcfVirusAnnotator:
             PPHMMLocationTable) for RefVirusGroup, PPHMMLocationTable in PPHMMLocationTable_Dict.items()}
         all_ucf_genomes["GOMSignatureTable_Dict"] = GOMSignatureTable_Dict
 
-        pickle.dump(all_ucf_genomes, open(VariableShelveFile_UcfVirus, "wb"))
+        pickle.dump(all_ucf_genomes, open(f"{self.VariableShelveDir_UcfVirus}/UcfVirusAnnotator.p", "wb")) ## TODO These should all inherit from central class
 
     def main(self) -> None:
         '''Generate PPHMM signature table, PPHMM location table, and GOM signature table for unclassified viruses, using PPHMM databases of reference viruses'''
@@ -137,7 +122,7 @@ class UcfVirusAnnotator:
 
         '''1/3: Retrieve variables'''
         self.VariableShelveFile_UcfVirus = retrieve_genome_vars(
-            self.VariableShelveDir_UcfVirus, self.IncludeIncompleteGenomes_UcfVirus)
+            self.VariableShelveDir_UcfVirus)
 
         if not os.path.isfile(self.GenomeSeqFile_UcfVirus):
             '''(OPT) 2/3: Get GenBank if not present'''

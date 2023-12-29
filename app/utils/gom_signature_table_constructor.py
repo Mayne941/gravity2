@@ -20,7 +20,6 @@ def GOMSignatureTable_Constructor(PPHMMLocationTable, GOMDB, GOMIDList):
             progress_bar(
                 f"\033[K GOM construction {GOM} ({GOM_i}/{N_GOMs}): [{'='*int(float(Virus_i)/N_Viruses*20)}] {Virus_i}/{N_Viruses} GOMs \r")
             Virus_i += 1
-        clean_stdout()
 
         GOMSignatureTable = np.column_stack(
             (GOMSignatureTable, GOMSignatureList))

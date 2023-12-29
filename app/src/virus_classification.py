@@ -177,9 +177,9 @@ class VirusClassificationAndEvaluation:
                 f"Classify viruses using {RefVirusGroup} as reference ({RefVirusGroup_i}/{self.N_RefVirusGroups})")
 
             '''Load in genomes variables'''
-            VariableShelveDir_RefVirus = f"{ShelveDir_RefVirus}/Shelves"
-            Parameters = {**retrieve_genome_vars(VariableShelveDir_RefVirus, self.IncludeIncompleteGenomes_RefVirus),
-                          **retrieve_ref_virus_vars(VariableShelveDir_RefVirus, self.IncludeIncompleteGenomes_RefVirus)}
+            VariableShelveDir_RefVirus = f"{ShelveDir_RefVirus}/output"
+            Parameters = {**retrieve_genome_vars(VariableShelveDir_RefVirus),
+                          **retrieve_ref_virus_vars(VariableShelveDir_RefVirus)}
             N_RefViruses = len(Parameters["SeqIDLists"])
 
             if "PPHMMSignatureTable_coo" in Parameters.keys():
@@ -781,7 +781,7 @@ class VirusClassificationAndEvaluation:
                                         direction='out')
 
         '''Save the plot to file'''
-        HeatmapWithDendrogramFile = f"{self.VariableShelveDir_UcfVirus}/HeatmapWithDendrogram.RefVirusGroup={RefVirusGroup}.IncompleteUcfRefGenomes={str(int(self.IncludeIncompleteGenomes_UcfVirus))+str(int(self.IncludeIncompleteGenomes_RefVirus))}.Scheme={self.SimilarityMeasurementScheme}.Method={self.Dendrogram_LinkageMethod}.p={self.p}.pdf"
+        HeatmapWithDendrogramFile = f"{self.VariableShelveDir_UcfVirus}/HeatmapWithDendrogram.pdf"
         plt.savefig(HeatmapWithDendrogramFile, format="pdf", bbox_inches = "tight", dpi=dpi)
 
     def group(self):
@@ -1050,9 +1050,9 @@ class VirusClassificationAndEvaluation:
 
         '''3/8: Retrieve variables'''
         self.ucf_genomes = retrieve_genome_vars(
-            self.VariableShelveDir_UcfVirus, self.IncludeIncompleteGenomes_UcfVirus)
+            self.VariableShelveDir_UcfVirus)
         self.ucf_annots = retrieve_ucf_annots(
-            self.VariableShelveDir_UcfVirus, self.IncludeIncompleteGenomes_UcfVirus, self.IncludeIncompleteGenomes_RefVirus)
+            self.VariableShelveDir_UcfVirus)
 
         if "PPHMMSignatureTable_Dict_coo" in self.ucf_annots.keys():
             self.ucf_annots["PPHMMSignatureTable_Dict"] = {RefVirusGroup: PPHMMSignatureTable_coo.toarray(

@@ -46,6 +46,7 @@ class Pipeline_II:
             GenomeDescTableFile=self.options['GenomeDescTableFile_UcfVirus'],
             GenomeSeqFile=self.options['GenomeSeqFile_UcfVirus'],
             ShelveDir=self.options['ShelveDir_UcfVirus'],
+            IncludeIncompleteGenomes=True, # HC on PL2
             Database=self.options['Database'],
             Database_Header=self.options['Database_Header'],
             RefreshGenbank=resfresh_genbank
@@ -59,33 +60,10 @@ class Pipeline_II:
         if str2bool(self.options['UseUcfVirusPPHMMs']) == True:
             [print(log_text) for log_text in self.logs[1]]
             pc = PPHMMDBConstruction(
-                genbank_email=self.options['genbank_email'],
                 GenomeSeqFile=self.options['GenomeSeqFile_UcfVirus'],
                 ShelveDir=self.options['ShelveDir_UcfVirus'],
-                ProteinLength_Cutoff=self.options['ProteinLength_Cutoff'],
-                IncludeIncompleteGenomes=str2bool(
-                    self.options['IncludeProteinsFromIncompleteGenomes']),
-                BLASTp_evalue_Cutoff=self.options['BLASTp_evalue_Cutoff'],
-                BLASTp_PercentageIden_Cutoff=self.options['BLASTp_PercentageIden_Cutoff'],
-                BLASTp_QueryCoverage_Cutoff=self.options['BLASTp_QueryCoverage_Cutoff'],
-                BLASTp_SubjectCoverage_Cutoff=self.options['BLASTp_SubjectCoverage_Cutoff'],
-                BLASTp_num_alignments=self.options['BLASTp_num_alignments'],
-                BLASTp_N_CPUs=self.options['N_CPUs'],
-                MUSCLE_GapOpenCost=self.options['MUSCLE_GapOpenCost'],
-                MUSCLE_GapExtendCost=self.options['MUSCLE_GapExtendCost'],
-                ProtClustering_MCLInflation=self.options['ProtClustering_MCLInflation'],
-                N_AlignmentMerging=self.options['N_AlignmentMerging'],
-                HHsuite_evalue_Cutoff=self.options['HHsuite_evalue_Cutoff'],
-                HHsuite_pvalue_Cutoff=self.options['HHsuite_pvalue_Cutoff'],
-                HHsuite_N_CPUs=self.options['N_CPUs'],
-                HHsuite_QueryCoverage_Cutoff=self.options['HHsuite_QueryCoverage_Cutoff'],
-                HHsuite_SubjectCoverage_Cutoff=self.options['HHsuite_SubjectCoverage_Cutoff'],
-                PPHMMClustering_MCLInflation=self.options['PPHMMClustering_MCLInflation_ForAlnMerging'],
-                HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging=str2bool(
-                    self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']),
             )
             pc.main()
-
         self.ucf_virus_annotator()
 
     @timing

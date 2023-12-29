@@ -43,6 +43,14 @@ class Data_e2e_unique_fns(BaseModel):
                                 description="Exeriment name will prefix all output folders (and files not contained in the main experiment folders, such as genbank files)")
     SkipFirstPass: bool = Query(False,
                                         description="Opt to skip first pass through both pipelines. N.b. first pass parameters still need to be filled in with valid entries.")
+    GenomeDescTableFile_FirstPass: FilePath = Query('./data/latest_vmr_firstpass.csv',
+                                          description="FIRST PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
+    GenomeDescTableFile_SecondPass: FilePath = Query('./data/latest_vmr_secondpass.csv',
+                                          description="SECOND PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
+    TaxoGroupingFile_FirstPass: Union[FilePath, None] = Query(None,
+                                                    description="FIRST PASS PIPELINE 1: It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
+    TaxoGroupingFile_SecondPass: Union[FilePath, None] = Query(None,
+                                                    description="SECOND PASS PIPELINE 1: It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
 
 
 '''PL1'''
@@ -102,20 +110,10 @@ class Data_common_pipeline_params(BaseModel):
                                       description="Proteins with length < LENGTH aa will be ignored")
     IncludeProteinsFromIncompleteGenomes: bool = Query(True,
                                                        description="Include protein sequences from incomplete genomes to the database if True.")
-    BLASTp_evalue_Cutoff: float = Field(0.001, ge=0,
-                                        description="Threshold for protein sequence similarity detection. A hit with an E-value > E-VALUE will be ignored.")
-    BLASTp_PercentageIden_Cutoff: int = Field(10, ge=0, le=100,
-                                              description="Threshold for protein sequence similarity detection. A hit with a percentage identity < PERCENTAGE IDENTITY will be ignored.")
-    BLASTp_QueryCoverage_Cutoff: int = Field(15, ge=0, le=100,
-                                             description="Threshold for protein sequence similarity detection. A hit with a query coverage < COVERAGE will be ignored.")
-    BLASTp_SubjectCoverage_Cutoff: int = Field(15, ge=0, le=100,
-                                               description="Threshold for protein sequence similarity detection. A hit with a subject coverage < COVERAGE will be ignored.")
-    BLASTp_num_alignments: int = Field(1000000, gt=0,
-                                       description="Maximum number of sequences to be considered in a BLASTp search.")
-    MUSCLE_GapOpenCost: float = Field(-3.0, lt=0,
-                                      description="MUSCLE gap opening panelty for aligning protein sequences.")
-    MUSCLE_GapExtendCost: float = Field(-0.0, le=0,
-                                        description="MUSCLE gap extension panelty for aligning protein sequences.")
+    Mash_p_val_cutoff: float = Field(0.05,
+                                        description="P value threshold below which results in Mash analysis will be ignored.")
+    Mash_sim_score_cutoff: float = Field(0.5,
+                                              description="Similarity score threshold below which results in Mash analysis will be ignored.")
     ProtClustering_MCLInflation: int = Field(2, gt=0,
                                              description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
     N_AlignmentMerging: int = Query(0,    # RM < TODO Cull?
@@ -177,21 +175,14 @@ class CombineGenomeSegs(Data_fasta_fns, Data_genome_segment_fpath):
 
 
 '''Pipelines'''
-class E2e_data(Data_pl2_unique_params, Data_common_pipeline_params, Data_pl1_unique_params, Data_e2e_unique_fns):
+class E2e_data(Data_common_pipeline_params, Data_pl1_unique_params, Data_pl2_unique_params, Data_e2e_unique_fns):
     '''PL1 (no unique PL2/General)'''
-    GenomeDescTableFile_FirstPass: FilePath = Query('./data/latest_vmr_firstpass.csv',
-                                          description="FIRST PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
-    GenomeDescTableFile_SecondPass: FilePath = Query('./data/latest_vmr_secondpass.csv',
-                                          description="SECOND PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
-    TaxoGroupingFile_FirstPass: Union[FilePath, None] = Query(None,
-                                                    description="FIRST PASS PIPELINE 1: It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
-    TaxoGroupingFile_SecondPass: Union[FilePath, None] = Query(None,
-                                                    description="SECOND PASS PIPELINE 1: It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
+    pass
 
 class Pipeline_i_data(Data_pl1_unique_params, Data_common_pipeline_params):
     GenomeDescTableFile: FilePath = Query('./data/latest_vmr.csv',
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
-    ShelveDir: str = Query('./output/myexperiment_pipeline_1',
+    ExpDir: str = Query('./output/myexperiment_pipeline_1',
                            description="Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")
     TaxoGroupingFile: Union[FilePath, None] = Query(None,
                                                     description="It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")

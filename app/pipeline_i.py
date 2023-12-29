@@ -19,17 +19,17 @@ class Pipeline_I:
     def __init__(self, payload):
         self.options = payload
         '''Create directories'''
-        if not os.path.exists(self.options['ShelveDir']):
-            os.makedirs(self.options['ShelveDir'])
+        if not os.path.exists(self.options['ExpDir']):
+            os.makedirs(self.options['ExpDir'])
 
         '''Logs'''
         self.log_gen = Log_Generator_Pl1(
-            self.options, self.options['ShelveDir'])
+            self.options, self.options['ExpDir'])
         self.logs = self.log_gen.entrypoint()
         self.actual_start = time.time()
-        with open(f"{self.options['ShelveDir']}/run_parameters.json", "w") as f:
+        with open(f"{self.options['ExpDir']}/run_parameters.json", "w") as f:
             f.write(json.dumps(payload))
-        shutil.copyfile(self.options['GenomeDescTableFile'], f"{self.options['ShelveDir']}/PL1_vmr.csv")
+        shutil.copyfile(self.options['GenomeDescTableFile'], f"{self.options['ExpDir']}/PL1_vmr.csv")
 
         '''Catch bad database flags'''
         if (self.options['Database'] != None and self.options['Database_Header'] == None):
@@ -46,9 +46,12 @@ class Pipeline_I:
         '''I: Fire Read Genom Desc Table'''
         [print(log_text) for log_text in self.logs[0]]
         rgdt = ReadGenomeDescTable(
+            payload=self.options,
             GenomeDescTableFile=self.options['GenomeDescTableFile'],
             GenomeSeqFile=self.options['GenomeSeqFile'],
-            ShelveDir=self.options['ShelveDir'],
+            ExpDir=self.options['ExpDir'],
+            IncludeIncompleteGenomes=str2bool(
+                self.options['AnnotateIncompleteGenomes']),
             Database=self.options['Database'],
             Database_Header=self.options['Database_Header'],
             TaxoGrouping_Header=self.options['TaxoGrouping_Header'],
@@ -63,30 +66,9 @@ class Pipeline_I:
         '''II: Fire PPHMDB Constructor'''
         [print(log_text) for log_text in self.logs[1]]
         pph = PPHMMDBConstruction(
-            genbank_email=self.options['genbank_email'],
+            payload=self.options,
             GenomeSeqFile=self.options['GenomeSeqFile'],
-            ShelveDir=self.options['ShelveDir'],
-            ProteinLength_Cutoff=self.options['ProteinLength_Cutoff'],
-            IncludeIncompleteGenomes=str2bool(
-                self.options['IncludeProteinsFromIncompleteGenomes']),
-            BLASTp_evalue_Cutoff=self.options['BLASTp_evalue_Cutoff'],
-            BLASTp_PercentageIden_Cutoff=self.options['BLASTp_PercentageIden_Cutoff'],
-            BLASTp_QueryCoverage_Cutoff=self.options['BLASTp_QueryCoverage_Cutoff'],
-            BLASTp_SubjectCoverage_Cutoff=self.options['BLASTp_SubjectCoverage_Cutoff'],
-            BLASTp_num_alignments=self.options['BLASTp_num_alignments'],
-            BLASTp_N_CPUs=self.options['N_CPUs'],
-            MUSCLE_GapOpenCost=self.options['MUSCLE_GapOpenCost'],
-            MUSCLE_GapExtendCost=self.options['MUSCLE_GapExtendCost'],
-            ProtClustering_MCLInflation=self.options['ProtClustering_MCLInflation'],
-            N_AlignmentMerging=self.options['N_AlignmentMerging'],
-            HHsuite_evalue_Cutoff=self.options['HHsuite_evalue_Cutoff'],
-            HHsuite_pvalue_Cutoff=self.options['HHsuite_pvalue_Cutoff'],
-            HHsuite_N_CPUs=self.options['N_CPUs'],
-            HHsuite_QueryCoverage_Cutoff=self.options['HHsuite_QueryCoverage_Cutoff'],
-            HHsuite_SubjectCoverage_Cutoff=self.options['HHsuite_SubjectCoverage_Cutoff'],
-            PPHMMClustering_MCLInflation=self.options['PPHMMClustering_MCLInflation_ForAlnMerging'],
-            HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging=str2bool(
-                self.options['HMMER_PPHMMDB_ForEachRoundOfPPHMMMerging']),
+            ExpDir=self.options['ExpDir'],
         )
         pph.main()
         self.ref_virus_annotator()
@@ -97,7 +79,7 @@ class Pipeline_I:
         [print(log_text) for log_text in self.logs[2]]
         rva = RefVirusAnnotator(
             GenomeSeqFile=self.options['GenomeSeqFile'],
-            ShelveDir=self.options['ShelveDir'],
+            ExpDir=self.options['ExpDir'],
             ProteinLength_Cutoff=self.options['ProteinLength_Cutoff'],
             IncludeIncompleteGenomes=str2bool(
                 self.options['AnnotateIncompleteGenomes']),
@@ -123,7 +105,7 @@ class Pipeline_I:
         '''IV: Fire Heatmap and Dendrogram Constructors'''
         [print(log_text) for log_text in self.logs[3]]
         ghm = GRAViTyDendrogramAndHeatmapConstruction(
-            ShelveDir=self.options['ShelveDir'],
+            ExpDir=self.options['ExpDir'],
             IncludeIncompleteGenomes=str2bool(
                 self.options['AnnotateIncompleteGenomes']),
             SimilarityMeasurementScheme=self.options['SimilarityMeasurementScheme'],
@@ -150,7 +132,7 @@ class Pipeline_I:
         '''V: Fire Mutal Info Calculator'''
         [print(log_text) for log_text in self.logs[4]]
         mic = MutualInformationCalculator(
-            ShelveDir=self.options['ShelveDir'],
+            ExpDir=self.options['ExpDir'],
             IncludeIncompleteGenomes=str2bool(
                 self.options['AnnotateIncompleteGenomes']),
             VirusGroupingFile=self.options['VirusGroupingFile'],

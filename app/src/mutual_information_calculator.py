@@ -162,9 +162,9 @@ class MutualInformationCalculator:
 
         '''2/3: Retrieve variables from VMR, ref annotations, PPHMMDB, virus grouping file'''
         self.genomes = retrieve_genome_vars(
-            self.VariableShelveDir, self.IncludeIncompleteGenomes)
+            self.VariableShelveDir)
         self.ref_annotations = retrieve_ref_virus_vars(
-            self.VariableShelveDir, self.IncludeIncompleteGenomes)
+            self.VariableShelveDir)
         if "PPHMMSignatureTable_coo" in self.ref_annotations.keys():
             self.ref_annotations["PPHMMSignatureTable_coo"] = self.ref_annotations["PPHMMSignatureTable_coo"].toarray(
             )

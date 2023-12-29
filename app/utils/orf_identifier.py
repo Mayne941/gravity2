@@ -46,8 +46,8 @@ def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, taxonomy_a
         ]):
     orf_tranl_table = get_orf_trasl_table()
     orf_no_match = no_orf_match()
-    ProtList, ProtIDList = [], []
-
+    ProtList, ProtIDList, raw_nas = [], [], {}
+    raw_nas[seq_id] = []
     '''Identifying ORFs'''
     try:
         Starts = orf_tranl_table[TranslTable]
@@ -67,7 +67,8 @@ def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, taxonomy_a
 
     SeqLength, ORF_i = len(GenBankSeq), 0
     for _, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
-        '''Split into multople of 3, get in-frame nucleotide seq, split sequence into codons'''
+        '''Split into multiple of 3, get in-frame nucleotide seq, split sequence into codons'''
+        raw_nas[seq_id].append(str(GenBankSeq.translate()))
         for frame in range(3):
             length = 3 * ((SeqLength-frame) // 3)
             nuc_inframe = nuc[frame:(frame+length)]
@@ -103,4 +104,4 @@ def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, taxonomy_a
                         f"{seq_id}|ORF{ORF_i}")
                     ORF_i += 1
 
-    return ProtList, ProtIDList
+    return ProtList, ProtIDList, raw_nas

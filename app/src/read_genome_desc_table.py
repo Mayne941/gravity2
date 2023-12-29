@@ -1,4 +1,5 @@
 from app.utils.console_messages import section_header
+from app.utils.generate_fnames import generate_file_names
 
 import numpy as np
 from collections import Counter
@@ -11,9 +12,11 @@ class ReadGenomeDescTable:
     '''Parse, transform and load input VMR to GRAViTy compatible format, store as shelve'''
 
     def __init__(self,
+                 payload,
                  GenomeDescTableFile,
                  GenomeSeqFile,
-                 ShelveDir,
+                 ExpDir,
+                 IncludeIncompleteGenomes,
                  Database=None,
                  Database_Header=None,
                  TaxoGrouping_Header="Family",
@@ -21,9 +24,10 @@ class ReadGenomeDescTable:
                  RefreshGenbank=False
                  ) -> None:
         self.GenomeDescTableFile = GenomeDescTableFile
-        self.VariableShelveDir = ShelveDir + "/output"
-        if not os.path.exists(self.VariableShelveDir):
-            os.makedirs(self.VariableShelveDir)
+        self.fnames = generate_file_names(payload,ExpDir)
+        if not os.path.exists(self.fnames["OutputDir"]):
+            os.makedirs(self.fnames["OutputDir"])
+        self.IncludeIncompleteGenomes = IncludeIncompleteGenomes
         self.Database = Database
         self.GenomeSeqFile = GenomeSeqFile
         self.Database_Header = Database_Header
@@ -111,18 +115,21 @@ class ReadGenomeDescTable:
                         self.DatabaseList.append(Line[Database_i])
 
 
-    def update_desc_table(self, flag) -> dict:
+    def update_desc_table(self) -> dict:
         '''Create dictionary in GRAViTy structure for saving to persistent storage'''
         master_data = {}
-        if flag == "all_genomes":
-            IncludedGenomes_IndexList = np.where(
-                self.DatabaseList == self.Database)[0]
-            master_data["DatabaseList"] = self.DatabaseList[IncludedGenomes_IndexList]
+        if self.IncludeIncompleteGenomes:
+            '''If including incomplete, take all seqs'''
+            IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(
+                self.SeqStatusList)]
         else:
+            '''Else only take coding complete seqs'''
             IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(
                 self.SeqStatusList) if "Complete" in SeqStatus]
-            if self.Database != None:
-                master_data["DatabaseList"] = self.DatabaseList[IncludedGenomes_IndexList]
+
+        if self.Database != None:
+            '''Filter to user-provided database if present'''
+            master_data["DatabaseList"] = self.DatabaseList[IncludedGenomes_IndexList]
 
         '''Create master data. Arrays are LINKED.'''
         self.BaltimoreList = master_data["BaltimoreList"] = self.BaltimoreList[IncludedGenomes_IndexList]
@@ -138,12 +145,12 @@ class ReadGenomeDescTable:
         self.DatabaseList = master_data["DatabaseList"] = self.DatabaseList
         return master_data
 
-    def save_desc_table(self, table, fname):
+    def save_desc_table(self, table):
         '''Save dictionary in GRAViTy structure to persistent storage'''
-        pickle.dump(table, open(f"{self.VariableShelveDir + fname}", "wb"))
+        pickle.dump(table, open(self.fnames["ReadGenomeDescTablePickle"], "wb"))
 
     def entrypoint(self) -> None:
-        '''RM < UPDATE DOCSTRING'''
+        '''RM < TODO DOCSTRING'''
         section_header("Read the GenomeDesc table")
 
         '''Open & parse input VMR (txt) file'''
@@ -200,16 +207,7 @@ class ReadGenomeDescTable:
             self.DatabaseList)
 
         '''Create ReadGenomeDescTable "all genomes' db'''
-        print("- Save variables to ReadGenomeDescTable.AllGenomes.p")
-        if self.Database != None:
-            '''If a database is provided, filter to these specific entries'''
-            all_desc_table = self.update_desc_table("all_genomes")
-
+        print("- Save variables to ReadGenomeDescTable pickle")
+        all_desc_table = self.update_desc_table()
         self.save_desc_table(
-            all_desc_table, "/ReadGenomeDescTable.AllGenomes.p")
-
-        '''Create ReadGenomeDescTable "complete genomes' db'''
-        print("- Save variables to ReadGenomeDescTable.CompleteGenomes.shelve")
-        complete_desc_table = self.update_desc_table("complete_genomes")
-        self.save_desc_table(complete_desc_table,
-                             "/ReadGenomeDescTable.CompleteGenomes.p")
+            all_desc_table)

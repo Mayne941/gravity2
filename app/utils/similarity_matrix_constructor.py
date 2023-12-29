@@ -1,7 +1,7 @@
-from .dcor import dcor
 import numpy as np
 
-from app.utils.stdout_utils import clean_stdout, progress_bar
+from app.utils.stdout_utils import clean_stdout, progress_msg
+from app.utils.dcor import dcor
 
 
 def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocationTable, SimilarityMeasurementScheme="PG", p=1.0):
@@ -10,7 +10,6 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
         return "'SimilarityMeasurementScheme' should be one of the following: 'P', 'G', 'L', 'PG', 'PL'."
 
     N_Viruses = PPHMMSignatureTable.shape[0]
-    N_Comparisons = N_Viruses*(N_Viruses-1)/2
     p = float(p)
 
     if "P" in SimilarityMeasurementScheme:
@@ -20,7 +19,6 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
     if "L" in SimilarityMeasurementScheme:
         PPHMMLocation_dCorMat = np.zeros((N_Viruses, N_Viruses))
 
-    Comparison_i = 0
     try:
         for i in range(N_Viruses):
             for j in range(i, N_Viruses):
@@ -50,9 +48,6 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
                         -1, 1), PPHMMLocation_j[PresentPPHMM_IndexList].reshape(-1, 1))
                     PPHMMLocation_dCorMat[j, i] = PPHMMLocation_dCorMat[i, j]
 
-                Comparison_i += 1
-                progress_bar(
-                    f"\033[K Compute pairwise similarity: [{'='*int(Comparison_i/N_Comparisons*20)}] {Comparison_i}/{N_Comparisons} comparisons \r")
     except ZeroDivisionError as ex:
         raise SystemExit(f"{ex}\n"
                          f"This usually means that there is no similarity between any of the sequences in your database, so we can't generate any stats or figures.\n"
@@ -70,17 +65,17 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
         PPHMMLocation_dCorMat[PPHMMLocation_dCorMat < 0] = 0
 
     if SimilarityMeasurementScheme == "P":
-        SimmilarityMat = PPHMMSignature_GJMat
+        SimilarityMat = PPHMMSignature_GJMat
     elif SimilarityMeasurementScheme == "G":
-        SimmilarityMat = GOMSignature_GJMat
+        SimilarityMat = GOMSignature_GJMat
     elif SimilarityMeasurementScheme == "L":
-        SimmilarityMat = PPHMMLocation_dCorMat
+        SimilarityMat = PPHMMLocation_dCorMat
     elif SimilarityMeasurementScheme == "PG":
-        SimmilarityMat = (PPHMMSignature_GJMat*GOMSignature_GJMat)**0.5
+        SimilarityMat = (PPHMMSignature_GJMat*GOMSignature_GJMat)**0.5
     elif SimilarityMeasurementScheme == "PL":
-        SimmilarityMat = PPHMMSignature_GJMat*PPHMMLocation_dCorMat
+        SimilarityMat = PPHMMSignature_GJMat*PPHMMLocation_dCorMat
     else:
         return "'SimilarityMeasurementScheme' should be one of the following: 'P', 'G', 'L', 'PG', 'PL'."
 
-    SimmilarityMat[SimmilarityMat < 0] = 0
-    return SimmilarityMat**p
+    SimilarityMat[SimilarityMat < 0] = 0
+    return SimilarityMat**p

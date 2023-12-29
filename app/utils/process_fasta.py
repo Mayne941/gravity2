@@ -44,7 +44,7 @@ def fasta_to_genbank(payload):
     df["Genetic code table"] = 1
 
     df.to_csv(f"{payload['vmr_fname']}")
-
+    print(f"Successfully converted {df.shape[0]} records")
     return f"Successfully converted {df.shape[0]} records"
 
 def combine_segments(payload):

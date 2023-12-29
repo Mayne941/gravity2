@@ -9,13 +9,13 @@ def split_payloads_for_e2e(payload):
 
     '''FP, PL1'''
     payload_fp_pl1["GenomeDescTableFile"] = payload["GenomeDescTableFile_FirstPass"]
-    payload_fp_pl1["ShelveDir"]           = firstpass_shelve_dir
+    payload_fp_pl1["ExpDir"]              = firstpass_shelve_dir
     payload_fp_pl1["TaxoGroupingFile"]    = payload["TaxoGroupingFile_FirstPass"]
     payload_fp_pl1["GenomeSeqFile"]       = firstpass_gen_seq_f
 
     '''SP, PL1'''
     payload_sp_pl1["GenomeDescTableFile"] = payload["GenomeDescTableFile_SecondPass"]
-    payload_sp_pl1["ShelveDir"]           = secondpass_shelve_dir
+    payload_sp_pl1["ExpDir"]              = secondpass_shelve_dir
     payload_sp_pl1["TaxoGroupingFile"]    = payload["TaxoGroupingFile_SecondPass"]
     payload_sp_pl1["GenomeSeqFile"]       = secondpass_gen_seq_f
 
