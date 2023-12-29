@@ -17,8 +17,8 @@ class ReadGenomeDescTable:
                  GenomeSeqFile,
                  ExpDir,
                  RefreshGenbank=False
-
                  ) -> None:
+        self.payload = payload
         self.GenomeDescTableFile = GenomeDescTableFile
         self.fnames = generate_file_names(payload,ExpDir)
         self.GenomeSeqFile = GenomeSeqFile
@@ -109,7 +109,7 @@ class ReadGenomeDescTable:
     def update_desc_table(self) -> dict:
         '''Create dictionary in GRAViTy structure for saving to persistent storage'''
         master_data = {}
-        if self.payload['IncludeIncompleteGenomes']:
+        if self.payload['AnnotateIncompleteGenomes']:
             '''If including incomplete, take all seqs'''
             IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(
                 self.SeqStatusList)]

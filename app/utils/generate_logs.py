@@ -40,8 +40,6 @@ class Log_Generator_Pl1:
                 f"Mash_p_val_cutoff: {self.options['Mash_p_val_cutoff']}",
                 f"Mash_sim_score_cutoff: {self.options['Mash_sim_score_cutoff']}",
                 f"N_CPUs: {self.options['N_CPUs']}",
-                f"MUSCLE_GapOpenCost: {self.options['MUSCLE_GapOpenCost']}",
-                f"MUSCLE_GapExtendCost: {self.options['MUSCLE_GapExtendCost']}",
                 f"ProtClustering_MCLInflation: {self.options['ProtClustering_MCLInflation']}",
                 f"Protein alignment merging options",
                 "-"*50,

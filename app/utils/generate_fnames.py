@@ -1,3 +1,4 @@
+import random, string
 
 def generate_file_names(payload, ExpDir):
     '''Generate dictionary of file and folder names'''
@@ -11,6 +12,9 @@ def generate_file_names(payload, ExpDir):
 
     '''PPHMMDB Cosntruction'''
     fnames = generate_pphmmdb_fnames(fnames)
+
+    '''Ref Virus Annotator'''
+    fnames = generate_ref_annotator_fnames(fnames)
 
     return fnames
 
@@ -37,4 +41,16 @@ def generate_pphmmdb_fnames(fnames):
     '''Misc'''
     fnames['RefSeqFile'] = f"{fnames['OutputDir']}/ref_seqs.fasta"
     fnames["PphmmdbPickle"] = f'{fnames["OutputDir"]}/PPHMMDBConstruction.p'
+    return fnames
+
+def generate_ref_annotator_fnames(fnames):
+    '''Generate file and folder names for Ref Virus Annotator'''
+    '''HMMER Dirs'''
+    fnames['HMMER_hmmscanDir'] = f"{fnames['HMMERDir']}/hmmscan_{''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))}"
+    fnames['PPHMMDB_Summary'] = f"{fnames['HMMER_PPHMMDb']}_Summary.txt"
+    fnames['PPHMMQueryFile'] = f"{fnames['HMMER_hmmscanDir']}/QProtSeqs.fasta"
+    fnames['PPHMMScanOutFile'] = f"{fnames['HMMER_hmmscanDir']}/PPHMMScanOut.txt"
+
+    '''Misc'''
+    fnames['RefAnnotatorPickle'] = f'{fnames["OutputDir"]}/RefVirusAnnotator.p'
     return fnames

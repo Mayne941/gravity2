@@ -5,7 +5,7 @@ import pickle
 
 from app.utils.ordered_set import OrderedSet
 from app.utils.console_messages import section_header
-from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ref_virus_vars, retrieve_pphmmdb_construction
+from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
 from app.utils.stdout_utils import progress_bar, clean_stdout
 
 
@@ -163,8 +163,7 @@ class MutualInformationCalculator:
         '''2/3: Retrieve variables from VMR, ref annotations, PPHMMDB, virus grouping file'''
         self.genomes = retrieve_genome_vars(
             self.VariableShelveDir)
-        self.ref_annotations = retrieve_ref_virus_vars(
-            self.VariableShelveDir)
+        self.ref_annotations = retrieve_pickle(self.VariableShelveDir) # TODO ref
         if "PPHMMSignatureTable_coo" in self.ref_annotations.keys():
             self.ref_annotations["PPHMMSignatureTable_coo"] = self.ref_annotations["PPHMMSignatureTable_coo"].toarray(
             )
@@ -172,8 +171,7 @@ class MutualInformationCalculator:
             self.ref_annotations["PPHMMLocationTable_coo"] = self.ref_annotations["PPHMMLocationTable_coo"].toarray(
             )
 
-        self.pphmmdb_construction = retrieve_pphmmdb_construction(
-            self.VariableShelveDir)
+        self.pphmmdb_construction = retrieve_pickle(self.VariableShelveDir) # TODO pphmmdb
         PPHMMDesc = [
             "PPHMM|"+ClusterDesc for ClusterDesc in self.pphmmdb_construction["ClusterDescList"].astype("str")]
         PPHMMDesc = np.array(PPHMMDesc)

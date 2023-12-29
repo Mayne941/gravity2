@@ -24,7 +24,7 @@ from app.utils.gomdb_constructor import GOMDB_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
 from app.utils.console_messages import section_header
-from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ucf_annots, retrieve_ref_virus_vars
+from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
 from app.utils.highest_posterior_density import hpd
 from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
 from app.utils.make_heatmap_labels import make_labels, split_labels
@@ -1051,8 +1051,7 @@ class VirusClassificationAndEvaluation:
         '''3/8: Retrieve variables'''
         self.ucf_genomes = retrieve_genome_vars(
             self.VariableShelveDir_UcfVirus)
-        self.ucf_annots = retrieve_ucf_annots(
-            self.VariableShelveDir_UcfVirus)
+        self.ucf_annots = retrieve_pickle(self.VariableShelveDir_UcfVirus) # UCF
 
         if "PPHMMSignatureTable_Dict_coo" in self.ucf_annots.keys():
             self.ucf_annots["PPHMMSignatureTable_Dict"] = {RefVirusGroup: PPHMMSignatureTable_coo.toarray(

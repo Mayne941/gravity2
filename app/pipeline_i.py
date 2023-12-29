@@ -72,24 +72,9 @@ class Pipeline_I:
         '''III: Fire Reference Virus Annotator'''
         [print(log_text) for log_text in self.logs[2]]
         rva = RefVirusAnnotator(
+            payload=self.options,
             GenomeSeqFile=self.options['GenomeSeqFile'],
             ExpDir=self.options['ExpDir'],
-            ProteinLength_Cutoff=self.options['ProteinLength_Cutoff'],
-            IncludeIncompleteGenomes=str2bool(
-                self.options['AnnotateIncompleteGenomes']),
-            HMMER_N_CPUs=self.options['N_CPUs'],
-            HMMER_C_EValue_Cutoff=self.options['HMMER_C_EValue_Cutoff'],
-            HMMER_HitScore_Cutoff=self.options['HMMER_HitScore_Cutoff'],
-            RemoveSingletonPPHMMs=str2bool(
-                self.options['RemoveSingletonPPHMMs']),
-            N_VirusesOfTheClassToIgnore=self.options['N_VirusesOfTheClassToIgnore'],
-            PPHMMSorting=str2bool(self.options['PPHMMSorting']),
-            HHsuite_evalue_Cutoff=self.options['HHsuite_evalue_Cutoff'],
-            HHsuite_pvalue_Cutoff=self.options['HHsuite_pvalue_Cutoff'],
-            HHsuite_N_CPUs=self.options['N_CPUs'],
-            HHsuite_QueryCoverage_Cutoff=self.options['HHsuite_QueryCoverage_Cutoff'],
-            HHsuite_SubjectCoverage_Cutoff=self.options['HHsuite_SubjectCoverage_Cutoff'],
-            PPHMMClustering_MCLInflation=self.options['PPHMMClustering_MCLInflation_ForPPHMMSorting'],
         )
         rva.main()
         self.make_graphs()

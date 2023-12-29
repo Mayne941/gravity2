@@ -10,7 +10,7 @@ from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Cons
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.download_genbank_file import DownloadGenBankFile
 from app.utils.console_messages import section_header
-from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ref_virus_vars
+from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
 
 
 class UcfVirusAnnotator:
@@ -69,8 +69,7 @@ class UcfVirusAnnotator:
                 ShelveDir_RefVirus)
 
             '''Retrieve variables related to the reference viruses'''
-            Parameters = retrieve_ref_virus_vars(
-                f"{ShelveDir_RefVirus}/output")
+            Parameters = retrieve_pickle(f"{ShelveDir_RefVirus}/output") #TODO REF
             if "GOMDB_coo" in Parameters.keys():
                 Parameters["GOMDB"] = {GOMID: GOM_coo.toarray(
                 ) for GOMID, GOM_coo in Parameters["GOMDB_coo"].items()}

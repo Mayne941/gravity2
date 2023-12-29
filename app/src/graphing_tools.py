@@ -7,7 +7,7 @@ from app.utils.taxo_label_constructor import TaxoLabel_Constructor
 from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
 from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
 from app.utils.console_messages import section_header
-from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_ref_virus_vars
+from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
 from app.utils.stdout_utils import error_handler
 import re
 import os
@@ -536,8 +536,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         '''2/7: Retrieve variables'''
         self.genomes = retrieve_genome_vars(
             self.VariableShelveDir)
-        self.ref_annotations = retrieve_ref_virus_vars(
-            self.VariableShelveDir)
+        self.ref_annotations = retrieve_pickle(self.VariableShelveDir) # TODO ref pickle
         if "PPHMMSignatureTable_coo" in self.ref_annotations.keys():
             self.ref_annotations["PPHMMSignatureTable_coo"] = self.ref_annotations["PPHMMSignatureTable_coo"].toarray(
             )
