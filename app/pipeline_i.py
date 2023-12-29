@@ -50,12 +50,6 @@ class Pipeline_I:
             GenomeDescTableFile=self.options['GenomeDescTableFile'],
             GenomeSeqFile=self.options['GenomeSeqFile'],
             ExpDir=self.options['ExpDir'],
-            IncludeIncompleteGenomes=str2bool(
-                self.options['AnnotateIncompleteGenomes']),
-            Database=self.options['Database'],
-            Database_Header=self.options['Database_Header'],
-            TaxoGrouping_Header=self.options['TaxoGrouping_Header'],
-            TaxoGroupingFile=self.options['TaxoGroupingFile'],
             RefreshGenbank=refresh_genbank
         )
         rgdt.entrypoint()

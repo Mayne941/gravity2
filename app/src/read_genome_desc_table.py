@@ -16,23 +16,14 @@ class ReadGenomeDescTable:
                  GenomeDescTableFile,
                  GenomeSeqFile,
                  ExpDir,
-                 IncludeIncompleteGenomes,
-                 Database=None,
-                 Database_Header=None,
-                 TaxoGrouping_Header="Family",
-                 TaxoGroupingFile=None,
                  RefreshGenbank=False
+
                  ) -> None:
         self.GenomeDescTableFile = GenomeDescTableFile
         self.fnames = generate_file_names(payload,ExpDir)
+        self.GenomeSeqFile = GenomeSeqFile
         if not os.path.exists(self.fnames["OutputDir"]):
             os.makedirs(self.fnames["OutputDir"])
-        self.IncludeIncompleteGenomes = IncludeIncompleteGenomes
-        self.Database = Database
-        self.GenomeSeqFile = GenomeSeqFile
-        self.Database_Header = Database_Header
-        self.TaxoGrouping_Header = TaxoGrouping_Header
-        self.TaxoGroupingFile = TaxoGroupingFile
         self.refresh_genbank = RefreshGenbank
         self.BaltimoreList, self.OrderList, self.FamilyList, \
             self.SubFamList, self.GenusList, self.VirusNameList, \
@@ -58,11 +49,11 @@ class ReadGenomeDescTable:
             SeqStatus_i = header.index("Genome coverage")
             TranslTable_i = header.index("Genetic code table")
 
-            if self.Database_Header != None:
-                Database_i = header.index(self.Database_Header)
+            if self.payload['Database_Header'] != None:
+                Database_i = header.index(self.payload['Database_Header'])
 
-            if self.TaxoGrouping_Header != None:
-                TaxoGrouping_i = header.index(self.TaxoGrouping_Header)
+            if self.payload['TaxoGrouping_Header'] != None:
+                TaxoGrouping_i = header.index(self.payload['TaxoGrouping_Header'])
             else:
                 TaxoGrouping_i = header.index("Family")
 
@@ -111,14 +102,14 @@ class ReadGenomeDescTable:
                         print(
                             f"Genetic code is not specified. GRAViTy will use the standard code for {self.VirusNameList[-1]}")
                         self.TranslTableList.append(1)
-                    if self.Database_Header != None:
+                    if self.payload['Database_Header'] != None:
                         self.DatabaseList.append(Line[Database_i])
 
 
     def update_desc_table(self) -> dict:
         '''Create dictionary in GRAViTy structure for saving to persistent storage'''
         master_data = {}
-        if self.IncludeIncompleteGenomes:
+        if self.payload['IncludeIncompleteGenomes']:
             '''If including incomplete, take all seqs'''
             IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(
                 self.SeqStatusList)]
@@ -127,7 +118,7 @@ class ReadGenomeDescTable:
             IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(
                 self.SeqStatusList) if "Complete" in SeqStatus]
 
-        if self.Database != None:
+        if self.payload['Database'] != None:
             '''Filter to user-provided database if present'''
             master_data["DatabaseList"] = self.DatabaseList[IncludedGenomes_IndexList]
 
@@ -156,10 +147,10 @@ class ReadGenomeDescTable:
         '''Open & parse input VMR (txt) file'''
         self.open_table()
 
-        if self.TaxoGroupingFile != None:
+        if self.payload['TaxoGroupingFile'] != None:
             '''PL1 has option to specify taxonomic grouping level.'''
             self.TaxoGroupingList = []
-            with open(self.TaxoGroupingFile, "r") as TaxoGrouping_txt:
+            with open(self.payload['TaxoGroupingFile'], "r") as TaxoGrouping_txt:
                 for TaxoGrouping in TaxoGrouping_txt:
                     TaxoGrouping = TaxoGrouping.split("\r\n")[0].split("\n")[0]
                     self.TaxoGroupingList.append(TaxoGrouping)

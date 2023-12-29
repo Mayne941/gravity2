@@ -45,10 +45,7 @@ class Pipeline_II:
         rgdt = ReadGenomeDescTable(
             GenomeDescTableFile=self.options['GenomeDescTableFile_UcfVirus'],
             GenomeSeqFile=self.options['GenomeSeqFile_UcfVirus'],
-            ShelveDir=self.options['ShelveDir_UcfVirus'],
-            IncludeIncompleteGenomes=True, # HC on PL2
-            Database=self.options['Database'],
-            Database_Header=self.options['Database_Header'],
+            ExpDir=self.options['ShelveDir_UcfVirus'],
             RefreshGenbank=resfresh_genbank
         )
         rgdt.entrypoint()
