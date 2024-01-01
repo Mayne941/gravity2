@@ -14,10 +14,10 @@ def PPHMMSignatureTable_Constructor(
     TranslTableList,
     HMMER_PPHMMDB,
     HMMER_hmmscanDir,
-    HMMER_N_CPUs=7,
+    HMMER_N_CPUs=6,
     HMMER_C_EValue_Cutoff=1E-3,
     HMMER_HitScore_Cutoff=0,
-):
+): # RM < TODO NEEDS REFACTORING, MERGING WITH SCRIPT IN PPHMMDB CONSTRUCTOR
     print("- Generate PPHMM signature table and PPHMM location table")
     '''Load GenBank record'''
     _, file_extension = os.path.splitext(GenBankFile)

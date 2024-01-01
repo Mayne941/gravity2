@@ -110,7 +110,7 @@ class ReadGenomeDescTable:
         else:
             '''Else only take coding complete seqs'''
             IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(
-                self.SeqStatusList) if "Complete" in SeqStatus]
+                self.SeqStatusList)]# if "Complete" in SeqStatus] # RM < TODO Removed as this can break a user workflow - guidance on using CCS is probably preferable
 
         '''Create master data. Arrays are LINKED.'''
         self.BaltimoreList = master_data["BaltimoreList"] = self.BaltimoreList[IncludedGenomes_IndexList]

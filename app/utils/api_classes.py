@@ -179,8 +179,8 @@ class Pipeline_ii_data(Data_pl2_unique_params, Data_common_pipeline_params):
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint")
     ShelveDir_UcfVirus: str = Query('output/myexperiment_pipeline_2',
                                     description="Full path to the shelve directory of unclassified viruses, storing GRAViTy outputs.")
-    ShelveDirs_RefVirus: str = Query('output/myexperiment_pipeline_1',
-                                     description="Full path(s) to the shelve director(y/ies) of reference virus(es). For example: 'path/to/shelve/ref1, path/to/shelve/ref2, ...'")
+    ExpDir_Pl1: str = Query('output/myexperiment_pipeline_1',
+                                     description="Full path to the directory of reference viruses produced during Pipeline 1.")
     GenomeSeqFile_UcfVirus: str = Query('output/unclassified_seqs.gb',
                                         description="Full path to the genome sequence GenBank file of unclassified viruses.")
     GenomeSeqFiles_RefVirus: str = Query('output/ref_sequences.gb',

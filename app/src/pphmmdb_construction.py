@@ -45,14 +45,14 @@ class PPHMMDBConstruction:
         '''3/10: Check if GenBank files exist; dl if needed. Index & transform.'''
         if not os.path.isfile(self.GenomeSeqFile):
             progress_msg("Download GenBank file\n GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s).")
-            DownloadGenBankFile(self.GenomeSeqFile,
+            DownloadGenBankFile(self.GenomeSeqFile, # RM < TODO We should give users option to provide their own gb file if not on genbank
                                 self.genomes["SeqIDLists"], self.payload["genbank_email"])
 
         progress_msg("Reading GenBank file")
         GenBankDict = SeqIO.index(self.GenomeSeqFile, "genbank")
         CleanGenbankDict = {}
         for i in GenBankDict.items():
-            ### RM < TEST: BACK TRANSCRIBE IF RNA SEQS USED
+            ### RM < TODO TEST: BACK TRANSCRIBE IF RNA SEQS USED
             if "u" in str(i[1].seq).lower():
                 i[1].seq = i[1].seq.back_transcribe()
             CleanGenbankDict[i[0].split(".")[0]] = i[1]

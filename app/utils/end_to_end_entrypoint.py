@@ -21,13 +21,13 @@ def split_payloads_for_e2e(payload):
 
     '''FP, PL2'''
     payload_fp_pl2["ShelveDir_UcfVirus"]      = f"output/{payload['ExperimentName']}_firstpass_pipeline_2"
-    payload_fp_pl2["ShelveDirs_RefVirus"]     = firstpass_shelve_dir
+    payload_fp_pl2["ExpDir_Pl1"]     = firstpass_shelve_dir
     payload_fp_pl2["GenomeSeqFiles_RefVirus"] = firstpass_gen_seq_f
     payload_fp_pl2["GenomeSeqFile_UcfVirus"]  = f"output/{payload['ExperimentName']}_unclassified_viruses.gb"
 
     '''SP, PL2'''
     payload_sp_pl2["ShelveDir_UcfVirus"]      = f"output/{payload['ExperimentName']}_secondpass_pipeline_2"
-    payload_sp_pl2["ShelveDirs_RefVirus"]     = secondpass_shelve_dir
+    payload_sp_pl2["ExpDir_Pl1"]     = secondpass_shelve_dir
     payload_sp_pl2["GenomeSeqFiles_RefVirus"] = secondpass_gen_seq_f
     payload_sp_pl2["GenomeSeqFile_UcfVirus"]  = f"output/{payload['ExperimentName']}_unclassified_viruses.gb"
 

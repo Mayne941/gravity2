@@ -25,28 +25,22 @@ class Pipeline_II:
         self.actual_start = time.time()
         self.logs = self.log_gen.entrypoint()
         shutil.copyfile(self.options['GenomeDescTableFile_UcfVirus'], f"{self.options['ShelveDir_UcfVirus']}/PL2_vmr.csv")
-
+        '''Seed payload with dummies so as to not hit PL1-specific options'''
+        self.options["TaxoGroupingFile"] = None
+        '''Save logs'''
         with open(f"{self.options['ShelveDir_UcfVirus']}/run_parameters.json", "w") as f:
             f.write(json.dumps(payload))
-        '''Catch bad database flags'''
-        if (self.options['Database'] != None and self.options['Database_Header'] == None):
-            raise optparse.OptionValueError(
-                f"You have specified DATABASE as {self.options['Database']}, 'Database_Header' cannot be 'None'")
-        if (self.options['Database'] == None and self.options['Database_Header'] != None):
-            Proceed = input(
-                f"You have specified 'Database_Header' as {self.options['Database_Header']}, but 'Database' is 'None'. GRAViTy will analyse all genomes. Do you want to proceed? [Y/n]: ")
-            if Proceed != "Y":
-                raise SystemExit("GRAViTy terminated.")
 
     @timing
-    def read_genome_desc_table(self, resfresh_genbank):
+    def read_genome_desc_table(self, refresh_genbank):
         '''I: Fire Read Genom Desc Table'''
         [print(log_text) for log_text in self.logs[0]]
         rgdt = ReadGenomeDescTable(
+            payload=self.options,
             GenomeDescTableFile=self.options['GenomeDescTableFile_UcfVirus'],
             GenomeSeqFile=self.options['GenomeSeqFile_UcfVirus'],
             ExpDir=self.options['ShelveDir_UcfVirus'],
-            RefreshGenbank=resfresh_genbank
+            RefreshGenbank=refresh_genbank
         )
         rgdt.entrypoint()
         self.pphmmdb_construction()
@@ -57,8 +51,9 @@ class Pipeline_II:
         if str2bool(self.options['UseUcfVirusPPHMMs']) == True:
             [print(log_text) for log_text in self.logs[1]]
             pc = PPHMMDBConstruction(
+                payload=self.options,
                 GenomeSeqFile=self.options['GenomeSeqFile_UcfVirus'],
-                ShelveDir=self.options['ShelveDir_UcfVirus'],
+                ExpDir=self.options['ShelveDir_UcfVirus'],
             )
             pc.main()
         self.ucf_virus_annotator()
@@ -68,17 +63,8 @@ class Pipeline_II:
         '''III: Fire UCF Virus Annotator'''
         [print(log_text) for log_text in self.logs[2]]
         ucf = UcfVirusAnnotator(
-            genbank_email=self.options['genbank_email'],
-            GenomeSeqFile_UcfVirus=self.options['GenomeSeqFile_UcfVirus'],
-            ShelveDir_UcfVirus=self.options['ShelveDir_UcfVirus'],
-            ShelveDirs_RefVirus=self.options['ShelveDirs_RefVirus'],
-            IncludeIncompleteGenomes_UcfVirus=str2bool(
-                self.options['AnnotateIncompleteGenomes_UcfVirus']),
-            IncludeIncompleteGenomes_RefVirus=str2bool(
-                self.options['UsingDatabaseIncludingIncompleteRefViruses']),
-            HMMER_N_CPUs=self.options['N_CPUs'],
-            HMMER_C_EValue_Cutoff=self.options['HMMER_C_EValue_Cutoff'],
-            HMMER_HitScore_Cutoff=self.options['HMMER_HitScore_Cutoff'],
+            payload=self.options,
+            ExpDir=self.options['ShelveDir_UcfVirus'], # TODO Is it necessary to pass this as it's in the payload??
         )
         ucf.main()
         self.virus_classification()

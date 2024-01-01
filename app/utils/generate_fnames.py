@@ -1,15 +1,18 @@
 import random, string
 
-def generate_file_names(payload, ExpDir):
-    '''Generate dictionary of file and folder names'''
+def generate_file_names(payload, ExpDir, Pl2=False):
+    '''Generate dictionary of file and folder names. If called from PL1, ignore
+    PL2 args; if called from PL2, all vars prior to if statement pertain to PL2,
+    then we generate dummy PL1 vars from the extra PL2 arguments.'''
     fnames = {}
+    output_prefix = "/output"
+
     '''Main'''
     fnames["ExpDir"] = ExpDir
-    fnames["OutputDir"] = f'{ExpDir}/output'
+    fnames["OutputDir"] = f'{ExpDir}{output_prefix}'
 
     '''Read Genome Desc Table'''
     fnames["ReadGenomeDescTablePickle"] = f'{fnames["OutputDir"]}/ReadGenomeDescTable.p'
-    # If PL2 run (mandatory UCF file key is in payload)... make these too. << New fn
 
     '''PPHMMDB Cosntruction'''
     fnames = generate_pphmmdb_fnames(fnames)
@@ -20,6 +23,15 @@ def generate_file_names(payload, ExpDir):
     '''PL1 Graphs & MI'''
     fnames = generate_pl1_graph_fnames(fnames,payload)
     fnames = generate_mi_scorer_fnames(fnames)
+
+    '''PL2 components'''
+    if Pl2:
+        '''Main'''
+        fnames["ExpDir_Pl1"] = payload['ExpDir_Pl1']
+        fnames["Pl1OutputDir"] = f'{fnames["ExpDir_Pl1"]}{output_prefix}'
+        '''UCF Annotator'''
+        fnames = generate_ucf_annotator(fnames)
+
     return fnames
 
 def generate_pphmmdb_fnames(fnames):
@@ -74,7 +86,16 @@ def generate_pl1_graph_fnames(fnames, payload):
     return fnames
 
 def generate_mi_scorer_fnames(fnames):
+    # TODO docst
     fnames['MutualInformationScoreDir'] = fnames['OutputDir']+"/MutualInformationScore"
     fnames['MiScorePickle'] = f'{fnames["OutputDir"]}/MutualInformationCalculator.p'
     fnames['MutualInformationScoreFile'] = f"{fnames['MutualInformationScoreDir']}/MIScore.csv"
+    return fnames
+
+def generate_ucf_annotator(fnames):
+    # TODO docst
+    fnames['HMMERDir_RefVirus'] = f"{fnames['ExpDir_Pl1']}/HMMER"
+    fnames['HMMER_PPHMMDB_RefVirus'] = f"{fnames['HMMERDir_RefVirus']}/HMMER_PPHMMDb/HMMER_PPHMMDb"
+    fnames['Pl1RefAnnotatorPickle'] = f'{fnames["Pl1OutputDir"]}/RefVirusAnnotator.p'
+    fnames['UcfAnnotatorPickle'] = f'{fnames["OutputDir"]}/UcfVirusAnnotator.p'
     return fnames
