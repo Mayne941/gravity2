@@ -67,8 +67,6 @@ class Data_pl1_unique_params(BaseModel):
                                description="Sort PPHMMs if True.")
     PPHMMClustering_MCLInflation_ForPPHMMSorting: int = Field(2, gt=0,
                                                               description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
-    VirusGroupingFile: Union[FilePath, None] = Query(None, # RM < TODO Cull?
-                                                     description="Fill path to the virus grouping scheme file. The file contains column(s) of arbitrary taxonomic grouping scheme(s) that users want to investigate. Note that file must contain headers, see docs for further info. If 'None', the taxonomic grouping as specified in 'Taxonomic grouping' column in the VMR will be used.")
     N_Sampling: int = Field(10, gt=0,
                             description="The number of mutual information scores sample size.")
     SamplingStrategy: Literal[None, "balance_without_repeat", "balance_with_repeat"] = Query('balance_with_repeat',
@@ -96,10 +94,6 @@ class Data_pl2_unique_params(BaseModel):
 class Data_common_pipeline_params(BaseModel):
     genbank_email: str = Query('name@provider.com',
                                description="A valid email address is required to download genbank files.")
-    Database: Union[str, None] = Query(None,  # RM < TODO Cull?
-                                       description="GRAViTy will only analyse genomes that are labelled with DATABASE in the database column. The database column can be specified by the DATABASE HEADER argument. If 'None', all entries are analysed.")
-    Database_Header: Union[str, None] = Query(None, # RM < TODO Cull?
-                                              description="The header of the database column. Cannot be 'None' if DATABASE is specified.")
     ProteinLength_Cutoff: int = Field(100, gt=0,
                                       description="Proteins with length < LENGTH aa will be ignored")
     IncludeProteinsFromIncompleteGenomes: bool = Query(True,
@@ -142,8 +136,6 @@ class Data_common_pipeline_params(BaseModel):
                                 description="Perform virus grouping if True.")
     SimilarityMeasurementScheme: Literal["P", "G", "L", "PG", "PL"] = Query("PG",
                                                                             description="Virus similarity measurement SCHEMEs. If SCHEME = 'P', an overall similarity between two viruses is their GJ_P. If SCHEME = 'L', an overall similarity between two viruses is their GJ_L. If SCHEME = 'G', an overall similarity between two viruses is their GJ_G. If SCHEME = 'PG', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_G. If SCHEME = 'PL', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_L.")
-    Heatmap_WithDendrogram: bool = Query(True,
-                                         description="Construct (dis)similarity heatmap with dendrogram if True.")
     Heatmap_DendrogramSupport_Cutoff: float = Field(0.75, ge=0, le=1,
                                                     description="Threshold for the BOOTSTRAP SUPPORT to be shown on the dendrogram on the heatmap.")
 
@@ -177,7 +169,7 @@ class Pipeline_i_data(Data_pl1_unique_params, Data_common_pipeline_params):
     ExpDir: str = Query('./output/myexperiment_pipeline_1',
                            description="Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")
     TaxoGroupingFile: Union[FilePath, None] = Query(None,
-                                                    description="It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
+                                                    description="If different viruses need to be associated with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
     GenomeSeqFile: str = Query('./output/ref_sequences.gb',
                                description="Full path to the genome sequence GenBank file. If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column")
 

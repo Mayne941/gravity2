@@ -1,4 +1,4 @@
-import random, string, os
+import random, string
 
 def generate_file_names(payload, ExpDir):
     '''Generate dictionary of file and folder names'''
@@ -63,7 +63,7 @@ def generate_pl1_graph_fnames(fnames, payload):
     '''Generate filenames for graphical and tree output'''
     '''Mandatory files'''
     fnames['HeatmapWithDendrogramFile'] = f"{fnames['OutputDir']}/GRAViTy_heatmap.pdf"
-    fnames['VirusGroupingFile'] = f"{fnames['OutputDir']}/virus_grouping.txt" # Kill api arg?
+    fnames['VirusGroupingFile'] = f"{fnames['OutputDir']}/virus_grouping.txt"
     '''Dendro files'''
     if payload['Bootstrap'] == True:
         fnames['VirusDendrogramDistFile'] = f"{fnames['OutputDir']}/dendrogram_dist.nwk"
@@ -76,5 +76,5 @@ def generate_pl1_graph_fnames(fnames, payload):
 def generate_mi_scorer_fnames(fnames):
     fnames['MutualInformationScoreDir'] = fnames['OutputDir']+"/MutualInformationScore"
     fnames['MiScorePickle'] = f'{fnames["OutputDir"]}/MutualInformationCalculator.p'
-    fnames['MutualInformationScoreFile'] = f"{fnames['MutualInformationScoreDir']}/MIScore.txt"
+    fnames['MutualInformationScoreFile'] = f"{fnames['MutualInformationScoreDir']}/MIScore.csv"
     return fnames

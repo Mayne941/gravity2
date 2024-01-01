@@ -48,9 +48,6 @@ class ReadGenomeDescTable:
             SeqStatus_i = header.index("Genome coverage")
             TranslTable_i = header.index("Genetic code table")
 
-            if self.payload['Database_Header'] != None:
-                Database_i = header.index(self.payload['Database_Header'])
-
             if self.payload['TaxoGrouping_Header'] != None:
                 TaxoGrouping_i = header.index(self.payload['TaxoGrouping_Header'])
             else:
@@ -101,8 +98,6 @@ class ReadGenomeDescTable:
                         print(
                             f"Genetic code is not specified. GRAViTy will use the standard code for {self.VirusNameList[-1]}")
                         self.TranslTableList.append(1)
-                    if self.payload['Database_Header'] != None:
-                        self.DatabaseList.append(Line[Database_i])
 
 
     def update_desc_table(self) -> dict:
@@ -116,10 +111,6 @@ class ReadGenomeDescTable:
             '''Else only take coding complete seqs'''
             IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(
                 self.SeqStatusList) if "Complete" in SeqStatus]
-
-        if self.payload['Database'] != None:
-            '''Filter to user-provided database if present'''
-            master_data["DatabaseList"] = self.DatabaseList[IncludedGenomes_IndexList]
 
         '''Create master data. Arrays are LINKED.'''
         self.BaltimoreList = master_data["BaltimoreList"] = self.BaltimoreList[IncludedGenomes_IndexList]

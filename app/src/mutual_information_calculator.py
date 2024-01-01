@@ -2,6 +2,7 @@ from sklearn.feature_selection import mutual_info_classif
 from alive_progress import alive_it
 import numpy as np
 import pickle
+import pandas as pd
 
 from app.utils.ordered_set import OrderedSet
 from app.utils.console_messages import section_header
@@ -29,26 +30,22 @@ class MutualInformationCalculator:
 
     def read_virus_grouping_file(self) -> dict:
         '''2/3: (Opt) Read virus grouping file to dict'''
-        progress_msg("Loading virus groupings from user-provided file")
+        progress_msg("Loading virus groupings from GRAViTy grouping file")
         VirusGroupingTable = []
-        with open(self.payload['VirusGroupingFile'], "r") as VirusGrouping_txt:
+        with open(self.fnames['VirusGroupingFile'], "r") as VirusGrouping_txt:
             VirusGroupingSchemeList = next(VirusGrouping_txt)
             VirusGroupingSchemeList = VirusGroupingSchemeList.split("\r\n")[0].split("\n")[
                 0].split("\t")
             for Line in VirusGrouping_txt:
                 Line = Line.split("\r\n")[0].split("\n")[0].split("\t")
                 VirusGroupingTable.append(Line)
-
-        VirusGroupingTable = np.array(VirusGroupingTable).T
-        VirusGroupingDict = {VirusGroupingScheme: np.array(
-            VirusGroupingList) for VirusGroupingScheme, VirusGroupingList in zip(VirusGroupingSchemeList, VirusGroupingTable)}
-        VirusGroupingDict = {"Overvall": self.genomes["TaxoGroupingList"]}
-        return VirusGroupingDict
+        '''Group at GRAViTy-assigned family level'''
+        return {"overall": np.array([i[1] for i in VirusGroupingTable if len(i) > 1])}
 
     def calculate_mis(self, PPHMMDesc, VirusGroupingDict) -> None:
         '''3/3: Calculate mutual info scores (sklearn), output to np to .txt, then save pickle'''
         progress_msg("Calculating Mutual Information Score (this can take a while...)")
-        ResultDict, VirusGroupingScheme_i = {}, 1
+        ResultDict = {}
         for VirusGroupingScheme, VirusGroupingList in VirusGroupingDict.items():
             '''Compute mutual information between PPHMM scores and virus classification'''
             ResultDict[VirusGroupingScheme] = {}
@@ -85,7 +82,6 @@ class MutualInformationCalculator:
             AverageMutualInformationScoreList = np.mean(
                 SampledMutualInformationTable, axis=0)
 
-            VirusGroupingScheme_i += 1
 
             '''Sort the PPHMMs according to mutual information scores'''
             PPHMMOrder = list(list([zip(*sorted([(AverageMutualInformationScore_i, AverageMutualInformationScore) for AverageMutualInformationScore_i, AverageMutualInformationScore in enumerate(AverageMutualInformationScoreList)],
@@ -114,23 +110,17 @@ class MutualInformationCalculator:
                                    VirusGroupingList,
                                    PPHMMSignatureTable_Subset[:, PPHMMOrder],
                                    ))
-
             Dat = np.vstack((["Sequence ID", "Virus name", "Baltimore classification group", "Order", "Family", "Subfamily", "Genus", "TaxoGrouping", "Virus grouping"]+IngroupVirus_PPHMMDesc[PPHMMOrder].tolist(),
                              Dat,
                              ["Average mutual information score"]+[""]*8 +
                              AverageMutualInformationScoreList[PPHMMOrder].astype(
                                  str).tolist(),
                              ))
-
-            # RM < TODO Switch to CSV
-            np.savetxt(fname=self.fnames['MutualInformationScoreFile'],
-                       X=Dat,
-                       fmt='%s',
-                       delimiter="\t")
-
-            with open(self.fnames['MutualInformationScoreFile'], "a") as MutualInformationScore_txt:
-                MutualInformationScore_txt.write(
-                    f"N_Sampling: {self.payload['N_Sampling']}\n Sampling strategy: {self.payload['SamplingStrategy']}\n Sample size per virus group: {self.payload['SampleSizePerGroup']}\n")
+            '''Save'''
+            df = pd.DataFrame(Dat)
+            df.columns = df.iloc[0]
+            df = df.iloc[1:]
+            df.to_csv(self.fnames['MutualInformationScoreFile'])
 
         '''Save all results to pickle'''
         pickle.dump(ResultDict, open(self.fnames['MiScorePickle'], "wb"))
@@ -144,10 +134,10 @@ class MutualInformationCalculator:
         PPHMMDesc = self.get_pphmm_clusters()
 
         '''2/3: Group PPHMMs'''
-        # if self.payload['VirusGroupingFile'] == None:
-        VirusGroupingDict = {"Overvall": self.genomes["TaxoGroupingList"]}
-        # else: # RM < TODO Retire the external grouping fn? This seems like cheating.
-        # VirusGroupingDict = self.read_virus_grouping_file()
+        if self.payload["VirusGrouping"]:
+            VirusGroupingDict = self.read_virus_grouping_file()
+        else:
+            VirusGroupingDict = {"overall": self.genomes["TaxoGroupingList"]}
 
         '''3/3: Calculate mutual information score between PPHMM and virus classification, save results'''
-        self.calculate_mis(PPHMMDesc, VirusGroupingDict,)
+        self.calculate_mis(PPHMMDesc, VirusGroupingDict)

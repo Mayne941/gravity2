@@ -1,5 +1,4 @@
 
-import optparse
 import os
 import time
 import json
@@ -10,7 +9,6 @@ from app.src.pphmmdb_construction import PPHMMDBConstruction
 from app.src.ref_virus_annotator import RefVirusAnnotator
 from app.src.pl1_graphs import GRAViTyDendrogramAndHeatmapConstruction
 from app.src.mutual_information_calculator import MutualInformationCalculator
-from app.utils.str_to_bool import str2bool
 from app.utils.generate_logs import Log_Generator_Pl1
 from app.utils.timer import timing
 
@@ -30,16 +28,6 @@ class Pipeline_I:
         with open(f"{self.options['ExpDir']}/run_parameters.json", "w") as f:
             f.write(json.dumps(payload))
         shutil.copyfile(self.options['GenomeDescTableFile'], f"{self.options['ExpDir']}/PL1_vmr.csv")
-
-        '''Catch bad database flags'''
-        if (self.options['Database'] != None and self.options['Database_Header'] == None):
-            raise optparse.OptionValueError(
-                f"You have specified DATABASE as {self.options['Database']}, 'Database_Header' cannot be 'None'")
-        if (self.options['Database'] == None and self.options['Database_Header'] != None):
-            Proceed = input(
-                f"You have specified 'Database_Header' as {self.options['Database_Header']}, but 'Database' is 'None'. GRAViTy will analyse all genomes. Do you want to proceed? [Y/n]: ")
-            if Proceed != "Y":
-                raise SystemExit("GRAViTy terminated.")
 
     @timing
     def read_genome_desc_table(self, refresh_genbank):

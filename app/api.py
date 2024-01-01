@@ -7,7 +7,6 @@ from app.pipeline_ii import Pipeline_II
 from app.utils.scrape_vmr import scrape, first_pass_taxon_filter, second_pass
 from app.utils.process_fasta import fasta_to_genbank, combine_segments
 from app.utils.end_to_end_entrypoint import split_payloads_for_e2e
-from app.utils.generate_fnames import generate_file_names
 from app.utils.api_classes import (Pipeline_i_data, Pipeline_ii_data, Endp_data_scrape_data,
                                    Endp_data_first_pass_taxon_filter, Endp_data_second_pass_filter,
                                    Endp_data_fasta_to_gb, CombineGenomeSegs, E2e_data)
