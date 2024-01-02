@@ -11,6 +11,8 @@ from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
 from app.utils.stdout_utils import warning_msg, progress_msg
 from app.utils.generate_fnames import generate_file_names
 from app.utils.mkdirs import mkdir_pl1_graphs
+from app.utils.heatmap_params import get_hmap_params, construct_hmap_lines
+from app.utils.error_handlers import raise_gravity_error
 
 import os
 import numpy as np
@@ -132,13 +134,13 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         VirusDendrogram = Phylo.read(self.fnames['BootstrappedDendrogramFile'], "newick")
 
         '''Determine virus order'''
+        _ = VirusDendrogram.ladderize(reverse=True)
         TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
                                               FamilyList=self.genomes["FamilyList"],
                                               GenusList=self.genomes["GenusList"],
                                               VirusNameList=self.genomes["VirusNameList"]
                                               )
 
-        _ = VirusDendrogram.ladderize(reverse=True)
         OrderedTaxoLabelList = [
             Clade.name for Clade in VirusDendrogram.get_terminals()]
         VirusOrder = [TaxoLabelList.index(TaxoLabel)
@@ -172,79 +174,13 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         ClassLabelList_x, ClassLabelList_y = split_labels(OrderedTaxoLabelList)
 
         '''Plot configuration'''
-        Heatmap_width = float(12)
-        Heatmap_height = Heatmap_width
-        TaxoLable_space = 1.00
-
-        CBar_Heatmap_gap = 0.05
-        CBar_width = Heatmap_width
-        CBar_height = 0.25
-        CBarLable_space = 0.25
-
-        Dendrogram_width = Heatmap_width/3
-        Dendrogram_height = Heatmap_height
-        Dendrogram_Heatmap_gap = 0.1
-
-        ScaleBar_Dendrogram_gap = CBar_Heatmap_gap
-        ScaleBar_width = Dendrogram_width
-        ScaleBar_height = CBar_height
-        ScaleBarLable_space = CBarLable_space
-
-        Outer_margin = 0.5
-        FontSize = 6
-        dpi=600
-
-        if len(ClassLabelList_x) >= 200:
-            '''Reduce draw parameter size if large n'''
-            FontSize = FontSize/2
-            dpi=dpi*1.5
-
-        elif len(ClassLabelList_x) >= 400:
-            FontSize = FontSize/4
-            dpi=dpi*3
-
-
-        Fig_width = Outer_margin + Dendrogram_width + Dendrogram_Heatmap_gap + \
-            Heatmap_width + TaxoLable_space + Outer_margin
-        Fig_height = Outer_margin + CBarLable_space + CBar_height + \
-            CBar_Heatmap_gap + Heatmap_height + TaxoLable_space + Outer_margin
-
-        ax_Dendrogram_L = Outer_margin/Fig_width
-        ax_Dendrogram_B = (Outer_margin + ScaleBarLable_space +
-                           ScaleBar_height + ScaleBar_Dendrogram_gap)/Fig_height
-        ax_Dendrogram_W = Dendrogram_width/Fig_width
-        ax_Dendrogram_H = Dendrogram_height/Fig_height
-
-        ax_ScaleBar_L = Outer_margin/Fig_width
-        ax_ScaleBar_B = (Outer_margin + ScaleBarLable_space)/Fig_height
-        ax_ScaleBar_W = ScaleBar_width/Fig_width
-        ax_ScaleBar_H = ScaleBar_height/Fig_height
-
-        ax_Heatmap_L = (Outer_margin + Dendrogram_width +
-                        Dendrogram_Heatmap_gap)/Fig_width
-        ax_Heatmap_B = (Outer_margin + CBarLable_space +
-                        CBar_height + CBar_Heatmap_gap)/Fig_height
-        ax_Heatmap_W = Heatmap_width/Fig_width
-        ax_Heatmap_H = Heatmap_height/Fig_height
-
-        ax_CBar_L = (Outer_margin + Dendrogram_width +
-                     Dendrogram_Heatmap_gap)/Fig_width
-        ax_CBar_B = (Outer_margin + CBarLable_space)/Fig_height
-        ax_CBar_W = CBar_width/Fig_width
-        ax_CBar_H = CBar_height/Fig_height
-
-        '''Plot the heat map'''
-        fig = plt.figure(figsize=(Fig_width, Fig_height), dpi=dpi)
-
-        '''Dendrogram'''
-        ax_Dendrogram = fig.add_axes(
-            [ax_Dendrogram_L, ax_Dendrogram_B, ax_Dendrogram_W, ax_Dendrogram_H], frame_on=False, facecolor="white")
+        hmap_params, fig, ax_Dendrogram, ax_Heatmap = get_hmap_params(len(ClassLabelList_x))
 
         try:
             Phylo.draw(VirusDendrogram, label_func=lambda x: "",
                     do_show=False,  axes=ax_Dendrogram)
         except Exception as ex:
-            raise SystemExit(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try disabling this feature and trying again.")
+            raise raise_gravity_error(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try disabling this feature and trying again.")
 
         VirusDendrogramDepth = max(
             [v for k, v in VirusDendrogram.depths().items()])
@@ -253,73 +189,23 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         ax_Dendrogram		.set_ylim([N_Viruses+0.5, 0.5])
         ax_Dendrogram		.set_axis_off()
 
-        '''Dendrogram scale bar'''
-        ax_ScaleBar = fig.add_axes(
-            [ax_ScaleBar_L, ax_ScaleBar_B, ax_ScaleBar_W, ax_ScaleBar_H], frame_on=False, facecolor="white")
-        ax_ScaleBar.plot([0, 1], [0, 0], 'k-')
-        ScaleBarTicks = [0, 0.25, 0.5, 0.75, 1]
-        for Tick in ScaleBarTicks:
-            ax_ScaleBar.plot([Tick, Tick], [-0.05, 0.05], 'k-')
-
-        ax_ScaleBar			.set_xlim([1, 0])
-        ax_ScaleBar			.set_xticks(ScaleBarTicks)
-        ax_ScaleBar			.set_xticklabels(
-            list(map(str, ScaleBarTicks)), rotation=0, size=FontSize)
-        ax_ScaleBar			.set_xlabel('Distance', rotation=0, size=FontSize+2)
-        ax_ScaleBar			.xaxis.set_label_position('bottom')
-        ax_ScaleBar			.tick_params(top=False,
-                                   bottom=False,
-                                   left=False,
-                                   right=False,
-                                   labeltop=False,
-                                   labelbottom=True,
-                                   labelleft=False,
-                                   labelright=False,
-                                   direction='out')
-
-        '''Heatmap'''
-        ax_Heatmap = fig.add_axes(
-            [ax_Heatmap_L, ax_Heatmap_B, ax_Heatmap_W, ax_Heatmap_H], frame_on=True, facecolor="white")
+        '''Draw heatmap elements on axes'''
         Heatmap_Graphic = ax_Heatmap.imshow(
             OrderedDistMat, cmap='magma', aspect='auto', vmin=0, vmax=1, interpolation='none')
 
         '''Draw grouping major & minor lines'''
-        for l in LineList_major:
-            ax_Heatmap.axvline(l, color='k', lw=0.4)
-            ax_Heatmap.axhline(l, color='k', lw=0.4)
-
-        for l in LineList_minor:
-            ax_Heatmap.axvline(l, color='gray', lw=0.2)
-            ax_Heatmap.axhline(l, color='gray', lw=0.2)
-
-        '''Draw gridlines for individual samples'''
-        TickLocList = np.arange(0, len(ClassLabelList_y))
-
-        ax_Heatmap			.set_xticks(TickLocList)
-        ax_Heatmap			.set_xticklabels(
-            ClassLabelList_x, rotation=90, size=FontSize)
-
-        ax_Heatmap			.set_yticks(TickLocList)
-        ax_Heatmap			.set_yticklabels(
-            ClassLabelList_y, rotation=0, size=FontSize)
-        ax_Heatmap			.tick_params(top=True,
-                                  bottom=False,
-                                  left=False,
-                                  right=True,
-                                  labeltop=True,
-                                  labelbottom=False,
-                                  labelleft=False,
-                                  labelright=True,
-                                  direction='out')
+        ax_Heatmap = construct_hmap_lines(ax_Heatmap, LineList_major, LineList_minor,
+                                          hmap_params, ClassLabelList_x, ClassLabelList_y,
+                                          TickLocList = np.arange(0, len(ClassLabelList_y)))
 
         '''Heatmap colourbars'''
         ax_CBar = fig.add_axes(
-            [ax_CBar_L, ax_CBar_B, ax_CBar_W, ax_CBar_H], frame_on=True, facecolor="white")
+            [hmap_params['ax_CBar_L'], hmap_params['ax_CBar_B'], hmap_params['ax_CBar_W'], hmap_params['ax_CBar_H']], frame_on=True, facecolor="white")
         CBar_Graphic = fig.colorbar(
             Heatmap_Graphic, cax=ax_CBar, orientation="horizontal", ticks=[0, 0.25, 0.50, 0.75, 1])
         CBar_Graphic		.ax.set_xticklabels(
-            ['0', '0.25', '0.50', '0.75', '1'], rotation=0, size=FontSize)
-        CBar_Graphic		.ax.set_xlabel('Distance', rotation=0, size=FontSize+2)
+            ['0', '0.25', '0.50', '0.75', '1'], rotation=0, size=hmap_params['FontSize'])
+        CBar_Graphic		.ax.set_xlabel('Distance', rotation=0, size=hmap_params['FontSize']+2)
         CBar_Graphic		.ax.tick_params(top=False,
                                       bottom=True,
                                       left=False,
@@ -331,7 +217,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                       direction='out')
 
         '''Save fig'''
-        plt.savefig(self.fnames['HeatmapWithDendrogramFile'], format="pdf", bbox_inches = "tight", dpi=dpi)
+        plt.savefig(self.fnames['HeatmapWithDendrogramFile'], format="pdf", bbox_inches = "tight", dpi=hmap_params['dpi'])
         return VirusOrder
 
     def virus_grouping(self, DistMat):

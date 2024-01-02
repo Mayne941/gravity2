@@ -47,7 +47,7 @@ def PairwiseSimilarityScore_Cutoff_Dict_Constructor(SimMat, TaxoGroupingList, N_
         Labels = np.array(["Intra"]*len(PairwiseSimilarityScore_IntraClass_List) +
                           ["Inter"]*len(PairwiseSimilarityScore_InterClass_List))
 
-        # RM <<<<<<<<<<<< SVC -- NEEDS REPLACING, TRAINING AND TUNING
+        # RM TODO <<<<<<<<<<<< SVC -- NEEDS TUNING
         clf = SVC(kernel="linear", class_weight="balanced")
         if np.unique(Labels).shape[0] == 1:
             # RM < Set control to outside of main cluster if only 1 detected

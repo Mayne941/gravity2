@@ -74,34 +74,8 @@ class Pipeline_II:
         '''IV: Fire Classifiers'''
         [print(log_text) for log_text in self.logs[3]]
         vce = VirusClassificationAndEvaluation(
-            ShelveDir_UcfVirus=self.options['ShelveDir_UcfVirus'],
-            ShelveDirs_RefVirus=self.options['ShelveDirs_RefVirus'],
-            IncludeIncompleteGenomes_UcfVirus=str2bool(
-                self.options['AnnotateIncompleteGenomes_UcfVirus']),
-            IncludeIncompleteGenomes_RefVirus=str2bool(
-                self.options['UsingDatabaseIncludingIncompleteRefViruses']),
-            UseUcfVirusPPHMMs=str2bool(self.options['UseUcfVirusPPHMMs']),
-            GenomeSeqFile_UcfVirus=self.options['GenomeSeqFile_UcfVirus'],
-            GenomeSeqFiles_RefVirus=self.options['GenomeSeqFiles_RefVirus'],
-            HMMER_N_CPUs=int(self.options['N_CPUs']),
-            HMMER_C_EValue_Cutoff=float(self.options['HMMER_C_EValue_Cutoff']),
-            HMMER_HitScore_Cutoff=float(self.options['HMMER_HitScore_Cutoff']),
-            SimilarityMeasurementScheme=self.options['SimilarityMeasurementScheme'],
-            p=float(self.options['p']),
-            Dendrogram_LinkageMethod=self.options['Dendrogram_LinkageMethod'],
-            DatabaseAssignmentSimilarityScore_Cutoff=float(
-                self.options['DatabaseAssignmentSimilarityScore_Cutoff']),
-            N_PairwiseSimilarityScores=int(
-                self.options['N_PairwiseSimilarityScores']),
-            Heatmap_WithDendrogram=str2bool(
-                self.options['Heatmap_WithDendrogram']),
-            Heatmap_DendrogramSupport_Cutoff=float(
-                self.options['Heatmap_DendrogramSupport_Cutoff']),
-            Bootstrap=str2bool(self.options['Bootstrap']),
-            N_Bootstrap=int(self.options['N_Bootstrap']),
-            Bootstrap_method=self.options['Bootstrap_method'],
-            Bootstrap_N_CPUs=int(self.options['N_CPUs']),
-            VirusGrouping=str2bool(self.options['VirusGrouping']),
+            payload=self.options,
+            ExpDir=self.options['ShelveDir_UcfVirus'],
         )
         vce.main()
 

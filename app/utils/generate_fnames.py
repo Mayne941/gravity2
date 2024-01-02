@@ -27,10 +27,11 @@ def generate_file_names(payload, ExpDir, Pl2=False):
     '''PL2 components'''
     if Pl2:
         '''Main'''
-        fnames["ExpDir_Pl1"] = payload['ExpDir_Pl1']
-        fnames["Pl1OutputDir"] = f'{fnames["ExpDir_Pl1"]}{output_prefix}'
+        fnames = generate_dummy_pl1_fnames(fnames, payload, output_prefix)
         '''UCF Annotator'''
-        fnames = generate_ucf_annotator(fnames)
+        fnames = generate_ucf_annotator_fnames(fnames)
+        '''Virus Clasifier'''
+        fnames = generate_virus_classifier_fnames(fnames)
 
     return fnames
 
@@ -57,7 +58,6 @@ def generate_pphmmdb_fnames(fnames):
     '''Misc'''
     fnames['RefSeqFile'] = f"{fnames['OutputDir']}/ref_seqs.fasta"
     fnames["PphmmdbPickle"] = f'{fnames["OutputDir"]}/PPHMMDBConstruction.p'
-    # If PL2 run (mandatory UCF file key is in payload)... make these too.
     return fnames
 
 def generate_ref_annotator_fnames(fnames):
@@ -86,16 +86,37 @@ def generate_pl1_graph_fnames(fnames, payload):
     return fnames
 
 def generate_mi_scorer_fnames(fnames):
-    # TODO docst
+    '''Generate filenames for mutual information calculator'''
     fnames['MutualInformationScoreDir'] = fnames['OutputDir']+"/MutualInformationScore"
     fnames['MiScorePickle'] = f'{fnames["OutputDir"]}/MutualInformationCalculator.p'
     fnames['MutualInformationScoreFile'] = f"{fnames['MutualInformationScoreDir']}/MIScore.csv"
     return fnames
 
-def generate_ucf_annotator(fnames):
-    # TODO docst
+def generate_dummy_pl1_fnames(fnames, payload, output_pre):
+    '''Generate filenames for PL1 reference data, when running PL2'''
+    fnames["ExpDir_Pl1"] = payload['ExpDir_Pl1']
+    fnames["Pl1OutputDir"] = f'{fnames["ExpDir_Pl1"]}{output_pre}'
+    fnames['Pl1ReadDescTablePickle'] = f'{fnames["Pl1OutputDir"]}/ReadGenomeDescTable.p'
+    fnames['Pl1RefAnnotatorPickle'] = f'{fnames["Pl1OutputDir"]}/RefVirusAnnotator.p'
+    return fnames
+
+def generate_ucf_annotator_fnames(fnames):
+    '''Generate filenames for unclassified virus annotator'''
     fnames['HMMERDir_RefVirus'] = f"{fnames['ExpDir_Pl1']}/HMMER"
     fnames['HMMER_PPHMMDB_RefVirus'] = f"{fnames['HMMERDir_RefVirus']}/HMMER_PPHMMDb/HMMER_PPHMMDb"
-    fnames['Pl1RefAnnotatorPickle'] = f'{fnames["Pl1OutputDir"]}/RefVirusAnnotator.p'
     fnames['UcfAnnotatorPickle'] = f'{fnames["OutputDir"]}/UcfVirusAnnotator.p'
+    return fnames
+
+def generate_virus_classifier_fnames(fnames):
+    '''Generate filenames for virus classifier'''
+    fnames['HMMERDir_UcfVirus'] = f"{fnames['ExpDir']}/HMMER"
+    fnames['HMMER_PPHMMDBDir_UcfVirus'] = f"{fnames['HMMERDir_UcfVirus']}/HMMER_PPHMMDb"
+    fnames['HMMER_PPHMMDB_UcfVirus'] = f"{fnames['HMMER_PPHMMDBDir_UcfVirus']}/HMMER_PPHMMDb"
+    fnames['VirusDendrogramFile'] = f"{fnames['OutputDir']}/Dendrogram.nwk"
+    fnames['DendrogramDist'] = f"{fnames['OutputDir']}/DendrogramDist.nwk"
+    fnames['BootstrappedVirusDendrogramFile'] = f"{fnames['OutputDir']}/BootstrappedDendrogram.nwk"
+    fnames['HeatmapWithDendrogramFile'] = f"{fnames['OutputDir']}/GRAViTy_heatmap.pdf"
+    fnames['ClassificationResultFile'] = f"{fnames['OutputDir']}/ClassificationResults.txt"
+    fnames['VirusGroupingFile'] = f"{fnames['OutputDir']}/VirusGrouping.txt"
+    fnames['VirusClassifierPickle'] = f'{fnames["OutputDir"]}/VirusClassification.p'
     return fnames

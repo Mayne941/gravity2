@@ -1,8 +1,7 @@
 import numpy as np
 
-from app.utils.stdout_utils import clean_stdout, progress_msg
+from app.utils.stdout_utils import clean_stdout
 from app.utils.dcor import dcor
-
 
 def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocationTable, SimilarityMeasurementScheme="PG", p=1.0):
     '''Construct similarity matrix according to specified scheme and p value'''
@@ -25,16 +24,16 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
                 if "P" in SimilarityMeasurementScheme:
                     PPHMMSignature_i = PPHMMSignatureTable[i]
                     PPHMMSignature_j = PPHMMSignatureTable[j]
-                    # May raise warnings when zero division is called - may be ignored.
+                    # TODO test ternary expression fixes zero div error. Break out to accessory fn? ("save divide")
                     PPHMMSignature_GJMat[i, j] = np.sum(np.minimum(
-                        PPHMMSignature_i, PPHMMSignature_j))/np.sum(np.maximum(PPHMMSignature_i, PPHMMSignature_j))
+                        PPHMMSignature_i, PPHMMSignature_j))/np.sum(np.maximum(PPHMMSignature_i, PPHMMSignature_j)) if not np.sum(np.maximum(PPHMMSignature_i, PPHMMSignature_j)) == 0 else 0
                     PPHMMSignature_GJMat[j, i] = PPHMMSignature_GJMat[i, j]
 
 
                 if "G" in SimilarityMeasurementScheme:
                     GOMSignature_i = GOMSignatureTable[i]
                     GOMSignature_j = GOMSignatureTable[j]
-                    GOMSignature_GJMat[i, j] = np.sum(np.minimum(
+                    GOMSignature_GJMat[i, j] = np.sum(np.minimum( # TODO ditto save div
                         GOMSignature_i, GOMSignature_j))/np.sum(np.maximum(GOMSignature_i, GOMSignature_j))
                     GOMSignature_GJMat[j, i] = GOMSignature_GJMat[i, j]
 

@@ -9,15 +9,15 @@ from app.utils.stdout_utils import clean_stdout, progress_bar
 
 
 def PPHMMSignatureTable_Constructor(
-    SeqIDLists,
-    GenBankFile,
-    TranslTableList,
-    HMMER_PPHMMDB,
-    HMMER_hmmscanDir,
-    HMMER_N_CPUs=6,
-    HMMER_C_EValue_Cutoff=1E-3,
-    HMMER_HitScore_Cutoff=0,
-): # RM < TODO NEEDS REFACTORING, MERGING WITH SCRIPT IN PPHMMDB CONSTRUCTOR
+            SeqIDLists,
+            GenBankFile,
+            TranslTableList,
+            HMMER_PPHMMDB,
+            HMMER_hmmscanDir,
+            HMMER_N_CPUs=6,
+            HMMER_C_EValue_Cutoff=1E-3,
+            HMMER_HitScore_Cutoff=0,
+        ): # RM < TODO NEEDS REFACTORING, MERGING WITH SCRIPT IN PPHMMDB CONSTRUCTOR
     print("- Generate PPHMM signature table and PPHMM location table")
     '''Load GenBank record'''
     _, file_extension = os.path.splitext(GenBankFile)
@@ -62,7 +62,7 @@ def PPHMMSignatureTable_Constructor(
         for seq in GenBankSeqList:
             GenBankSeq = GenBankSeq+seq
 
-        GenBankID = "/".join(GenBankIDList)
+        GenBankID = "/".join(GenBankIDList) # RM < TODO DEPRECATE THIS !!!
         ProtSeq1 = SeqRecord(GenBankSeq[0:].translate(
             table=TranslTable), id=GenBankID+'_+1')
         ProtSeq2 = SeqRecord(GenBankSeq[1:].translate(
@@ -79,7 +79,7 @@ def PPHMMSignatureTable_Constructor(
         ProtSeq6frames = ProtSeq1+ProtSeq2+ProtSeq3+ProtSeqC1+ProtSeqC2+ProtSeqC3
         ProtSeq6frames.id = GenBankID
 
-        if len(ProtSeq6frames) > 100000:
+        if len(ProtSeq6frames) > 100000: # RM < TODO DEPRECATE THIS !!!
             '''If seq is too long for HMMSCAN to handle, curtail it'''
             len_seq, chunksize = len(ProtSeq6frames), 19999
             ProtSeq6frames = ProtSeq6frames[0:chunksize] + ProtSeq6frames[int(len_seq*0.2):int(len_seq*0.2)+chunksize] + \

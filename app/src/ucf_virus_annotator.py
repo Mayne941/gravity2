@@ -1,8 +1,6 @@
-from copy import copy
 import os
 import string
 import random
-import subprocess
 import pickle
 from scipy.sparse import coo_matrix
 
