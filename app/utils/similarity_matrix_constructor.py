@@ -24,7 +24,6 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
                 if "P" in SimilarityMeasurementScheme:
                     PPHMMSignature_i = PPHMMSignatureTable[i]
                     PPHMMSignature_j = PPHMMSignatureTable[j]
-                    # TODO test ternary expression fixes zero div error. Break out to accessory fn? ("save divide")
                     PPHMMSignature_GJMat[i, j] = np.sum(np.minimum(
                         PPHMMSignature_i, PPHMMSignature_j))/np.sum(np.maximum(PPHMMSignature_i, PPHMMSignature_j)) if not np.sum(np.maximum(PPHMMSignature_i, PPHMMSignature_j)) == 0 else 0
                     PPHMMSignature_GJMat[j, i] = PPHMMSignature_GJMat[i, j]
@@ -33,8 +32,8 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
                 if "G" in SimilarityMeasurementScheme:
                     GOMSignature_i = GOMSignatureTable[i]
                     GOMSignature_j = GOMSignatureTable[j]
-                    GOMSignature_GJMat[i, j] = np.sum(np.minimum( # TODO ditto save div
-                        GOMSignature_i, GOMSignature_j))/np.sum(np.maximum(GOMSignature_i, GOMSignature_j))
+                    GOMSignature_GJMat[i, j] = np.sum(np.minimum(
+                        GOMSignature_i, GOMSignature_j))/np.sum(np.maximum(GOMSignature_i, GOMSignature_j)) if not np.sum(np.maximum(GOMSignature_i, GOMSignature_j)) == 0 else 0
                     GOMSignature_GJMat[j, i] = GOMSignature_GJMat[i, j]
 
 
@@ -73,8 +72,6 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
         SimilarityMat = (PPHMMSignature_GJMat*GOMSignature_GJMat)**0.5
     elif SimilarityMeasurementScheme == "PL":
         SimilarityMat = PPHMMSignature_GJMat*PPHMMLocation_dCorMat
-    else:
-        return "'SimilarityMeasurementScheme' should be one of the following: 'P', 'G', 'L', 'PG', 'PL'."
 
     SimilarityMat[SimilarityMat < 0] = 0
     return SimilarityMat**p

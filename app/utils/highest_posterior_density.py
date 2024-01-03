@@ -1,7 +1,7 @@
 import numpy as np
 
 def hpd(x, alpha = 0.05):
-	"""Calculate highest posterior density (HPD) of array for given alpha. 
+	"""Calculate highest posterior density (HPD) of array for given alpha.
 	The HPD is the minimum width Bayesian credible interval (BCI).
 	:Arguments:
 		x : Numpy array
@@ -9,7 +9,7 @@ def hpd(x, alpha = 0.05):
 		alpha : float
 		Desired probability of type I error (defaults to 0.05)
 	"""
-	
+
 	# Make a copy of trace
 	x = x.copy()
 	# For multivariate node
@@ -19,13 +19,12 @@ def hpd(x, alpha = 0.05):
 		dims = np.shape(tx)
 		# Container list for intervals
 		intervals = np.resize(0.0, dims[:-1]+(2,))
-		
 		for index in make_indices(dims[:-1]):
 			try:
 				index = tuple(index)
 			except TypeError:
 				pass
-			
+
 			# Sort trace
 			sx = np.sort(tx[index])
 			# Append to list
@@ -35,7 +34,7 @@ def hpd(x, alpha = 0.05):
 	else:
 		# Sort univariate node
 		sx = np.sort(x)
-	
+
 	return np.array(calc_min_interval(sx, alpha))
 
 def calc_min_interval(x, alpha):
@@ -50,9 +49,9 @@ def calc_min_interval(x, alpha):
 	interval_width = x[interval_idx_inc:] - x[:n_intervals]
 	if len(interval_width) == 0:
 		raise ValueError('Too few elements for interval calculation')
-	
+
 	min_idx = np.argmin(interval_width)
 	hdi_min = x[min_idx]
 	hdi_max = x[min_idx+interval_idx_inc]
-	
+
 	return hdi_min, hdi_max

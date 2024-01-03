@@ -103,11 +103,11 @@ class ReadGenomeDescTable:
         master_data = {}
         if self.payload['AnnotateIncompleteGenomes']:
             '''If including incomplete, take all seqs'''
-            IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(
+            IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, _ in enumerate(
                 self.SeqStatusList)]
         else:
             '''Else only take coding complete seqs'''
-            IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, SeqStatus in enumerate(
+            IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, _ in enumerate(
                 self.SeqStatusList)]# if "Complete" in SeqStatus] # RM < TODO Removed as this can break a user workflow - guidance on using CCS is probably preferable
 
         '''Create master data. Arrays are LINKED.'''

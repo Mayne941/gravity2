@@ -21,7 +21,7 @@ def cent_dist(X):
 	Computes the pairwise euclidean distance between rows of X and centers
 	each cell of the distance matrix with row mean, column mean, and grand mean.
 	"""
-	M = squareform(pdist(X))	# distance matrix
+	M = squareform(pdist(X))
 	rmean = M.mean(axis=1)
 	cmean = M.mean(axis=0)
 	gmean = rmean.mean()
@@ -39,26 +39,24 @@ def dcor(X, Y):
 	>>> Y = np.matrix('1;2;9;4;4')
 	>>> dcor(X, Y)
 	0.76267624241686649
-	
+
 	__author__ = "Kailash Budhathoki"
 	__email__ = "kbudhath@mpi-inf.mpg.de"
 	__copyright__ = "Copyright (c) 2016"
 	__license__ = "MIT"
 	"""
-	
+
 	assert X.shape[0] == Y.shape[0]
-	
+
 	A = cent_dist(X)
 	B = cent_dist(Y)
-	
+
 	dcov_AB = dcov(A, B)
 	dvar_A = dvar(A)
 	dvar_B = dvar(B)
-	
+
 	dcor = 0.0
 	if dvar_A > 0.0 and dvar_B > 0.0:
 		dcor = dcov_AB / np.sqrt(dvar_A * dvar_B)
-	
+
 	return dcor
-
-
