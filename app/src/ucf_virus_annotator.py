@@ -10,7 +10,6 @@ from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
 from app.utils.generate_fnames import generate_file_names
 from app.utils.stdout_utils import progress_msg
-from app.utils.shell_cmds import shell
 
 
 class UcfVirusAnnotator:
@@ -29,8 +28,8 @@ class UcfVirusAnnotator:
 
         '''Retrieve variables related to the reference viruses'''
         pl1_ref_annotations = retrieve_pickle(self.fnames["Pl1RefAnnotatorPickle"])
-        RefVirusGroup = self.fnames["ExpDir_Pl1"].split("/")[-1]
-        if "GOMDB_coo" in pl1_ref_annotations.keys(): # RM < TODO Check if still needed
+        '''GOM Coords might not be in PL1 data depending on settings used'''
+        if "GOMDB_coo" in pl1_ref_annotations.keys():
             pl1_ref_annotations["GOMDB"] = {GOMID: GOM_coo.toarray(
             ) for GOMID, GOM_coo in pl1_ref_annotations["GOMDB_coo"].items()}
 
@@ -50,13 +49,10 @@ class UcfVirusAnnotator:
                                                             GOMIDList=pl1_ref_annotations["GOMIDList"])
 
         '''Construct out dict, dump to pickle'''
-        all_ucf_genomes = {} # TODO < Rm nesting
-        all_ucf_genomes["PPHMMSignatureTable_Dict_coo"] = {RefVirusGroup: coo_matrix(
-            PPHMMSignatureTable)}
-        all_ucf_genomes["PPHMMLocationTable_Dict_coo"] = {RefVirusGroup: coo_matrix(
-            PPHMMLocationTable)}
+        all_ucf_genomes = {}
+        all_ucf_genomes["PPHMMSignatureTable_coo"] = coo_matrix(PPHMMSignatureTable).toarray()
+        all_ucf_genomes["PPHMMLocationTable_coo"] = coo_matrix(PPHMMLocationTable).toarray()
         all_ucf_genomes["GOMSignatureTable_Dict"] = GOMSignatureTable
-
         pickle.dump(all_ucf_genomes, open(self.fnames['UcfAnnotatorPickle'], "wb"))
 
     def main(self) -> None:

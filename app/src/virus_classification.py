@@ -48,10 +48,6 @@ class VirusClassificationAndEvaluation:
         self.fnames = generate_file_names(payload, ExpDir, Pl2=True)
         self.genomes = retrieve_genome_vars(self.fnames['ReadGenomeDescTablePickle'])
         self.ucf_annots = retrieve_pickle(self.fnames['UcfAnnotatorPickle'])
-        if "PPHMMSignatureTable_Dict_coo" in self.ucf_annots.keys(): # RM < TODO Optimal if could remove RefVirusGroup (_) from UCF Annotator to avoid this
-            self.ucf_annots["PPHMMSignatureTable_Dict"] = [PPHMMSignatureTable_coo.toarray() for _, PPHMMSignatureTable_coo in self.ucf_annots["PPHMMSignatureTable_Dict_coo"].items()][0]
-        if "PPHMMLocationTable_Dict_coo" in self.ucf_annots.keys():
-            self.ucf_annots["PPHMMLocationTable_Dict"] = [PPHMMLocationTable_coo.toarray() for _, PPHMMLocationTable_coo in self.ucf_annots["PPHMMLocationTable_Dict_coo"].items()][0]
         self.N_UcfViruses = len(self.genomes["SeqIDLists"])
         self.TaxoLabelList_UcfVirus = [f"Query_{i+1}_{self.genomes['SeqIDLists'][i][0]}" for i in range(self.N_UcfViruses)]
         self.final_results = {}
@@ -59,7 +55,7 @@ class VirusClassificationAndEvaluation:
     def use_ucf_virus_pphmms(self):
         '''4/8: Scan unclassified viruses against their PPHMM DB to create additional PPHMMSignatureTable, and PPHMMLocationTable'''
         progress_msg('Generating PPHMMSignatureTable and PPHMMLocationTable tables for Unclassified Viruses')
-        PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB = PPHMMSignatureTable_Constructor( # TODO Surplus now
+        PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB = PPHMMSignatureTable_Constructor(
                 self.genomes,
                 self.payload,
                 self.fnames,
@@ -68,10 +64,9 @@ class VirusClassificationAndEvaluation:
                 Pl2=True
             )
 
-
         '''Update unclassified viruses' PPHMMSignatureTables, and PPHMMLocationTables'''
-        self.ucf_annots["PPHMMSignatureTable_Dict"] = np.hstack((self.ucf_annots["PPHMMSignatureTable_Dict"], PPHMMSignatureTable_UcfVirusVSUcfDB))
-        self.ucf_annots["PPHMMLocationTable_Dict"] = np.hstack((self.ucf_annots["PPHMMLocationTable_Dict"], PPHMMLocationTable_UcfVirusVSUcfDB))
+        self.ucf_annots["PPHMMSignatureTable_Dict"] = np.hstack((self.ucf_annots["PPHMMSignatureTable_coo"], PPHMMSignatureTable_UcfVirusVSUcfDB))
+        self.ucf_annots["PPHMMLocationTable_Dict"] = np.hstack((self.ucf_annots["PPHMMLocationTable_coo"], PPHMMLocationTable_UcfVirusVSUcfDB))
 
     def classify(self):
         '''6/8: Classify viruses'''
@@ -84,6 +79,7 @@ class VirusClassificationAndEvaluation:
         pl1_ref_annotations = {**retrieve_genome_vars(self.fnames['Pl1ReadDescTablePickle']),
                                 **retrieve_pickle(self.fnames['Pl1RefAnnotatorPickle'])}
         N_RefViruses = len(pl1_ref_annotations["SeqIDLists"])
+        '''Various PL1 annotations may not be present depending on user settings'''
         if "PPHMMSignatureTable_coo" in pl1_ref_annotations.keys():
             pl1_ref_annotations["PPHMMSignatureTable"] = pl1_ref_annotations["PPHMMSignatureTable_coo"].toarray(
             )
@@ -94,7 +90,7 @@ class VirusClassificationAndEvaluation:
         if self.payload['UseUcfVirusPPHMMs']:
             '''Scan reference viruses against the PPHMM database of unclassified viruses to generate additional PPHMMSignatureTable, and PPHMMLocationTable'''
             '''Make OR update HMMER_hmmscanDir'''
-            PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB = PPHMMSignatureTable_Constructor( # TODO Surplus now
+            PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB = PPHMMSignatureTable_Constructor(
                     retrieve_genome_vars(self.fnames['Pl1ReadDescTablePickle']),
                     self.payload,
                     self.fnames,

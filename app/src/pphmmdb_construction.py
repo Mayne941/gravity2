@@ -22,7 +22,6 @@ from app.utils.stdout_utils import clean_stdout, progress_msg, warning_msg
 from app.utils.retrieve_pickle import retrieve_genome_vars
 from app.utils.shell_cmds import shell
 from app.utils.mkdirs import mkdir_pphmmdbc
-from app.utils.hhr_parse import hhparse
 from app.utils.error_handlers import raise_gravity_error
 from app.utils.taxo_label_constructor import TaxoLabel_Constructor
 from app.utils.generate_fnames import generate_file_names
@@ -50,13 +49,12 @@ class PPHMMDBConstruction:
 
         progress_msg("Reading GenBank file")
         GenBankDict = SeqIO.index(self.GenomeSeqFile, "genbank")
-        CleanGenbankDict = {}
+        CleanGenbankDict = {} # TODO remove redundancy with sig table constructor
         for i in GenBankDict.items():
             ### RM < TODO TEST: BACK TRANSCRIBE IF RNA SEQS USED
             if "u" in str(i[1].seq).lower():
                 i[1].seq = i[1].seq.back_transcribe()
             CleanGenbankDict[i[0].split(".")[0]] = i[1]
-        # {k.split(".")[0]: v for k, v in GenBankDict.items()}
         return {k.split(".")[0]: v for k, v in CleanGenbankDict.items()}
 
     def sequence_extraction(self, GenBankDict):
@@ -165,7 +163,7 @@ class PPHMMDBConstruction:
             for i in mash_iter:
                 pair = ", ".join(sorted([ProtList[ProtSeq_i].id, i["orf"]]))
                 if  ((i["p"] < self.payload['Mash_p_val_cutoff'])
-                    and (i["mash_sim"] > 0.5)):      # PARAMETERISE
+                    and (i["mash_sim"] > self.payload['Mash_sim_score_cutoff'])):
                     '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
                     if pair in SeenPair:
                         '''If the pair has already been seen...'''
