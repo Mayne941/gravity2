@@ -35,43 +35,22 @@ class UcfVirusAnnotator:
             ) for GOMID, GOM_coo in pl1_ref_annotations["GOMDB_coo"].items()}
 
         '''Generate PPHMMSignatureTable, PPHMMLocationTable, and GOMSignatureTable for unclassified viruses using the reference PPHMM and GOM database'''
-        '''Make HMMER_hmmscanDir'''
-        HMMER_hmmscanDir_RefVirus = f"{self.fnames['HMMERDir_RefVirus']}/hmmscan_"+''.join(
-            random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
-        os.makedirs(HMMER_hmmscanDir_RefVirus)
-
         '''Generate PPHMMSignatureTable and PPHMMLocationTable'''
         PPHMMSignatureTable, PPHMMLocationTable = PPHMMSignatureTable_Constructor(
-            SeqIDLists=self.genomes["SeqIDLists"],
-            GenBankFile=self.payload['GenomeSeqFile_UcfVirus'],
-            TranslTableList=self.genomes["TranslTableList"],
-            HMMER_PPHMMDB=self.fnames['HMMER_PPHMMDB_RefVirus'],
-            HMMER_hmmscanDir=HMMER_hmmscanDir_RefVirus,
-            HMMER_N_CPUs=self.payload['N_CPUs'],
-            HMMER_C_EValue_Cutoff=self.payload['HMMER_C_EValue_Cutoff'],
-            HMMER_HitScore_Cutoff=self.payload['HMMER_HitScore_Cutoff']
-        )
-
-        '''Delete HMMER_hmmscanDir'''
-        shell(f"rm -rf {HMMER_hmmscanDir_RefVirus}")
+                                                self.genomes,
+                                                self.payload,
+                                                self.fnames,
+                                                GenomeSeqFile=self.payload['GenomeSeqFile_UcfVirus'],
+                                                HMMER_PPHMMDB=self.fnames['HMMER_PPHMMDB_RefVirus'],
+                                                Pl2=True
+                                            )
 
         GOMSignatureTable = GOMSignatureTable_Constructor(PPHMMLocationTable=PPHMMLocationTable,
                                                             GOMDB=pl1_ref_annotations["GOMDB"],
                                                             GOMIDList=pl1_ref_annotations["GOMIDList"])
 
         '''Construct out dict, dump to pickle'''
-        # TODO Remove when checked that virus classifier still works with new use of "RefVirusGroup", i.e. no iteration
-        # PPHMMSignatureTable_Dict, PPHMMLocationTable_Dict, GOMSignatureTable_Dict = {}, {}, {}
-        # PPHMMSignatureTable_Dict[RefVirusGroup] = PPHMMSignatureTable
-        # PPHMMLocationTable_Dict[RefVirusGroup] = PPHMMLocationTable
-        # GOMSignatureTable_Dict[RefVirusGroup] = GOMSignatureTable
-        # all_ucf_genomes["PPHMMSignatureTable_Dict_coo"] = {RefVirusGroup: coo_matrix(
-        #     SigTable) for RefVirusGroup, SigTable in PPHMMSignatureTable}
-        # all_ucf_genomes["PPHMMLocationTable_Dict_coo"] = {RefVirusGroup: coo_matrix(
-        #     LocTable) for RefVirusGroup, LocTable in PPHMMLocationTable.items()}
-        # all_ucf_genomes["GOMSignatureTable_Dict"] = GOMSignatureTable
-
-        all_ucf_genomes = {}
+        all_ucf_genomes = {} # TODO < Rm nesting
         all_ucf_genomes["PPHMMSignatureTable_Dict_coo"] = {RefVirusGroup: coo_matrix(
             PPHMMSignatureTable)}
         all_ucf_genomes["PPHMMLocationTable_Dict_coo"] = {RefVirusGroup: coo_matrix(

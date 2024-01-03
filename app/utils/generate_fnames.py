@@ -62,11 +62,6 @@ def generate_pphmmdb_fnames(fnames):
 
 def generate_ref_annotator_fnames(fnames):
     '''Generate file and folder names for Ref Virus Annotator'''
-    '''HMMER Dirs'''
-    fnames['HMMER_hmmscanDir'] = f"{fnames['HMMERDir']}/hmmscan_{''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))}"
-    fnames['PPHMMDB_Summary'] = f"{fnames['HMMER_PPHMMDb']}_Summary.txt"
-    fnames['PPHMMQueryFile'] = f"{fnames['HMMER_hmmscanDir']}/QProtSeqs.fasta"
-    fnames['PPHMMScanOutFile'] = f"{fnames['HMMER_hmmscanDir']}/PPHMMScanOut.txt"
     '''Misc'''
     fnames['RefAnnotatorPickle'] = f'{fnames["OutputDir"]}/RefVirusAnnotator.p'
     return fnames

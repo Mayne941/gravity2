@@ -28,9 +28,6 @@ def mkdir_pphmmdbc(fnames):
 
 def mkdir_ref_annotator(fnames, PPHMMSorting):
     ''' Return all dirs for db storage and retrieval'''
-    '''Hmmer '''
-    os.makedirs(fnames['HMMER_hmmscanDir'])
-
     '''HHSuite for optional sorting fns'''
     if PPHMMSorting == True:
         if os.path.exists(fnames['HHsuiteDir']):

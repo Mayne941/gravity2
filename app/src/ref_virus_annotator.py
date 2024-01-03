@@ -26,6 +26,7 @@ from app.utils.shell_cmds import shell
 from app.utils.mkdirs import mkdir_ref_annotator
 from app.utils.stdout_utils import progress_msg, warning_msg
 from app.utils.generate_fnames import generate_file_names
+from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
 
 class RefVirusAnnotator:
     def __init__(self,
@@ -41,154 +42,6 @@ class RefVirusAnnotator:
         mkdir_ref_annotator(self.fnames, self.payload['PPHMMSorting'])
         '''Placehodler dirs & objects'''
         self.PPHMMSignatureTable, self.PPHMMLocationTable = [], []
-
-    def PPHMMSignatureTable_Constructor(self):
-        '''2/8: Create PPHMM signature and location tables'''
-        progress_msg("- Generating PPHMM signature table and PPHMM location table")
-        '''Load GenBank record'''
-        # RM << TODO WHY DON'T WE USE THE SIG TABLE CONSTRUCTOR FROM UTILS??
-        GenBankDict = SeqIO.index(self.GenomeSeqFile, "fasta" if os.path.splitext(self.GenomeSeqFile)[1] in [".fas", ".fst", ".fasta"] else "gb")
-        Records_dict = {}
-        for i in GenBankDict.items():
-            ### RM < TEST: BACK TRANSCRIBE IF RNA SEQS USED
-            if "u" in str(i[1].seq).lower():
-                i[1].seq = i[1].seq.back_transcribe()
-            Records_dict[i[0].split(".")[0]] = i[1]
-
-        Records_dict = {k.split(".")[0]: v for k, v in Records_dict.items()}
-
-        '''Specify PPHMMQueryFile and PPHMMScanOutFile'''
-        N_PPHMMs = LineCount(self.fnames['PPHMMDB_Summary']) - 1
-        PPHMMSignatureTable = np.empty((0, N_PPHMMs))
-        PPHMMLocMiddleBestHitTable = np.empty((0, N_PPHMMs))
-
-        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"])):
-            GenBankSeqList, GenBankIDList, GenBankDescList = [], [], []
-            for SeqID in SeqIDList:
-                GenBankRecord = Records_dict[SeqID]
-                GenBankSeqList.append(GenBankRecord.seq)
-                GenBankIDList.append(GenBankRecord.id)
-                GenBankDescList.append(GenBankRecord.description)
-
-            '''sort lists by sequence/segment lengths'''
-            _, GenBankSeqList, GenBankIDList, GenBankDescList = list(zip(
-                *sorted(zip(list(map(len, list(map(str, GenBankSeqList)))), GenBankSeqList, GenBankIDList, GenBankDescList), reverse=True)))
-
-            '''Get each orf for a genome'''
-            ProtList, ProtIDList = [], []
-            for GenBankSeq, GenBankID in zip(GenBankSeqList, GenBankIDList):
-                prot, prot_id, _ = find_orfs(GenBankID, GenBankSeq, TranslTable, self.payload['ProteinLength_Cutoff'],
-                                             taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
-                ProtList += prot
-                ProtIDList += prot_id
-
-            with open(self.fnames['PPHMMQueryFile'], "w") as f:
-                '''Write each translated ORF to the PPHMM Query File'''
-                for i in range(len(ProtIDList)):
-                    f.write(f">{ProtIDList[i]}\n{str(ProtList[i].seq)}\n")
-
-            '''HMMSCAN query file vs PPHMM database'''
-            shell(f"hmmscan --cpu {self.payload['N_CPUs']} --noali --nobias --domtblout {self.fnames['PPHMMScanOutFile']} {self.fnames['HMMER_PPHMMDb']} {self.fnames['PPHMMQueryFile']}",
-                                "Ref virus annotator: signature table constructor, HMMScan call")
-
-            PPHMMIDList, PPHMMScoreList, FeatureFrameBestHitList, FeatureLocFromBestHitList, \
-                FeatureLocToBestHitList, FeatureDescList = [], [], [], [], [], []
-
-            with open(self.fnames['PPHMMScanOutFile'], "r") as PPHMMScanOut_txt:
-                '''Open HMMSCAN results, collate scores for ORFs vs each PPHMM in database'''
-                for Line in PPHMMScanOut_txt:
-                    # RM < TODO Break out into fn as nesting here is upsetting me
-                    # RM < Why does this differ from the fn in utils??
-                    if Line[0] == "#":
-                        '''If header'''
-                        continue
-                    Line = Line.split()
-                    '''Concatenate the cluster description back'''
-                    Line[22] = " ".join(Line[22:])
-                    Line = Line[:23]
-                    C_EValue = float(Line[11])
-                    HitScore = float(Line[7])
-                    OriAASeqlen = float(len(GenBankSeq))/3
-
-                    if C_EValue >= self.payload['HMMER_C_EValue_Cutoff'] or HitScore <= self.payload['HMMER_HitScore_Cutoff']:
-                        '''Threshold at user-set values'''
-                        continue
-                    '''Determine the frame and the location of the hit'''
-                    iden = int(Line[0].split('_')[-1])
-                    HitFrom = int(Line[17])
-                    HitTo = int(Line[18])
-                    HitMid = float(HitFrom+HitTo)/2
-                    Frame = int(np.ceil(HitMid/OriAASeqlen)) if np.ceil(HitMid/OriAASeqlen) <= 3 else int(-(np.ceil(HitMid/OriAASeqlen)-3))
-                    LocFrom = int(HitFrom % OriAASeqlen)
-                    if LocFrom == 0:
-                        '''If the hit occurs preciously from the end of the sequence'''
-                        LocFrom = int(OriAASeqlen)
-                    LocTo = int(HitTo % OriAASeqlen)
-                    if LocTo == 0:
-                        '''If the hit occurs preciously to the end of the sequence'''
-                        LocTo = int(OriAASeqlen)
-                    if LocTo < LocFrom:
-                        '''The hit (falsely) spans across sequences of different frames'''
-                        if np.ceil(HitFrom/OriAASeqlen) <= 3:
-                            HitFrom_Frame = int(
-                                np.ceil(HitFrom/OriAASeqlen))
-                        else:
-                            HitFrom_Frame = int(
-                                -(np.ceil(HitFrom/OriAASeqlen)-3))
-
-                        if np.ceil(HitTo/OriAASeqlen) <= 3:
-                            HitTo_Frame = int(
-                                np.ceil(HitTo/OriAASeqlen))
-                        else:
-                            HitTo_Frame = int(-(np.ceil(HitTo/OriAASeqlen)-3))
-
-                        if Frame == HitFrom_Frame:
-                            LocTo = int(OriAASeqlen)
-                        elif Frame == HitTo_Frame:
-                            LocFrom = int(1)
-                        elif HitFrom_Frame != Frame and Frame != HitTo_Frame:
-                            LocFrom = int(1)
-                            LocTo = int(OriAASeqlen)
-                        else:
-                            warning_msg(
-                                "Something is wrong with this PPHMMDB hit location determination")
-
-                    if iden not in PPHMMIDList:
-                        '''If new hit'''
-                        Best_C_EValue = C_EValue
-                        PPHMMIDList.append(iden)
-                        PPHMMScoreList.append(HitScore)
-                        FeatureDescList.append(
-                            Line[22].split('|')[0])
-                        FeatureFrameBestHitList.append(Frame)
-                        FeatureLocFromBestHitList.append(LocFrom*3)
-                        FeatureLocToBestHitList.append(LocTo*3)
-
-                    elif iden in PPHMMIDList and C_EValue < Best_C_EValue:
-                        '''Not new hit but score better than last'''
-                        Best_C_EValue = C_EValue
-                        FeatureFrameBestHitList[-1] = Frame
-                        FeatureLocFromBestHitList[-1] = LocFrom*3
-                        FeatureLocToBestHitList[-1] = LocTo*3
-
-                    else:
-                        '''Not new hit and score not as good as last'''
-                        continue
-
-            '''Absolute coordinate with orientation info encoded into it: +ve if the gene is present on the (+)strand, otherwise -ve'''
-            FeatureLocMiddleBestHitList = np.zeros(N_PPHMMs)
-            FeatureLocMiddleBestHitList[PPHMMIDList] = np.mean(np.array([FeatureLocFromBestHitList, FeatureLocToBestHitList]), axis=0)*(
-                np.array(FeatureFrameBestHitList)/abs(np.array(FeatureFrameBestHitList)))
-            PPHMMLocMiddleBestHitTable = np.vstack(
-                (PPHMMLocMiddleBestHitTable, FeatureLocMiddleBestHitList))
-            FeatureValueList = np.zeros(N_PPHMMs)
-            FeatureValueList[PPHMMIDList] = PPHMMScoreList
-            PPHMMSignatureTable = np.vstack(
-                (PPHMMSignatureTable, FeatureValueList))
-
-        '''Delete Hmmscan directory'''
-        shell(f"rm -rf {self.fnames['HMMER_hmmscanDir']}")
-        return PPHMMSignatureTable, PPHMMLocMiddleBestHitTable
 
     def remove_singleton_pphmms(self):
         '''Remove singleton PPHMMs from the PPHMM databases'''
@@ -569,9 +422,14 @@ class RefVirusAnnotator:
         section_header(
             "Generate PPHMM signature & loc tables, GOM database & GOM sig table")
 
-        # TODO Swap out for utils ver - keep self var update
         '''3/8 : Generate PPHMMSignatureTable and PPHMMLocationTable'''
-        self.PPHMMSignatureTable, self.PPHMMLocationTable = self.PPHMMSignatureTable_Constructor()
+        self.PPHMMSignatureTable, self.PPHMMLocationTable = PPHMMSignatureTable_Constructor(
+                    self.genomes,
+                    self.payload,
+                    self.fnames,
+                    self.GenomeSeqFile,
+                    self.fnames['HMMER_PPHMMDb']
+        )
 
         if self.payload['RemoveSingletonPPHMMs']:
             '''4/8 : (OPT) Remove singleton PPHMMs'''

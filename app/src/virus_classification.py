@@ -56,35 +56,18 @@ class VirusClassificationAndEvaluation:
         self.TaxoLabelList_UcfVirus = [f"Query_{i+1}_{self.genomes['SeqIDLists'][i][0]}" for i in range(self.N_UcfViruses)]
         self.final_results = {}
 
-    def generate_pphmm_signature_tab(self, seqs, seq_file, transl_table):
-        '''Accessory Fn. Call PL2 PPHMM sig & loc table constructor for either ucf or ref viruses'''
-        hmmer_temp_dir = f"{self.fnames['HMMERDir_UcfVirus']}/hmmscan_"+''.join(
-            random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
-        os.makedirs(hmmer_temp_dir)
-
-        '''Generate PPHMMSignatureTable and PPHMMLocationTable'''
-        PPHMMSignatureTable, \
-            PPHMMLocationTable = PPHMMSignatureTable_Constructor(SeqIDLists=seqs,
-                                                                GenBankFile=seq_file,
-                                                                TranslTableList=transl_table,
-                                                                HMMER_PPHMMDB=self.fnames['HMMER_PPHMMDB_UcfVirus'],
-                                                                HMMER_hmmscanDir=hmmer_temp_dir,
-                                                                HMMER_N_CPUs=self.payload['N_CPUs'],
-                                                                HMMER_C_EValue_Cutoff=self.payload['HMMER_C_EValue_Cutoff'],
-                                                                HMMER_HitScore_Cutoff=self.payload['HMMER_HitScore_Cutoff']
-                                                                )
-        '''Delete temp HMMER_hmmscanDir'''
-        shell(f"rm -rf {hmmer_temp_dir}")
-        return PPHMMSignatureTable, PPHMMLocationTable
-
     def use_ucf_virus_pphmms(self):
         '''4/8: Scan unclassified viruses against their PPHMM DB to create additional PPHMMSignatureTable, and PPHMMLocationTable'''
         progress_msg('Generating PPHMMSignatureTable and PPHMMLocationTable tables for Unclassified Viruses')
-        PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB = self.generate_pphmm_signature_tab(
-                self.genomes["SeqIDLists"],
-                self.payload['GenomeSeqFile_UcfVirus'],
-                self.genomes["TranslTableList"]
+        PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB = PPHMMSignatureTable_Constructor( # TODO Surplus now
+                self.genomes,
+                self.payload,
+                self.fnames,
+                GenomeSeqFile=self.payload['GenomeSeqFile_UcfVirus'],
+                HMMER_PPHMMDB=self.fnames['HMMER_PPHMMDB_UcfVirus'],
+                Pl2=True
             )
+
 
         '''Update unclassified viruses' PPHMMSignatureTables, and PPHMMLocationTables'''
         self.ucf_annots["PPHMMSignatureTable_Dict"] = np.hstack((self.ucf_annots["PPHMMSignatureTable_Dict"], PPHMMSignatureTable_UcfVirusVSUcfDB))
@@ -111,10 +94,13 @@ class VirusClassificationAndEvaluation:
         if self.payload['UseUcfVirusPPHMMs']:
             '''Scan reference viruses against the PPHMM database of unclassified viruses to generate additional PPHMMSignatureTable, and PPHMMLocationTable'''
             '''Make OR update HMMER_hmmscanDir'''
-            PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB = self.generate_pphmm_signature_tab(
-                    pl1_ref_annotations["SeqIDLists"],
-                    self.payload['GenomeSeqFiles_RefVirus'],
-                    pl1_ref_annotations["TranslTableList"]
+            PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB = PPHMMSignatureTable_Constructor( # TODO Surplus now
+                    retrieve_genome_vars(self.fnames['Pl1ReadDescTablePickle']),
+                    self.payload,
+                    self.fnames,
+                    GenomeSeqFile=self.payload['GenomeSeqFiles_RefVirus'],
+                    HMMER_PPHMMDB=self.fnames['HMMER_PPHMMDB_UcfVirus'],
+                    Pl2=True
                 )
 
             pl1_ref_annotations["PPHMMSignatureTable"] = np.hstack(
