@@ -1,5 +1,7 @@
+from termcolor import colored
+
 def section_header(msg):
     '''Print a section header to console and output log'''
-    print("#"*90)
-    print(msg)
-    print("#"*90)
+    print(colored("#"*90, 'green'))
+    print(colored(msg, 'green'))
+    print(colored("#"*90, 'green'))

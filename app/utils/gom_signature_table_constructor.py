@@ -1,29 +1,23 @@
 import numpy as np
 from .dcor import dcor
-from app.utils.stdout_utils import progress_bar, clean_stdout
+from alive_progress import alive_it
 
 
-def GOMSignatureTable_Constructor(PPHMMLocationTable, GOMDB, GOMIDList):
+def GOMSignatureTable_Constructor(PPHMMLocationTable, GOMDB, GOMIDList, bootstrap=0):
     '''Generate organisational model signature table, for annotations, graphing and description functions'''
+    if bootstrap != 0:
+        print(f"- (Re-)Constructing GOM Signature Table, bootstrap iteration: {bootstrap}")
     N_Viruses = len(PPHMMLocationTable)
-    N_GOMs = len(GOMIDList)
     GOMSignatureTable = np.empty((N_Viruses, 0))
-    GOM_i = 1
-    for GOM in GOMIDList:
-        GOMSignatureList, Virus_i = [], 1
+    for GOM in alive_it(GOMIDList):
+        GOMSignatureList = []
         for PPHMMLocation in PPHMMLocationTable:
             RelevantPPHMMIndices = np.where(list(map(any, list(
                 zip(list(map(any, GOMDB[GOM].transpose() != 0)), PPHMMLocation != 0)))))[0]
             GOMSignatureList.append(dcor(
                 GOMDB[GOM][:, RelevantPPHMMIndices].T, PPHMMLocation[RelevantPPHMMIndices].reshape(-1, 1)))
 
-            progress_bar(
-                f"\033[K GOM construction {GOM} ({GOM_i}/{N_GOMs}): [{'='*int(float(Virus_i)/N_Viruses*20)}] {Virus_i}/{N_Viruses} GOMs \r")
-            Virus_i += 1
-        clean_stdout()
-
         GOMSignatureTable = np.column_stack(
             (GOMSignatureTable, GOMSignatureList))
-        GOM_i = GOM_i+1
 
     return GOMSignatureTable

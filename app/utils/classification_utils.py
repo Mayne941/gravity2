@@ -1,9 +1,10 @@
 import numpy as np
 from ete3 import Tree
 from sklearn.svm import SVC
+from alive_progress import alive_it
 
 from app.utils.ordered_set import OrderedSet
-from app.utils.stdout_utils import progress_bar, clean_stdout
+from app.utils.stdout_utils import progress_msg
 
 
 def PairwiseSimilarityScore_Cutoff_Dict_Constructor(SimMat, TaxoGroupingList, N_PairwiseSimilarityScores) -> dict:
@@ -47,12 +48,12 @@ def PairwiseSimilarityScore_Cutoff_Dict_Constructor(SimMat, TaxoGroupingList, N_
         Labels = np.array(["Intra"]*len(PairwiseSimilarityScore_IntraClass_List) +
                           ["Inter"]*len(PairwiseSimilarityScore_InterClass_List))
 
-        # RM <<<<<<<<<<<< SVC -- NEEDS REPLACING, TRAINING AND TUNING
+        # TODO Evaluate whether SVC is best option
         clf = SVC(kernel="linear", class_weight="balanced")
         if np.unique(Labels).shape[0] == 1:
-            # RM < Set control to outside of main cluster if only 1 detected
+            # TODO Set control to outside of main cluster if only 1 detected; if only 1 cluster we create a dummy
             Labels[-1] = "Extra"
-        clf			.fit(PairwiseSimilarityList, Labels)
+        clf.fit(PairwiseSimilarityList, Labels)
         PairwiseSimilarityScore_Cutoff_Dict[TaxoGrouping]["CutOff"] = - \
             clf.intercept_[0]/clf.coef_[0][0]
 
@@ -61,11 +62,11 @@ def PairwiseSimilarityScore_Cutoff_Dict_Constructor(SimMat, TaxoGroupingList, N_
 
 def TaxonomicAssignmentProposerAndEvaluator(SimMat_UcfVirusesVSRefViruses, TaxoGrouping, VirusDendrogram, TaxoLabelList_RefVirus, TaxoLabelList_UcfVirus, PairwiseSimilarityScore_Cutoff_Dict):
     '''Accessory to classify (6): Propose a taxonomic class to each unclassified viruses, using the 1-nearest neighbour algorithm'''
+    progress_msg("Evaluating taxonomic assignments")
     MaxSimScoreList = np.max(SimMat_UcfVirusesVSRefViruses, axis=1)
     TaxoOfMaxSimScoreList = TaxoGrouping[np.argmax(
         SimMat_UcfVirusesVSRefViruses, axis=1)]
 
-    print("Evaluating taxonomic assignments")
     '''Rename the reference virus leaves in the dendrogram to class label'''
     VirusDendrogram = Tree(VirusDendrogram)
     for LeafNode in VirusDendrogram.get_leaves():
@@ -75,7 +76,7 @@ def TaxonomicAssignmentProposerAndEvaluator(SimMat_UcfVirusesVSRefViruses, TaxoG
 
     TaxoAssignmentList, PhyloStatList, N_UcfViruses = [
     ], [], len(SimMat_UcfVirusesVSRefViruses)
-    for UcfVirus_i in range(N_UcfViruses):
+    for UcfVirus_i in alive_it(range(N_UcfViruses)):
         CandidateTaxoAssignment = TaxoOfMaxSimScoreList[UcfVirus_i]
         MaxSimScore = MaxSimScoreList[UcfVirus_i]
 
@@ -160,9 +161,5 @@ def TaxonomicAssignmentProposerAndEvaluator(SimMat_UcfVirusesVSRefViruses, TaxoG
             '''The unclassified virus isn't similar enough to the members of the candidate class'''
             TaxoAssignmentList.append(f"Unclassified - NS: {original_label}")
             PhyloStatList.append("NA")
-
-        progress_bar(
-            f"\033[K Taxonomic assignment evaluation: [{'='*int(float(UcfVirus_i+1)/N_UcfViruses*20)}] {UcfVirus_i+1}/{N_UcfViruses} viruses \r")
-    clean_stdout()
 
     return MaxSimScoreList, TaxoOfMaxSimScoreList, TaxoAssignmentList, PhyloStatList
