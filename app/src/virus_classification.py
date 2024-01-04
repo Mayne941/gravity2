@@ -7,10 +7,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-import os
 import sys
-import random
-import string
 import operator
 import pickle
 import re
@@ -34,6 +31,7 @@ from app.utils.shell_cmds import shell
 from app.utils.mkdirs import mkdir_virus_classifier
 from app.utils.heatmap_params import get_blue_cmap, get_red_cmap, get_purple_cmap, get_hmap_params, construct_hmap_lines
 from app.utils.error_handlers import raise_gravity_error
+from app.utils.shared_pphmm_graphs import shared_norm_pphmm_ratio, shared_pphmm_ratio, pphmm_loc_distances, pphmm_loc_diffs_pairwise
 
 matplotlib.use('agg')
 sys.setrecursionlimit(10000)
@@ -131,6 +129,23 @@ class VirusClassificationAndEvaluation:
         DistMat = 1 - SimMat
         DistMat[DistMat < 0] = 0
 
+        '''Combine PPHMM/GOM sigs, save as CSV for shared PPHMM heatmaps'''
+        sigs_data = np.column_stack((TaxoLabelList_AllVirus,
+                                    PPHMMSignatureTable_AllVirus,
+                                    GOMSignatureTable_AllVirus))
+        pphmm_names = [f"PPHMM|{ClusterDesc}" for ClusterDesc in pl1_ref_annotations["ClusterDescList"].astype("str")] + \
+                        [f"PPHMM|{i}" for i in retrieve_pickle(self.fnames['PphmmdbPickle'])["ClusterDescList"]]
+        pphmm_names = [pphmm_names[i] if not pphmm_names[i] == "PPHMM|~|" else f"PPHMM|UCF{i}|" for i in range(len(pphmm_names))]
+        sigs_df = pd.DataFrame(sigs_data, index=None, columns=
+                            ["Virus name"] + \
+                            pphmm_names + \
+                            ["GOM"]
+                )
+        sigs_df.to_csv(self.fnames["PphmmAndGomSigs"])
+        '''Get PPHMM Locations, save as CSV for location heatmaps'''
+        locs_df = pd.DataFrame(np.column_stack((TaxoLabelList_AllVirus, PPHMMLocationTable_AllVirus)), columns = ["Virus name"] + pphmm_names)
+        locs_df.to_csv(self.fnames["PphmmLocs"], index=False)
+
         '''Generate dendrogram'''
         VirusDendrogram = DistMat2Tree(
             DistMat, TaxoLabelList_AllVirus, self.payload['Dendrogram_LinkageMethod'])
@@ -188,9 +203,10 @@ class VirusClassificationAndEvaluation:
                                                     PPHMMLocationTable_AllVirus, N_RefViruses, TaxoLabelList_AllVirus, TaxoLabelList_RefVirus)
 
         '''Draw hm/dendro'''
-        self.heatmap_with_dendrogram(pl1_ref_annotations, TaxoLabelList_AllVirus,
+        label_order, x_labels = self.heatmap_with_dendrogram(pl1_ref_annotations, TaxoLabelList_AllVirus,
                                         DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList)
-
+        '''Draw PPHMM sig and loc heatmaps'''
+        self.draw_pphmm_heatmaps(TaxoLabelList_AllVirus, label_order, pphmm_names, x_labels)
 
     def do_virus_groupings(self, DistMat, N_RefViruses, pl1_ref_annotations) -> None:
         '''Accessory fn to CLASSIFY (6):  Group viruses with scipy fcluster/linkage, save results to txt'''
@@ -209,7 +225,6 @@ class VirusClassificationAndEvaluation:
         self.final_results["VirusGrouping"]["CorrelationScore"] = CorrelationScore
         self.final_results["VirusGrouping"]["Theils_u_TaxoGroupingListGivenPred"] = Theils_u_TaxoGroupingListGivenPred
         self.final_results["VirusGrouping"]["Theils_u_PredGivenTaxoGroupingList"] = Theils_u_PredGivenTaxoGroupingList
-
 
         '''Save result to txt and CSV files'''
         output_data = np.column_stack((list(map(", ".join, pl1_ref_annotations["SeqIDLists"].tolist()+self.genomes["SeqIDLists"].tolist())), pl1_ref_annotations["FamilyList"].tolist( )+[""]*self.N_UcfViruses, pl1_ref_annotations["GenusList"].tolist( )+[""]*self.N_UcfViruses, pl1_ref_annotations["VirusNameList"].tolist( )+self.genomes["VirusNameList"].tolist(), pl1_ref_annotations["TaxoGroupingList"].tolist( )+[""]*self.N_UcfViruses, VirusGroupingList, ))
@@ -246,7 +261,7 @@ class VirusClassificationAndEvaluation:
 
         for Bootstrap_i in range(0, self.payload['N_Bootstrap']):
             '''Bootstrap the data'''
-            print(f"Round {Bootstrap_i+1}")
+            print(f"Round {Bootstrap_i+1}/{self.payload['N_Bootstrap']}")
 
             '''Construct bootstrapped PPHMMSignatureTable and PPHMMLocationTable'''
             PPHMM_IndexList = sorted(np.random.choice(
@@ -494,6 +509,15 @@ class VirusClassificationAndEvaluation:
                                         labelright=True,
                                         direction='out')
         plt.savefig(self.fnames['HeatmapWithDendrogramFile'], format="pdf", bbox_inches = "tight", dpi=hmap_params['dpi'])
+        return VirusOrder, ClassLabelList_x
+
+    def draw_pphmm_heatmaps(self, TaxoLabelList_AllVirus, label_order, pphmm_names, x_labels):
+        '''Call all heatmaps for PPHMM location and signatures'''
+        y_label_acc_ids = np.array([i.split("_")[0] if not i[0:5] == "Query" else i.split("_")[-1] for i in TaxoLabelList_AllVirus])[label_order]
+        self.final_results["SharedPphmmRatioMatrix"] = shared_pphmm_ratio(label_order, self.fnames, labels=[x_labels, y_label_acc_ids])
+        self.final_results["SharedNormPphmmRatioMatrix"] = shared_norm_pphmm_ratio(label_order, self.fnames, labels=[x_labels, y_label_acc_ids])
+        pphmm_loc_distances(self.fnames, pphmm_names, labels=[x_labels, y_label_acc_ids])
+        self.final_results["PphmmLocMatrix"] = pphmm_loc_diffs_pairwise(self.fnames, labels=[x_labels, y_label_acc_ids])
 
     def group(self):
         '''7/8 : Pool results from all classfiers, and finalise the taxonomic assignment (and virus grouping)'''

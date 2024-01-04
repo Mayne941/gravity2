@@ -23,7 +23,7 @@ def generate_file_names(payload, ExpDir, Pl2=False):
     '''PL1 Graphs & MI'''
     fnames = generate_pl1_graph_fnames(fnames,payload)
     fnames = generate_mi_scorer_fnames(fnames)
-
+    fnames = generate_shared_pl_graph_fnames(fnames)
     '''PL2 components'''
     if Pl2:
         '''Main'''
@@ -78,6 +78,16 @@ def generate_pl1_graph_fnames(fnames, payload):
         fnames['BootstrappedDendrogramFile'] = f"{fnames['OutputDir']}/dendrogram_bootstrapped.nwk"
     else:
         fnames['Heatmap_DendrogramFile'] = f"{fnames['OutputDir']}/dendrogram.nwk"
+    return fnames
+
+def generate_shared_pl_graph_fnames(fnames):
+    '''Generate fnames for graphs comparing PPHMM/GOM content, for both pipelines'''
+    fnames["PphmmAndGomSigs"] = f"{fnames['OutputDir']}/PPHMMandGOMsignatures.csv"
+    fnames["SharedPphmmHm"] = f"{fnames['OutputDir']}/shared_pphmms.png"
+    fnames["NormPphmmRatioHm"] = f"{fnames['OutputDir']}/shared_norm_pphmm_ratio.png"
+    fnames["PphmmLocs"] = f"{fnames['OutputDir']}/PPHMMLocs.csv"
+    fnames["PphmmLocDists"] = f"{fnames['OutputDir']}/pphmm_location_distances.png"
+    fnames["PphmmLocPairwise"] = f"{fnames['OutputDir']}/pphmm_location_distances_pairwise.png"
     return fnames
 
 def generate_mi_scorer_fnames(fnames):

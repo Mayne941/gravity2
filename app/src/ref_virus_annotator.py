@@ -379,23 +379,16 @@ class RefVirusAnnotator:
         '''8/8: Load in PPHMMDB, to extract cluster list...'''
         parameters = retrieve_pickle(self.fnames['PphmmdbPickle'])
 
-        '''Combine with original data from VMR'''
+        '''Combine with original data from VMR, save as CSV for shared PPHMM heatmaps'''
         PPHMMDesc = [
             f"PPHMM|{ClusterDesc}" for ClusterDesc in parameters["ClusterDescList"].astype("str")]
         GOMDesc = [f"GOM|{TaxoGrouping}" for TaxoGrouping in GOMIDList]
-        header = ["Virus name", "Accession", "Order", "Family", "Subfamily", "Genus", "Class"] + PPHMMDesc + GOMDesc
+        header = ["Virus name"] + PPHMMDesc + GOMDesc
         table_data = np.column_stack((self.genomes["VirusNameList"],
-                                      list(map(", ".join,
-                                               self.genomes["SeqIDLists"])),
-                                      self.genomes["OrderList"],
-                                      self.genomes["FamilyList"],
-                                      self.genomes["SubFamList"],
-                                      self.genomes["GenusList"],
-                                      self.genomes["TaxoGroupingList"],
                                       self.PPHMMSignatureTable,
                                       GOMSignatureTable))
         out_df = pd.DataFrame(table_data, index=None, columns=header)
-        out_df.to_csv(f"{self.fnames['OutputDir']}/PPHMMandGOMsignatures.csv")
+        out_df.to_csv(self.fnames["PphmmAndGomSigs"])
 
         '''Save'''
         parameters["PPHMMSignatureTable"] = self.PPHMMSignatureTable

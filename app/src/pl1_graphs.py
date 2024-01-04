@@ -13,11 +13,10 @@ from app.utils.generate_fnames import generate_file_names
 from app.utils.mkdirs import mkdir_pl1_graphs
 from app.utils.heatmap_params import get_hmap_params, construct_hmap_lines
 from app.utils.error_handlers import raise_gravity_error
+from app.utils.shared_pphmm_graphs import shared_norm_pphmm_ratio, shared_pphmm_ratio
 
 import os
 import numpy as np
-import plotly.express as px
-import pandas as pd
 import matplotlib.pyplot as plt
 from Bio import Phylo
 import matplotlib
@@ -37,7 +36,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         mkdir_pl1_graphs(self.fnames, self.payload)
 
     def est_pairwise_dists(self):
-        '''3/7: Estimate pairwise distances between viruses, return distance matrix (recip. sim matrix)'''
+        '''Estimate pairwise distances between viruses, return distance matrix (recip. sim matrix)'''
         SimMat = SimilarityMat_Constructor(PPHMMSignatureTable=self.ref_annotations["PPHMMSignatureTable"],
                                            GOMSignatureTable=self.ref_annotations["GOMSignatureTable"],
                                            PPHMMLocationTable=self.ref_annotations["PPHMMLocationTable"],
@@ -49,7 +48,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         return DistMat
 
     def dendrogram(self, DistMat):
-        '''4/7: Build dendrogram'''
+        '''Build dendrogram'''
         progress_msg("Constructing Dendrogram")
         '''Make TaxoLabelList'''
         TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
@@ -70,6 +69,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             progress_msg("Computing Dendrogram Bootstrap Support")
             N_PPHMMs = self.ref_annotations["PPHMMSignatureTable"].shape[1]
             for Bootstrap_i in range(0, self.payload['N_Bootstrap']):
+                print(f"Round {Bootstrap_i+1}/{self.payload['N_Bootstrap']}")
                 '''Construct bootstrapped PPHMMSignatureTable and PPHMMLocationTable'''
                 PPHMM_IndexList = np.random.choice(
                     list(range(N_PPHMMs)), N_PPHMMs, replace=True)
@@ -221,7 +221,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         return VirusOrder
 
     def virus_grouping(self, DistMat):
-        '''7/7: (OPT) Group viruses via Thiels-U and other metrics; save as txt.'''
+        '''Group viruses via Thiels-U and other metrics; save as txt.'''
         progress_msg("Calculating virus groupings")
         VirusGroupingList, OptDistance_Cutoff, CorrelationScore, Theils_u_TaxoGroupingListGivenPred, \
             Theils_u_PredGivenTaxoGroupingList = VirusGrouping_Estimator(
@@ -249,69 +249,26 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                 f"U(X,Y) == 1 means that knowing Y implies a perfect knowledge of X and vice-versa\n"
             )
 
+    def call_pphmm_sig_graphs(self, label_order):
+        '''Call PPHMM Heatmaps'''
+        labels = [self.genomes["VirusNameList"][label_order], list([i[0] for i in self.genomes["SeqIDLists"][label_order]])]
+        shared_pphmm_ratio(label_order, self.fnames, labels)
+        shared_norm_pphmm_ratio(label_order, self.fnames, labels)
+
     def main(self):
         '''Generate GRAViTy dendrogram and heat map	'''
         section_header("Generate GRAViTy dendrogram and heat map")
 
-        '''3/7: Estimate virus pairwise distances'''
+        '''Estimate virus pairwise distances'''
         DistMat = self.est_pairwise_dists()
 
-        '''X/7: Do plotting'''
+        '''Do plotting'''
         self.dendrogram(DistMat)
         label_order = self.heatmap_with_dendro(DistMat)
 
         if self.payload['VirusGrouping'] == True:
-            '''7/7: (OPT) Group viruses'''
+            '''(OPT) Group viruses'''
             self.virus_grouping(DistMat)
 
-        ########################################################################################
-        ################## New feats in development
-
-        self.shared_pphmm_ratio(label_order)
-        self.shared_norm_pphmm_ratio(label_order)
-
-
-    def shared_pphmm_ratio(self, label_order):
-        out_fname = f"{self.fnames['OutputDir']}/shared_pphmms.png" # TODO Parameterise
-        df = pd.read_csv(f"{self.fnames['OutputDir']}/PPHMMandGOMsignatures.csv", index_col=0) # TODO Parameterise
-        df = df.drop(columns=["Virus name", "Accession", "Order", "Family", "Subfamily", "Genus", "Class", df.columns[-1]])
-        df = df.apply(pd.to_numeric)
-        arr = np.asarray(df.reindex(label_order))
-
-        shared_pphmms = []
-        for row in arr:
-            row_res = []
-            for i in range(arr.shape[0]):
-                cur_row = row
-                com_row = arr[i]
-                n_hits  = 0
-                for j in range(row.shape[0]):
-                    if cur_row[j] != 0 and com_row[j] != 0:
-                        n_hits += 1
-                row_res.append(n_hits)
-            shared_pphmms.append(row_res)
-
-        fig = px.imshow(shared_pphmms, x=self.genomes["VirusNameList"][label_order],y=list([i[0] for i in self.genomes["SeqIDLists"][label_order]]),title="Shared N PPHMMs")
-        fig.layout.height=1000; fig.layout.width=1000
-        fig.write_image(out_fname)
-
-    def shared_norm_pphmm_ratio(self, label_order):
-        out_fname = f"{self.fnames['OutputDir']}/shared_norm_pphmm_ratio.png" # TODO Parameterise
-        df = pd.read_csv(f"{self.fnames['OutputDir']}/PPHMMandGOMsignatures.csv", index_col=0) # TODO Parameterise
-        df = df.drop(columns=["Virus name", "Accession", "Order", "Family", "Subfamily", "Genus", "Class", df.columns[-1]])
-        df = df.apply(pd.to_numeric)
-        arr = np.asarray(df.reindex(label_order))
-        def func(a,b, max_possible):
-            hits = len([a[idx] for idx in range(a.shape[0]) if not a[idx] == 0 and not b[idx] == 0])
-            return min([hits, max_possible]) / max([hits,max_possible])
-
-        l = arr.shape[0]
-        shared_pphmm_ratio = np.zeros((l,l))
-        for idx_a, a in enumerate(arr):
-            for idx_b, b in enumerate(arr):
-                max_possible = min([np.count_nonzero(a), np.count_nonzero(b)])
-                shared_pphmm_ratio[idx_b,idx_a] = func(a,b, max_possible)
-
-        fig = px.imshow(shared_pphmm_ratio, x=self.genomes["VirusNameList"][label_order],y=list([i[0] for i in self.genomes["SeqIDLists"][label_order]]),title="Shared Normalised PPHMM Ratio (pairwise: n common PPHMMs / n PPHMMs)")
-        fig.layout.height=1000; fig.layout.width=1000
-        fig.write_image(out_fname)
+        '''Call PPHMM Heatmaps'''
+        self.call_pphmm_sig_graphs(label_order)
