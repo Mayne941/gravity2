@@ -1,6 +1,7 @@
 from Bio import SeqIO
 import numpy as np
 import random, string, os
+from alive_progress import alive_it
 
 from .line_count import LineCount
 from app.utils.shell_cmds import shell
@@ -41,7 +42,7 @@ def PPHMMSignatureTable_Constructor(
     PPHMMSignatureTable = np.empty((0, N_PPHMMs))
     PPHMMLocMiddleBestHitTable = np.empty((0, N_PPHMMs))
 
-    for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"]):
+    for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"])):
         GenBankSeqList, GenBankIDList, GenBankDescList = [], [], []
         for SeqID in SeqIDList:
             GenBankRecord = Records_dict[SeqID]

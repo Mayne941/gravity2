@@ -79,7 +79,7 @@ def run_end_to_end(payload):
     if not payload["SkipFirstPass"]:
         run_pipeline_i_full(payload_fp_pl1)
         run_pipeline_ii_full(payload_fp_pl2)
-    run_pipeline_i_full(payload_sp_pl1, refresh_genbank=True)
+    run_pipeline_i_full(payload_sp_pl1, refresh_genbank=True) ############## TODO
     run_pipeline_ii_full(payload_sp_pl2, refresh_genbank=True)
 
 

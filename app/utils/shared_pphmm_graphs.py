@@ -6,12 +6,16 @@ import numpy as np
 def get_sig_data(fnames, label_order) -> np.array:
     '''Load PPHMM/GOM sigs from csv, remove non-numerical cols, cast to array'''
     df = pd.read_csv(fnames['PphmmAndGomSigs'], index_col=0)
-    df = df.iloc[:,1:-1]
+    df = df.iloc[:,1:]
     df = df.apply(pd.to_numeric)
     return np.asarray(df.reindex(label_order))
 
 def build_hm(data, fnames, labels, map_type="null") -> None:
     '''Build and write heatmap'''
+    if len(labels[0]) < 25:
+        h, w = 1000, 1000
+    else:
+        h, w = 1500, 1500
     if map_type == "shared":
         tit = "Shared N PPHMMs"
         out_fname = fnames['SharedPphmmHm']
@@ -25,8 +29,8 @@ def build_hm(data, fnames, labels, map_type="null") -> None:
         tit = "Distance of PPHMMs (nt) from their mean position, x=PPHMMs, y=genomes. PPHMMs sorted by estimated genome position (<-5', 3'->)"
         out_fname = fnames["PphmmLocDists"]
     fig = px.imshow(data, x=labels[0],y=labels[1],title=tit)
-    fig.layout.height = 1000
-    fig.layout.width  = 1000 if not map_type == "null" else 1500
+    fig.layout.height = h
+    fig.layout.width  = w if not map_type == "null" else w*1.5
     fig.write_image(out_fname)
 
 def shared_pphmm_ratio(label_order, fnames, labels) -> None:

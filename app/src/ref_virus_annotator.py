@@ -20,11 +20,10 @@ from app.utils.gomdb_constructor import GOMDB_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
-from app.utils.orf_identifier import find_orfs
 from app.utils.error_handlers import raise_gravity_error
 from app.utils.shell_cmds import shell
 from app.utils.mkdirs import mkdir_ref_annotator
-from app.utils.stdout_utils import progress_msg, warning_msg
+from app.utils.stdout_utils import progress_msg
 from app.utils.generate_fnames import generate_file_names
 from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
 
@@ -383,10 +382,10 @@ class RefVirusAnnotator:
         PPHMMDesc = [
             f"PPHMM|{ClusterDesc}" for ClusterDesc in parameters["ClusterDescList"].astype("str")]
         GOMDesc = [f"GOM|{TaxoGrouping}" for TaxoGrouping in GOMIDList]
-        header = ["Virus name"] + PPHMMDesc + GOMDesc
+        header = ["Virus name"] + PPHMMDesc #+ GOMDesc
         table_data = np.column_stack((self.genomes["VirusNameList"],
-                                      self.PPHMMSignatureTable,
-                                      GOMSignatureTable))
+                                      self.PPHMMSignatureTable))
+                                      #, GOMSignatureTable))
         out_df = pd.DataFrame(table_data, index=None, columns=header)
         out_df.to_csv(self.fnames["PphmmAndGomSigs"])
 

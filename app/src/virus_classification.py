@@ -131,15 +131,13 @@ class VirusClassificationAndEvaluation:
 
         '''Combine PPHMM/GOM sigs, save as CSV for shared PPHMM heatmaps'''
         sigs_data = np.column_stack((TaxoLabelList_AllVirus,
-                                    PPHMMSignatureTable_AllVirus,
-                                    GOMSignatureTable_AllVirus))
+                                    PPHMMSignatureTable_AllVirus))
         pphmm_names = [f"PPHMM|{ClusterDesc}" for ClusterDesc in pl1_ref_annotations["ClusterDescList"].astype("str")] + \
                         [f"PPHMM|{i}" for i in retrieve_pickle(self.fnames['PphmmdbPickle'])["ClusterDescList"]]
         pphmm_names = [pphmm_names[i] if not pphmm_names[i] == "PPHMM|~|" else f"PPHMM|UCF{i}|" for i in range(len(pphmm_names))]
         sigs_df = pd.DataFrame(sigs_data, index=None, columns=
                             ["Virus name"] + \
-                            pphmm_names + \
-                            ["GOM"]
+                            pphmm_names
                 )
         sigs_df.to_csv(self.fnames["PphmmAndGomSigs"])
         '''Get PPHMM Locations, save as CSV for location heatmaps'''
