@@ -23,7 +23,6 @@ def make_labels(dendro, labels):
                 TerminalNodeList = TerminalNodeList[len(
                     DescendantNodeList):]
                 break
-
     return np.array(classes), np.array(lines) + 0.5
 
 def split_labels(OrderedTaxoLabelList):

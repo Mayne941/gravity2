@@ -67,6 +67,7 @@ def PPHMMSignatureTable_Constructor(
             for i in range(len(ProtIDList)):
                 f.write(f">{ProtIDList[i]}\n{str(ProtList[i].seq)}\n")
 
+        # TODO build in e value and hit score (-E, -T) thresholds, remove filter logic beneath
         shell(f"hmmscan --cpu {payload['N_CPUs']} --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDB} {PPHMMQueryFile}")
 
         PPHMMIDList, PPHMMScoreList, FeatureFrameBestHitList, FeatureLocFromBestHitList, \

@@ -71,16 +71,16 @@ def shared_norm_pphmm_ratio(label_order, fnames, labels) -> None:
             shared_pphmms_ratio[idx_b,idx_a] = _f(a,b, max_possible)
 
     build_hm(shared_pphmms_ratio, fnames, labels, "norm")
-    return shared_norm_pphmm_ratio
+    return shared_pphmms_ratio
 
-def get_dist_data(fnames):
+def get_dist_data(fnames, label_order):
     loc_df = pd.read_csv(fnames["PphmmLocs"], index_col=False)
     trim_df = loc_df.iloc[:,1:]
     trim_df = trim_df.apply(pd.to_numeric)
     '''Replace non-hits with NaN so as to not mess up mean calculations'''
     trim_df = trim_df.replace(0, np.nan)
     means = trim_df.mean().to_list()
-    means_indices = np.argsort(means)
+    means_indices = np.argsort(means) ## HOW IS THIS ORIGINAL GRAV ORDER? THIS IS JUST X AXIS
 
     all_dists = []
     for row in np.array(trim_df):
@@ -88,19 +88,21 @@ def get_dist_data(fnames):
         for i in range(row.shape[0]):
             dists.append(round(np.abs(row[i] - means[i]), 4) if not row[i] == np.nan else np.nan) # nan for blank squares
         all_dists.append(dists)
-    '''Rearrange matrix Y axis to match GRAViTy heatmap (i.e. calculated tree)'''
-    distance_arr = np.array(all_dists).T[means_indices].T
+    '''Rearrange matrix X to PPHMM loc order and Y to match GRAViTy heatmap (i.e. calculated tree)'''
+    # distance_arr = np.array(all_dists).T[means_indices].T
+    distance_arr = np.array(all_dists).T[means_indices].T[label_order]
     return distance_arr, means_indices
 
-def pphmm_loc_distances(fnames, pphmm_names, labels):
+def pphmm_loc_distances(fnames, pphmm_names, label_order, labels):
     '''Reindex output df by mean position of PPHMM (NOT distance from mean)'''
-    distance_arr, means_indices = get_dist_data(fnames)
-    reindexed_labels = np.array(pphmm_names)[means_indices]
-    build_hm(distance_arr, fnames, [reindexed_labels, labels[1]])
+    distance_arr, means_indices = get_dist_data(fnames, label_order)
+    reindexed_xlabels = np.array(pphmm_names)[means_indices]
+    build_hm(distance_arr, fnames, [reindexed_xlabels, labels[1]])
+    return distance_arr, reindexed_xlabels
 
-def pphmm_loc_diffs_pairwise(fnames, labels):
+def pphmm_loc_diffs_pairwise(fnames, label_order, labels):
     '''Do pairwise distances of PPHMM location from mean'''
-    distance_arr, _ = get_dist_data(fnames)
+    distance_arr, _ = get_dist_data(fnames, label_order)
     out_arr = pairwise_distances(np.nan_to_num(distance_arr, nan=0), metric="braycurtis")
     build_hm(out_arr, fnames, labels, map_type="loc")
-    return distance_arr
+    return out_arr

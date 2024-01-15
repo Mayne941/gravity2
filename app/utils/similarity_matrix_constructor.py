@@ -52,7 +52,7 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
                          f"Check your input VMR: are there any entries, and do you expect them to be related? Check your input Genbank file: are there any sequences in it?")
     clean_stdout()
 
-    if "P" in SimilarityMeasurementScheme:
+    if "P" in SimilarityMeasurementScheme: # TODO tidy
         PPHMMSignature_GJMat[np.where(np.isnan(PPHMMSignature_GJMat))] = 0
         PPHMMSignature_GJMat[PPHMMSignature_GJMat < 0] = 0
     if "G" in SimilarityMeasurementScheme:
@@ -62,7 +62,7 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
         PPHMMLocation_dCorMat[np.where(np.isnan(PPHMMLocation_dCorMat))] = 0
         PPHMMLocation_dCorMat[PPHMMLocation_dCorMat < 0] = 0
 
-    if SimilarityMeasurementScheme == "P":
+    if SimilarityMeasurementScheme == "P": # TODO map to a dict
         SimilarityMat = PPHMMSignature_GJMat
     elif SimilarityMeasurementScheme == "G":
         SimilarityMat = GOMSignature_GJMat

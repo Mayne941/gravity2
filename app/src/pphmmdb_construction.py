@@ -84,7 +84,7 @@ class PPHMMDBConstruction:
                 for Feature in GenBankFeatures:
                     if(Feature.type == 'CDS' and "protein_id" in Feature.qualifiers and "translation" in Feature.qualifiers):
                         ContainProtAnnotation = True
-                        try:
+                        try: # TODO Triple exception makes me sad
                             ProtName = Feature.qualifiers["product"][0]
                         except KeyError:
                             try:
@@ -98,12 +98,14 @@ class PPHMMDBConstruction:
                         ProtSeq = Feature.qualifiers["translation"][0]
                         if len(ProtSeq) >= self.payload['ProteinLength_Cutoff']:
                             ProtRecord = SeqRecord(Seq(ProtSeq),
-                                                   id=GenBankID+"|"+ProtID,
-                                                   name=GenBankID+"|"+ProtID,
-                                                   description=ProtName,
-                                                   annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
+                                                #    id   = f"{Family}_{Genus}_{VirusName}_{GenBankID}|{ProtID}", # Print taxonomic information to mashup subjects file
+                                                #    name =f"{Family}_{Genus}_{VirusName}_{GenBankID}|{ProtID}",
+                                                    id=f"{GenBankID}|{ProtID}",
+                                                    name=f"{GenBankID}|{ProtID}",
+                                                    description=ProtName,
+                                                    annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
                             ProtList.append(ProtRecord)
-                            ProtIDList.append(GenBankID+"|"+ProtID)
+                            ProtIDList.append(f"{GenBankID}|{ProtID}")
 
                 '''If the genome isn't annotated with any ORFs, find some'''
                 if not ContainProtAnnotation:
@@ -141,16 +143,16 @@ class PPHMMDBConstruction:
         progress_msg("Creating Mash sketches")
         SeenPair, SeenPair_i, MashMatrix, MashAllRes, N_ProtSeqs = {}, 0, [], pd.DataFrame(), len(ProtList)
         mash_all_fname  = f'{"/".join(self.fnames["MashOutputFile"].split("/")[:-1])}/mashup_scores_all.tab'
-        shell(f"mash-Linux64-v2.3/mash sketch -a -i {self.fnames['MashSubjectFile']}") # PARAMETERISE MASH CALL
+        shell(f"mash-Linux64-v2.3/mash sketch -a -i {self.fnames['MashSubjectFile']}") # TODO PARAMETERISE MASH CALL; add parallelism (-p)
         for ProtSeq_i in alive_it(range(N_ProtSeqs)):
             '''Mash query fasta file'''
             MashQuery = ProtList[ProtSeq_i]
-            with open(self.fnames['MashQueryFile'], "w") as MashQuery_txt: _ = SeqIO.write(MashQuery, MashQuery_txt, "fasta")
+            with open(self.fnames['MashQueryFile'], "w") as MashQuery_txt:
+                _ = SeqIO.write(MashQuery, MashQuery_txt, "fasta") # TODO THIS IS PROBABLY SUPER SLOW!!!
 
             mash_fname = f'{"/".join(self.fnames["MashOutputFile"].split("/")[:-1])}/mashup_scores.tab'
             shell(f"mash-Linux64-v2.3/mash sketch -a -i {self.fnames['MashQueryFile']}")
-            shell(f"mash-Linux64-v2.3/mash dist {self.fnames['MashSubjectFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}")
-
+            shell(f"mash-Linux64-v2.3/mash dist -i {self.fnames['MashSubjectFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}")
             mash_df = pd.read_csv(mash_fname, sep="\t", header=None, names=["orf", "query", "dist", "p", "hashes"])
 
             mash_df["query"] = ProtList[ProtSeq_i].id
@@ -223,7 +225,7 @@ class PPHMMDBConstruction:
 
                 '''Cluster file'''
                 AlnClusterFile = f"{self.fnames['ClustersDir']}/Cluster_{Cluster_i}.fasta"
-                with open(AlnClusterFile, "w") as UnAlnClusterTXT:
+                with open(AlnClusterFile, "w") as UnAlnClusterTXT: # TODO this likely very slow.
                     p = SeqIO.write(HitList, UnAlnClusterTXT, "fasta")
 
                 temp_aln_fname = f"{self.fnames['ClustersDir']}/temp.fasta"

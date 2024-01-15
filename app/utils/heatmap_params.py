@@ -31,13 +31,16 @@ def get_purple_cmap():
                 1024
     )
 
-def get_hmap_params(n_viruses):
+def get_hmap_params(n_viruses, is_square=True):
     hmap_params = {}
     '''General'''
     hmap_params['Outer_margin'] = 0.5
     hmap_params['FontSize'] = 6
     hmap_params['dpi']=600
-    hmap_params['Heatmap_width'] = float(12)
+    if not is_square:
+        hmap_params['Heatmap_width'] = float(24)
+    else:
+        hmap_params['Heatmap_width'] = float(12)
     hmap_params['Heatmap_height'] = hmap_params['Heatmap_width']
     hmap_params['TaxoLable_space'] = 1.00
 
@@ -153,13 +156,45 @@ def construct_hmap_lines(ax_Heatmap, LineList_major, LineList_minor, hmap_params
         ax_Heatmap.axhline(l, color='k', lw=hmap_params['linewidth_major'])
 
     for l in LineList_minor:
-        ax_Heatmap.axvline(l, color='gray', lw=hmap_params['linewidth_minor'])
         ax_Heatmap.axhline(l, color='gray', lw=hmap_params['linewidth_minor'])
+        ax_Heatmap.axvline(l, color='gray', lw=hmap_params['linewidth_minor'])
+
     ax_Heatmap			.set_xticks(TickLocList)
     ax_Heatmap			.set_xticklabels(
         ClassLabelList_x, rotation=90, size=hmap_params['FontSize'])
 
     ax_Heatmap			.set_yticks(TickLocList)
+    ax_Heatmap			.set_yticklabels(
+        ClassLabelList_y, rotation=0, size=hmap_params['FontSize'])
+
+    ax_Heatmap			.tick_params(top=True,
+                            bottom=False,
+                            left=False,
+                            right=True,
+                            labeltop=True,
+                            labelbottom=False,
+                            labelleft=False,
+                            labelright=True,
+                            direction='out')
+    return ax_Heatmap
+
+def construct_wide_hmap_lines(ax_Heatmap, len_x, LineList_major, LineList_minor, hmap_params, ClassLabelList_x, ClassLabelList_y, TickLocList_y):
+    for l in LineList_major:
+        ax_Heatmap.axhline(l, color='k', lw=hmap_params['linewidth_major']*2)
+    for l in LineList_minor:
+        ax_Heatmap.axhline(l, color='gray', lw=hmap_params['linewidth_minor'])
+
+    import numpy as np
+    x_lines = np.arange(-1,len_x) + 0.5
+    for l in x_lines:
+        ax_Heatmap.axvline(l, color='gray', lw=hmap_params['linewidth_minor'])
+
+    TickLocList_x = np.arange(len_x)
+    ax_Heatmap			.set_xticks(TickLocList_x)
+    ax_Heatmap			.set_xticklabels(
+        ClassLabelList_x, rotation=90, size=hmap_params['FontSize'])
+
+    ax_Heatmap			.set_yticks(TickLocList_y)
     ax_Heatmap			.set_yticklabels(
         ClassLabelList_y, rotation=0, size=hmap_params['FontSize'])
 
