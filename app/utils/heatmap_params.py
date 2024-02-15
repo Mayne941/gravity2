@@ -1,5 +1,6 @@
 from matplotlib.colors import LinearSegmentedColormap as LSC
 import matplotlib.pyplot as plt
+import numpy as np
 
 def get_blue_cmap():
     return LSC('MyBlues',
@@ -31,17 +32,28 @@ def get_purple_cmap():
                 1024
     )
 
-def get_hmap_params(n_viruses, is_square=True):
+def get_hmap_params(n_viruses, n_pphmms=99, is_square=True):
     hmap_params = {}
     '''General'''
     hmap_params['Outer_margin'] = 0.5
     hmap_params['FontSize'] = 6
-    hmap_params['dpi']=600
+    hmap_params['dpi']=100 # TODO How high can we get this without massive delays?
     if not is_square:
-        hmap_params['Heatmap_width'] = float(24)
+        if n_pphmms > 3000:
+            hmap_params['Heatmap_width'] = float(60)
+            hmap_params['Heatmap_height'] = float(6)
+        elif n_pphmms > 500 and n_pphmms <= 3000:
+            hmap_params['Heatmap_width'] = float(30)
+            hmap_params['Heatmap_height'] = float(6)
+        elif n_pphmms > 100 and n_pphmms <= 500:
+            hmap_params['Heatmap_width'] = float(15)
+            hmap_params['Heatmap_height'] = float(6)
+        else:
+            hmap_params['Heatmap_width'] = float(10)
+            hmap_params['Heatmap_height'] = float(6)
     else:
         hmap_params['Heatmap_width'] = float(12)
-    hmap_params['Heatmap_height'] = hmap_params['Heatmap_width']
+        hmap_params['Heatmap_height'] = hmap_params['Heatmap_width']
     hmap_params['TaxoLable_space'] = 1.00
 
     hmap_params['CBar_Heatmap_gap'] = 0.05
@@ -62,13 +74,15 @@ def get_hmap_params(n_viruses, is_square=True):
     hmap_params['linewidth_major'] = 0.4
     hmap_params['linewidth_minor'] = 0.2
 
-    if n_viruses >= 200:
+    if n_viruses < 20:
+        hmap_params['FontSize'] = 10
+
+    elif n_viruses >= 200:
         '''Reduce draw parameter size if large n'''
         hmap_params['FontSize'] = hmap_params['FontSize']/2
         hmap_params['linewidth_major'] = hmap_params['linewidth_major']/2
         hmap_params['linewidth_minor'] = hmap_params['linewidth_minor']/2
         hmap_params['dpi']=hmap_params['dpi']*1.5
-
 
     elif n_viruses >= 400:
         hmap_params['FontSize'] = hmap_params['FontSize']/4
@@ -178,27 +192,34 @@ def construct_hmap_lines(ax_Heatmap, LineList_major, LineList_minor, hmap_params
                             direction='out')
     return ax_Heatmap
 
-def construct_wide_hmap_lines(ax_Heatmap, len_x, LineList_major, LineList_minor, hmap_params, ClassLabelList_x, ClassLabelList_y, TickLocList_y):
+def construct_wide_hmap_lines(ax_Heatmap, len_x, LineList_major, LineList_minor, hmap_params, ClassLabelList_x, ClassLabelList_y, TickLocList_y, data):
     for l in LineList_major:
         ax_Heatmap.axhline(l, color='k', lw=hmap_params['linewidth_major']*2)
     for l in LineList_minor:
         ax_Heatmap.axhline(l, color='gray', lw=hmap_params['linewidth_minor'])
 
-    import numpy as np
     x_lines = np.arange(-1,len_x) + 0.5
-    for l in x_lines:
-        ax_Heatmap.axvline(l, color='gray', lw=hmap_params['linewidth_minor'])
-
     TickLocList_x = np.arange(len_x)
-    ax_Heatmap			.set_xticks(TickLocList_x)
-    ax_Heatmap			.set_xticklabels(
-        ClassLabelList_x, rotation=90, size=hmap_params['FontSize'])
+    if len_x < 200:
+        '''No lines or labels for massive graphs'''
+        for l in x_lines:
+            ax_Heatmap.axvline(l, color='gray', lw=hmap_params['linewidth_minor'])
+        ax_Heatmap			.set_xticks(TickLocList_x)
+        ax_Heatmap			.set_xticklabels(
+            ClassLabelList_x, rotation=90, size=hmap_params['FontSize'])
+    else:
+        # profile_xlables = np.round(np.nanmean(data, axis=0), 2)
+        # profile_xlables.sort()
+        # ax_Heatmap			.set_xticks(TickLocList_x)
+        # ax_Heatmap			.set_xticklabels(
+        #     profile_xlables, rotation=90, size=hmap_params['FontSize'])
+        ...
 
     ax_Heatmap			.set_yticks(TickLocList_y)
     ax_Heatmap			.set_yticklabels(
         ClassLabelList_y, rotation=0, size=hmap_params['FontSize'])
 
-    ax_Heatmap			.tick_params(top=True,
+    ax_Heatmap			.tick_params(top=False,
                             bottom=False,
                             left=False,
                             right=True,

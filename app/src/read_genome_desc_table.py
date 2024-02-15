@@ -135,16 +135,6 @@ class ReadGenomeDescTable:
         '''Open & parse input VMR (txt) file'''
         self.open_table()
 
-        if self.payload['TaxoGroupingFile'] != None:
-            '''PL1 has option to specify taxonomic grouping level.'''
-            self.TaxoGroupingList = []
-            with open(self.payload['TaxoGroupingFile'], "r") as TaxoGrouping_txt:
-                for TaxoGrouping in TaxoGrouping_txt:
-                    TaxoGrouping = TaxoGrouping.split("\r\n")[0].split("\n")[0]
-                    self.TaxoGroupingList.append(TaxoGrouping)
-            self.TaxoGroupingList = np.array(self.TaxoGroupingList)
-            self.TaxoGroupingList = self.TaxoGroupingList[self.VirusIndexList]
-
         '''Generate rows for output'''
         all_desc_table = {}
         self.BaltimoreList = all_desc_table["BaltimoreList"] = np.array(

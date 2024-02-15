@@ -27,7 +27,7 @@ def fasta_to_genbank(payload):
             '''Don't process duplicate Acc IDs - omit all but first'''
             output_seqs.append(sequences[i])
             seq_codes.append(sequences[i].id)
-            seq_names.append(f"Query_{i+1}_{sequences[i].id}")
+            seq_names.append(f"Query_{i+1}_{sequences[i].description}") #id}")
             sequences[i].id = sequences[i].id
         else:
             print(f"WARNING: I detected an entry in your FASTA file that has a duplicate accession ID: {sequences[id].id}\n GRAViTy has only kept the first entry!")
@@ -42,7 +42,6 @@ def fasta_to_genbank(payload):
     df["Virus GENBANK accession"] = seq_codes
     df["Virus name(s)"] = seq_names
     df["Genetic code table"] = 1
-
     df.to_csv(f"{payload['vmr_fname']}")
     print(f"Successfully converted {df.shape[0]} records")
     return f"Successfully converted {df.shape[0]} records"

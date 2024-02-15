@@ -47,11 +47,6 @@ class Data_e2e_unique_fns(BaseModel):
                                           description="FIRST PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
     GenomeDescTableFile_SecondPass: FilePath = Query('./data/latest_vmr_secondpass.csv',
                                           description="SECOND PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
-    TaxoGroupingFile_FirstPass: Union[FilePath, None] = Query(None,
-                                                    description="FIRST PASS PIPELINE 1: It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
-    TaxoGroupingFile_SecondPass: Union[FilePath, None] = Query(None,
-                                                    description="SECOND PASS PIPELINE 1: It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
-
 
 '''PL1'''
 class Data_pl1_unique_params(BaseModel):
@@ -138,6 +133,11 @@ class Data_common_pipeline_params(BaseModel):
                                                                             description="Virus similarity measurement SCHEMEs. If SCHEME = 'P', an overall similarity between two viruses is their GJ_P. If SCHEME = 'L', an overall similarity between two viruses is their GJ_L. If SCHEME = 'G', an overall similarity between two viruses is their GJ_G. If SCHEME = 'PG', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_G. If SCHEME = 'PL', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_L.")
     Heatmap_DendrogramSupport_Cutoff: float = Field(0.75, ge=0, le=1,
                                                     description="Threshold for the BOOTSTRAP SUPPORT to be shown on the dendrogram on the heatmap.")
+    PphmmNeighbourhoodWeight: float = Field(0.0125, ge=0, le=1,
+                                            description="Apply weighting to protein profile scores where multiple, adjacent (i.e. very similar) profiles exist. This can help to resolve minor violations at the sub-family level: sensible range is 0-0.05.")
+    PphmmSigScoreThreshold: int = Field(0,
+                                        description="Disregard profiles where signature scores are less than this threshold. This can help to resolve minor violations at the sub-family level: sensible range is 0-300.")
+
 
 
 '''ENDPOINT MODEL COLLECTIONS'''
@@ -168,8 +168,6 @@ class Pipeline_i_data(Data_pl1_unique_params, Data_common_pipeline_params):
                                           description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
     ExpDir: str = Query('./output/myexperiment_pipeline_1',
                            description="Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")
-    TaxoGroupingFile: Union[FilePath, None] = Query(None,
-                                                    description="If different viruses need to be associated with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
     GenomeSeqFile: str = Query('./output/ref_sequences.gb',
                                description="Full path to the genome sequence GenBank file. If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column")
 

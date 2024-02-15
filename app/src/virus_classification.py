@@ -25,13 +25,12 @@ from app.utils.highest_posterior_density import hpd
 from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
 from app.utils.make_heatmap_labels import make_labels, split_labels
 from app.utils.generate_fnames import generate_file_names
-from app.utils.error_handlers import error_handler_virus_classifier
+from app.utils.error_handlers import error_handler_virus_classifier, raise_gravity_error
 from app.utils.stdout_utils import progress_msg
 from app.utils.shell_cmds import shell
 from app.utils.mkdirs import mkdir_virus_classifier
-from app.utils.heatmap_params import get_blue_cmap, get_red_cmap, get_purple_cmap, get_hmap_params, construct_hmap_lines, construct_wide_hmap_lines
-from app.utils.error_handlers import raise_gravity_error
-from app.utils.shared_pphmm_graphs import shared_norm_pphmm_ratio, shared_pphmm_ratio, pphmm_loc_distances, pphmm_loc_diffs_pairwise
+from app.utils.heatmap_params import get_blue_cmap, get_red_cmap, get_purple_cmap, get_hmap_params, construct_hmap_lines
+from app.utils.shared_pphmm_graphs import supplementary_pphmm_heatmaps, shared_norm_pphmm_ratio, shared_pphmm_ratio, pphmm_loc_distances, pphmm_loc_diffs_pairwise
 
 matplotlib.use('agg')
 sys.setrecursionlimit(10000)
@@ -47,7 +46,7 @@ class VirusClassificationAndEvaluation:
         self.genomes = retrieve_genome_vars(self.fnames['ReadGenomeDescTablePickle'])
         self.ucf_annots = retrieve_pickle(self.fnames['UcfAnnotatorPickle'])
         self.N_UcfViruses = len(self.genomes["SeqIDLists"])
-        self.TaxoLabelList_UcfVirus = [f"Query_{i+1}_{self.genomes['SeqIDLists'][i][0]}" for i in range(self.N_UcfViruses)]
+        self.TaxoLabelList_UcfVirus = [self.genomes['VirusNameList'][i] for i in range(self.N_UcfViruses)]
         self.final_results = {}
 
     def use_ucf_virus_pphmms(self):
@@ -124,10 +123,6 @@ class VirusClassificationAndEvaluation:
         PPHMMLocationTable_AllVirus = np.vstack(
             (pl1_ref_annotations["PPHMMLocationTable"],  self.ucf_annots["PPHMMLocationTable_Dict"]))
         TaxoLabelList_AllVirus = TaxoLabelList_RefVirus + self.TaxoLabelList_UcfVirus
-        SimMat = SimilarityMat_Constructor(PPHMMSignatureTable_AllVirus, GOMSignatureTable_AllVirus,
-                                            PPHMMLocationTable_AllVirus, self.payload['SimilarityMeasurementScheme'], self.payload['p'])
-        DistMat = 1 - SimMat
-        DistMat[DistMat < 0] = 0
 
         '''Combine PPHMM/GOM sigs, save as CSV for shared PPHMM heatmaps'''
         sigs_data = np.column_stack((TaxoLabelList_AllVirus,
@@ -143,6 +138,18 @@ class VirusClassificationAndEvaluation:
         '''Get PPHMM Locations, save as CSV for location heatmaps'''
         locs_df = pd.DataFrame(np.column_stack((TaxoLabelList_AllVirus, PPHMMLocationTable_AllVirus)), columns = ["Virus name"] + pphmm_names)
         locs_df.to_csv(self.fnames["PphmmLocs"], index=False)
+
+        '''Call similarity matrix, build dist matrix from it'''
+        SimMat = SimilarityMat_Constructor(PPHMMSignatureTable_AllVirus,
+                                        GOMSignatureTable_AllVirus,
+                                        PPHMMLocationTable_AllVirus,
+                                        self.payload["PphmmNeighbourhoodWeight"],
+                                        self.payload["PphmmSigScoreThreshold"],
+                                        self.payload['SimilarityMeasurementScheme'],
+                                        self.payload['p'], fnames=self.fnames)
+        DistMat = 1 - SimMat
+        DistMat[DistMat < 0] = 0
+
 
         '''Generate dendrogram'''
         VirusDendrogram = DistMat2Tree(
@@ -205,22 +212,21 @@ class VirusClassificationAndEvaluation:
                                         DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList)
         '''Draw PPHMM sig and loc heatmaps'''
         self.draw_pphmm_heatmaps(TaxoLabelList_AllVirus, label_order, pphmm_names, x_labels)
-        ##################
-        _, _ = self.heatmap_with_dendrogramTEST(pl1_ref_annotations, TaxoLabelList_AllVirus,
-                                        DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList, self.final_results["SharedNormPphmmRatioMatrix"], f"{self.fnames['OutputDir']}/shared_norm_pphmm_ratio_matrix.pdf")
-        shared_pphmm_matrix_standardised = self.final_results["SharedPphmmRatioMatrix"]
-        # shared_pphmm_matrix_standardised = (self.final_results["SharedPphmmRatioMatrix"] - np.min(self.final_results["SharedPphmmRatioMatrix"]))/np.ptp(self.final_results["SharedPphmmRatioMatrix"])
-        _, _ = self.heatmap_with_dendrogramTEST(pl1_ref_annotations, TaxoLabelList_AllVirus,
-                                        DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList, shared_pphmm_matrix_standardised, f"{self.fnames['OutputDir']}/shared_pphmm_ratio_matrix.pdf")
-        _, _ = self.heatmap_with_dendrogramTEST(pl1_ref_annotations, TaxoLabelList_AllVirus,
-                                        DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList, self.final_results["PphmmLocMatrix"], f"{self.fnames['OutputDir']}/pphmm_loc_matrix.pdf")
-        loc_distances_standardised = self.final_results["PphmmLocDistances"]
-        # loc_distances_standardised = (self.final_results["PphmmLocDistances"] - np.min(self.final_results["PphmmLocDistances"]))/np.ptp(self.final_results["PphmmLocDistances"])
-        _, _ = self.heatmap_with_dendrogramTEST(pl1_ref_annotations, TaxoLabelList_AllVirus,
-                                        DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList, loc_distances_standardised, f"{self.fnames['OutputDir']}/pphmm_loc_distances.pdf", is_square=False)
-        # Get structure from? pphmm_loc_distances(self.fnames, pphmm_names, labels=[x_labels, y_label_acc_ids])
-        #
-        ####################
+        '''Iterate over each variety of additional heatmap. Key (fname): [data, is_square]'''
+        pphmm_heatmaps = {
+            "Shared_norm_pphmm_ratio_matrix": [self.final_results["SharedNormPphmmRatioMatrix"], True],
+            "Pphmm_locations": [self.final_results["PphmmPos"], False],
+            "Shared_pphmm_ratio_matrix": [self.final_results["SharedPphmmRatioMatrix"], True],
+            "Pphmm_loc_distances_pairwise": [self.final_results["PphmmLocMatrix"], True],
+            "Pphmm_loc_distances": [self.final_results["PphmmLocDistances"], False]
+        }
+        for fname, data in pphmm_heatmaps.items():
+            _, _ = supplementary_pphmm_heatmaps(pl1_ref_annotations, TaxoLabelList_AllVirus,
+                                                     N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList,
+                                                     data[0], f"{self.fnames['OutputDir']}/{fname}.pdf",
+                                                     self.fnames, self.payload, self.final_results, is_square=data[1],
+                                                     pl2_components=[self.N_UcfViruses, self.TaxoLabelList_UcfVirus])
+
 
     def do_virus_groupings(self, DistMat, N_RefViruses, pl1_ref_annotations) -> None:
         '''Accessory fn to CLASSIFY (6):  Group viruses with scipy fcluster/linkage, save results to txt'''
@@ -295,7 +301,8 @@ class VirusClassificationAndEvaluation:
 
             '''Construct a dendrogram from the bootstrapped data'''
             BootstrappedSimMat = SimilarityMat_Constructor(
-                BootstrappedPPHMMSignatureTable, BootstrappedGOMSignatureTable, BootstrappedPPHMMLocationTable, self.payload['SimilarityMeasurementScheme'], self.payload['p'])
+                BootstrappedPPHMMSignatureTable, BootstrappedGOMSignatureTable, BootstrappedPPHMMLocationTable, self.payload["PphmmNeighbourhoodWeight"],
+                self.payload["PphmmSigScoreThreshold"], self.payload['SimilarityMeasurementScheme'], self.payload['p'], self.fnames)
             BootstrappedDistMat = 1 - BootstrappedSimMat
             BootstrappedDistMat[BootstrappedDistMat < 0] = 0
             BootstrappedVirusDendrogram = DistMat2Tree(
@@ -337,10 +344,10 @@ class VirusClassificationAndEvaluation:
         '''Create a bootstrapped dendrogram'''
         if self.payload['Bootstrap_method'] == "booster":
             '''Can't call error handler here as tool writes to stderr'''
-            shell(f"./booster_linux64 -i {self.fnames['VirusDendrogramFile']} -b {self.fnames['VirusDendrogramDistFile']} -o {self.fnames['BootstrappedVirusDendrogramFile']} -@ {self.payload['N_CPUs']} ")
+            shell(f"./booster_linux64 -i {self.fnames['VirusDendrogramFile']} -b {self.fnames['VirusDendrogramDistFile']} -o {self.fnames['BootstrappedDendrogramFile']} -@ {self.payload['N_CPUs']} ")
 
         elif self.payload['Bootstrap_method'] == "sumtrees":
-            shell(f"sumtrees.py --decimals=2 --no-annotations --preserve-underscores --force-rooted --output-tree-format=newick --output-tree-filepath={self.fnames['BootstrappedVirusDendrogramFile']} --target={self.fnames['VirusDendrogramFile']} {self.fnames['VirusDendrogramDistFile']}")
+            shell(f"sumtrees.py --decimals=2 --no-annotations --preserve-underscores --force-rooted --output-tree-format=newick --output-tree-filepath={self.fnames['BootstrappedDendrogramFile']} --target={self.fnames['VirusDendrogramFile']} {self.fnames['VirusDendrogramDistFile']}")
 
         else:
             print("WARNING ** Bootstrap dendrogram not constructed: 'Bootstrap_method' can either be 'booster' or 'sumtrees'.")
@@ -350,7 +357,10 @@ class VirusClassificationAndEvaluation:
         progress_msg("Constructing GRAViTy Heatmap and Dendrogram")
         '''Load the tree'''
         if self.payload['Bootstrap']:
-            VirusDendrogramFile = self.fnames['BootstrappedVirusDendrogramFile']
+            try:
+                VirusDendrogramFile = self.fnames['BootstrappedDendrogramFile']
+            except:
+                raise_gravity_error(f"GRAViTy couldn't load your bootstrapped dendrogram file: this usually happens when the bootstrap program fails to process your data.")
         else:
             VirusDendrogramFile = self.fnames['VirusDendrogramFile']
 
@@ -523,147 +533,16 @@ class VirusClassificationAndEvaluation:
                                         labelright=True,
                                         direction='out')
         plt.savefig(self.fnames['HeatmapWithDendrogramFile'], format="pdf", bbox_inches = "tight", dpi=hmap_params['dpi'])
+        plt.clf()
+        plt.cla()
         return VirusOrder, ClassLabelList_x
-
-    ########################################################
-    def heatmap_with_dendrogramTEST(self, pl1_ref_annotations, TaxoLabelList_AllVirus, DistMat, N_RefViruses, TaxoLabelList_RefVirus,
-                                    TaxoAssignmentList, data, out_fname, is_square=True):
-        '''Construct GRAViTy heat map with dendrogram'''
-        progress_msg("Constructing GRAViTy Heatmap and Dendrogram")
-        '''Load the tree'''
-        if self.payload['Bootstrap']:
-            VirusDendrogramFile = self.fnames['BootstrappedVirusDendrogramFile']
-        else:
-            VirusDendrogramFile = self.fnames['VirusDendrogramFile']
-
-        VirusDendrogram = Phylo.read(VirusDendrogramFile, "newick")
-
-        '''Determine virus order'''
-        _ = VirusDendrogram.ladderize(reverse=True)
-        OrderedTaxoLabelList = [
-            Clade.name for Clade in VirusDendrogram.get_terminals()]
-        VirusOrder = [TaxoLabelList_AllVirus.index(
-            TaxoLabel) for TaxoLabel in OrderedTaxoLabelList]
-
-        '''Re-order the distance matrix for heatmap squares'''
-        OrderedDistMat = DistMat[VirusOrder][:, VirusOrder]
-
-        '''Remove clade support values that are < Heatmap_DendrogramSupport_Cutoff'''
-        N_InternalNodes = len(VirusDendrogram.get_nonterminals())
-        for InternalNode_i in range(N_InternalNodes):
-            try:
-                '''Here we want to ensure there are no labels on the dendrogram where bootstrap confidence < cutoff (or not present if BS = False)'''
-                if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff'] or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
-                    continue
-                else:
-                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
-                        VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
-            except:
-                '''Exception as first entry will always be None'''
-                continue
-
-        '''Colour terminal branches: reference virus's branch is blue, unclassified virus's branch is red'''
-        N_Viruses = N_RefViruses + self.N_UcfViruses
-        for Virus_i in range(N_Viruses):
-            Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
-            if Taxolabel in TaxoLabelList_RefVirus:
-                VirusDendrogram.get_terminals()[Virus_i].color = "blue"
-            elif Taxolabel in self.TaxoLabelList_UcfVirus:
-                VirusDendrogram.get_terminals()[Virus_i].color = "red"
-
-        '''Labels, label positions, and ticks'''
-        ClassDendrogram = copy(VirusDendrogram)
-        ClassDendrogram_label = Phylo.read(VirusDendrogramFile, "newick")
-        TaxoGroupingList_AllVirus = pl1_ref_annotations["TaxoGroupingList"].tolist(
-        ) + TaxoAssignmentList
-
-        '''Construct taxo labels in ordered list for heatmap axis labels'''
-        _, LineList_major = make_labels(ClassDendrogram, zip(
-            TaxoLabelList_AllVirus, TaxoGroupingList_AllVirus))
-
-        _, LineList_minor = make_labels(ClassDendrogram_label, zip(
-            TaxoLabelList_AllVirus, OrderedTaxoLabelList))
-        ClassLabelList_x, ClassLabelList_y = split_labels(OrderedTaxoLabelList)
-
-        '''Heat map colour indicators'''
-        IndicatorMat_RefVirus = np.tile(
-            [True]*N_RefViruses + [False]*self.N_UcfViruses, N_Viruses).reshape(N_Viruses, -1)
-        IndicatorMat_RefVirus = IndicatorMat_RefVirus * IndicatorMat_RefVirus.T
-        IndicatorMat_RefVirus = IndicatorMat_RefVirus[VirusOrder][:, VirusOrder]
-        IndicatorMat_UcfVirus = np.tile(
-            [False]*N_RefViruses + [True]*self.N_UcfViruses, N_Viruses).reshape(N_Viruses, -1)
-        IndicatorMat_UcfVirus = IndicatorMat_UcfVirus * IndicatorMat_UcfVirus.T
-        IndicatorMat_UcfVirus = IndicatorMat_UcfVirus[VirusOrder][:, VirusOrder]
-
-        '''Plot configuration'''
-        hmap_params, fig, ax_Dendrogram, ax_Heatmap = get_hmap_params(len(ClassLabelList_x), is_square)
-
-        try:
-            Phylo.draw(VirusDendrogram, label_func=lambda x: "",
-                    do_show=False,  axes=ax_Dendrogram)
-        except Exception as ex:
-            raise raise_gravity_error(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try swapping bootstrap method or disabling, then try again.")
-
-        VirusDendrogramDepth = max(
-            [v for k, v in VirusDendrogram.depths().items()])
-        ax_Dendrogram		.set_xlim(
-            [(VirusDendrogramDepth - 1), VirusDendrogramDepth])
-        ax_Dendrogram		.set_ylim([N_Viruses+0.5, 0.5])
-        ax_Dendrogram		.set_axis_off()
-
-        '''Draw heatmap elements on axes'''
-        vmax = np.max(np.nan_to_num(data, nan=0))
-        Heatmap_Graphic = ax_Heatmap.imshow(
-            data, cmap='magma', aspect='auto', vmin=0, vmax=vmax, interpolation='none')
-
-        '''Draw grouping major & minor lines'''
-        if is_square:
-            ax_Heatmap = construct_hmap_lines(ax_Heatmap, LineList_major, LineList_minor,
-                                            hmap_params, ClassLabelList_x, ClassLabelList_y,
-                                            TickLocList = np.array(
-                                                list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:])))))
-                                                )
-        else:
-            ax_Heatmap = construct_wide_hmap_lines(ax_Heatmap, data.shape[1], LineList_major, LineList_minor,
-                                            hmap_params, self.final_results["PphmLabels"], ClassLabelList_y, np.array(
-                                                list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:])))))
-                                                )
-
-        '''Selectively colour tick labels red if a UCF sample'''
-        [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
-        if bool(re.match(r"Query", i.get_text()))]
-        [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
-        if bool(re.match(r"Query", i.get_text()))]
-
-        '''Reference virus colour bar'''
-        ax_CBar = fig.add_axes(
-            [hmap_params['ax_CBar_L'], hmap_params['ax_CBar_B'], hmap_params['ax_CBar_W'], hmap_params['ax_CBar_H']], frame_on=True, facecolor="white")
-        CBar_Graphic = fig.colorbar(
-            Heatmap_Graphic, cax=ax_CBar, orientation="horizontal", ticks=[round(i, -1) for i in np.linspace(0, vmax, 5)]) # DYNAMIC TICKS
-        CBar_Graphic		.ax.set_xticklabels(
-            ['0', '0.25', '0.50', '0.75', '1'], rotation=0, size=hmap_params['FontSize'])
-        CBar_Graphic		.ax.set_xlabel('Distance', rotation=0, size=hmap_params['FontSize']+2)
-        CBar_Graphic		.ax.tick_params(top=False,
-                                    bottom=True,
-                                    left=False,
-                                    right=False,
-                                    labeltop=False,
-                                    labelbottom=True,
-                                    labelleft=False,
-                                    labelright=False,
-                                    direction='out')
-
-
-        plt.savefig(f"{out_fname}", format="pdf", bbox_inches = "tight", dpi=hmap_params['dpi']) ## FNAME
-        return VirusOrder, ClassLabelList_x
-    #################################################################
 
     def draw_pphmm_heatmaps(self, TaxoLabelList_AllVirus, label_order, pphmm_names, x_labels):
         '''Call all heatmaps for PPHMM location and signatures'''
         y_label_acc_ids = np.array([i.split("_")[0] if not i[0:5] == "Query" else i.split("_")[-1] for i in TaxoLabelList_AllVirus])[label_order]
         self.final_results["SharedPphmmRatioMatrix"] = shared_pphmm_ratio(label_order, self.fnames, labels=[x_labels, y_label_acc_ids])
         self.final_results["SharedNormPphmmRatioMatrix"] = shared_norm_pphmm_ratio(label_order, self.fnames, labels=[x_labels, y_label_acc_ids])
-        self.final_results["PphmmLocDistances"], self.final_results["PphmLabels"] = pphmm_loc_distances(self.fnames, pphmm_names, label_order, labels=[x_labels, y_label_acc_ids])
+        self.final_results["PphmmLocDistances"], self.final_results["PphmLabels"], self.final_results["PphmmPos"] = pphmm_loc_distances(self.fnames, pphmm_names, label_order, labels=[x_labels, y_label_acc_ids])
         self.final_results["PphmmLocMatrix"] = pphmm_loc_diffs_pairwise(self.fnames, label_order, labels=[x_labels, y_label_acc_ids])
 
     def group(self):

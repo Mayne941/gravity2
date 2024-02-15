@@ -55,6 +55,7 @@ class PPHMMDBConstruction:
             if "u" in str(i[1].seq).lower():
                 i[1].seq = i[1].seq.back_transcribe()
             CleanGenbankDict[i[0].split(".")[0]] = i[1]
+
         return {k.split(".")[0]: v for k, v in CleanGenbankDict.items()}
 
     def sequence_extraction(self, GenBankDict):
@@ -66,6 +67,7 @@ class PPHMMDBConstruction:
         raw_seqs = {}
 
         for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"])):
+
             for SeqID in SeqIDList:
                 '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
                 try:
@@ -141,30 +143,29 @@ class PPHMMDBConstruction:
     def mash_analysis(self, ProtList):
         '''6/10: Perform ALL-VERSUS-ALL Mash analysis'''
         progress_msg("Creating Mash sketches")
-        SeenPair, SeenPair_i, MashMatrix, MashAllRes, N_ProtSeqs = {}, 0, [], pd.DataFrame(), len(ProtList)
-        mash_all_fname  = f'{"/".join(self.fnames["MashOutputFile"].split("/")[:-1])}/mashup_scores_all.tab'
-        shell(f"mash-Linux64-v2.3/mash sketch -a -i {self.fnames['MashSubjectFile']}") # TODO PARAMETERISE MASH CALL; add parallelism (-p)
+        SeenPair, SeenPair_i, MashMatrix, N_ProtSeqs = {}, 0, [], len(ProtList)
+        shell(f"mash-Linux64-v2.3/mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashSubjectFile']}") # TODO PARAMETERISE MASH CALL; add parallelism (-p)
         for ProtSeq_i in alive_it(range(N_ProtSeqs)):
             '''Mash query fasta file'''
             MashQuery = ProtList[ProtSeq_i]
             with open(self.fnames['MashQueryFile'], "w") as MashQuery_txt:
-                _ = SeqIO.write(MashQuery, MashQuery_txt, "fasta") # TODO THIS IS PROBABLY SUPER SLOW!!!
+                MashQuery_txt.write(f">{MashQuery.name} {MashQuery.description}\n{str(MashQuery.seq)}")
 
             mash_fname = f'{"/".join(self.fnames["MashOutputFile"].split("/")[:-1])}/mashup_scores.tab'
-            shell(f"mash-Linux64-v2.3/mash sketch -a -i {self.fnames['MashQueryFile']}")
-            shell(f"mash-Linux64-v2.3/mash dist -i {self.fnames['MashSubjectFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}")
+            shell(f"mash-Linux64-v2.3/mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashQueryFile']}")
+            shell(f"mash-Linux64-v2.3/mash dist -p {self.payload['N_CPUs']} -i {self.fnames['MashSubjectFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}")
+            # TODO Pandas read might be slowing this down a lot? Can we pipe STDOUT to Python?
             mash_df = pd.read_csv(mash_fname, sep="\t", header=None, names=["orf", "query", "dist", "p", "hashes"])
 
             mash_df["query"] = ProtList[ProtSeq_i].id
             mash_df = mash_df[mash_df["orf"] != mash_df["query"]]
-            MashAllRes = pd.concat([MashAllRes, mash_df])
             mash_df["p"] = mash_df["p"].astype(float)
             mash_df["mash_sim"] = np.abs(1 - mash_df["dist"])
 
             mash_iter = mash_df.to_dict(orient="records")
             for i in mash_iter:
                 pair = ", ".join(sorted([ProtList[ProtSeq_i].id, i["orf"]]))
-                if  ((i["p"] < self.payload['Mash_p_val_cutoff'])
+                if  ((i["p"] < self.payload['Mash_p_val_cutoff']) # TODO Put reporting thresholds into mash call
                     and (i["mash_sim"] > self.payload['Mash_sim_score_cutoff'])):
                     '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
                     if pair in SeenPair:
@@ -178,7 +179,6 @@ class PPHMMDBConstruction:
                             [pair.split(", ")[0], pair.split(", ")[1], i["mash_sim"]])
                         SeenPair_i += 1
 
-        MashAllRes.to_csv(mash_all_fname)
         MashMatrix = np.array(MashMatrix)
         if MashMatrix.shape[0] == 0:
             raise_gravity_error(f"No Mash results were extracted from protein sequences. Check Mash is installed and that your parameters aren't too restrictive.")
@@ -225,8 +225,10 @@ class PPHMMDBConstruction:
 
                 '''Cluster file'''
                 AlnClusterFile = f"{self.fnames['ClustersDir']}/Cluster_{Cluster_i}.fasta"
-                with open(AlnClusterFile, "w") as UnAlnClusterTXT: # TODO this likely very slow.
+                with open(AlnClusterFile, "w") as UnAlnClusterTXT: ################# TODO this likely very slow.
                     p = SeqIO.write(HitList, UnAlnClusterTXT, "fasta")
+                # with open(AlnClusterFile, "w") as UnAlnClusterTXT: # In progress......
+                #     UnAlnClusterTXT.write(f">{AlnClusterFile.name} {AlnClusterFile.description}\n{str(AlnClusterFile.seq)}")
 
                 temp_aln_fname = f"{self.fnames['ClustersDir']}/temp.fasta"
                 '''Align cluster using Mafft'''

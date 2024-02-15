@@ -74,13 +74,22 @@ async def end_to_end(payload: E2e_data, background_tasks: BackgroundTasks):
     background_tasks.add_task(run_end_to_end, payload)
     return "Task fired successfully, running in background"
 
+@app.post("/end_to_end_programmatic/", tags=["Dev Utilities"])
+async def end_to_end(payload: E2e_data):
+    payload = process_json(payload)
+    run_end_to_end(payload)
+    return True
+
 def run_end_to_end(payload):
+    import time
+    st = time.time()
     payload_fp_pl1, payload_fp_pl2, payload_sp_pl1, payload_sp_pl2 = split_payloads_for_e2e(payload)
     if not payload["SkipFirstPass"]:
         run_pipeline_i_full(payload_fp_pl1)
         run_pipeline_ii_full(payload_fp_pl2)
-    run_pipeline_i_full(payload_sp_pl1, refresh_genbank=True) ############## TODO
+    run_pipeline_i_full(payload_sp_pl1, refresh_genbank=True)
     run_pipeline_ii_full(payload_sp_pl2, refresh_genbank=True)
+    print(f"Time for end-to-end: {time.time() - st}")
 
 
 '''PL1 Entrypoints'''

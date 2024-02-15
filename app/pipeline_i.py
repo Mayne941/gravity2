@@ -11,6 +11,7 @@ from app.src.pl1_graphs import GRAViTyDendrogramAndHeatmapConstruction
 from app.src.mutual_information_calculator import MutualInformationCalculator
 from app.utils.generate_logs import Log_Generator_Pl1
 from app.utils.timer import timing
+from app.utils.error_handlers import raise_gravity_error
 
 
 class Pipeline_I:
@@ -27,7 +28,10 @@ class Pipeline_I:
         self.actual_start = time.time()
         with open(f"{self.options['ExpDir']}/run_parameters.json", "w") as f:
             f.write(json.dumps(payload))
-        shutil.copyfile(self.options['GenomeDescTableFile'], f"{self.options['ExpDir']}/PL1_vmr.csv")
+        try:
+            shutil.copyfile(self.options['GenomeDescTableFile'], f"{self.options['ExpDir']}/PL1_vmr.csv")
+        except: raise_gravity_error(f"I couldn't find your Pipeline I VMR-like document.\n"
+                                    f"This usually happens when you've copied settings from a previous run. Try deleting your .gb fine and start again.")
 
     @timing
     def read_genome_desc_table(self, refresh_genbank):

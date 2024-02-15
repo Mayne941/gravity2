@@ -9,7 +9,7 @@ def GOMSignatureTable_Constructor(PPHMMLocationTable, GOMDB, GOMIDList, bootstra
         print(f"- (Re-)Constructing GOM Signature Table, bootstrap iteration: {bootstrap}")
     N_Viruses = len(PPHMMLocationTable)
     GOMSignatureTable = np.empty((N_Viruses, 0))
-    for GOM in alive_it(GOMIDList):
+    for GOM in alive_it(GOMIDList): ###############
         GOMSignatureList = []
         for PPHMMLocation in PPHMMLocationTable:
             RelevantPPHMMIndices = np.where(list(map(any, list(

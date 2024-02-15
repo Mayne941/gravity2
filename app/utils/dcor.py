@@ -24,7 +24,7 @@ def cent_dist(X):
 	M = squareform(pdist(X))
 	rmean = M.mean(axis=1)
 	cmean = M.mean(axis=0)
-	gmean = rmean.mean()
+	gmean = rmean.mean() # TODO Replace with np
 	R = np.tile(rmean, (M.shape[0], 1)).transpose()
 	C = np.tile(cmean, (M.shape[1], 1))
 	G = np.tile(gmean, M.shape)

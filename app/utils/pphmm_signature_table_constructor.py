@@ -57,7 +57,7 @@ def PPHMMSignatureTable_Constructor(
         '''Get each orf for a genome'''
         ProtList, ProtIDList = [], []
         for GenBankSeq, GenBankID in zip(GenBankSeqList, GenBankIDList):
-            prot, prot_id, _ = find_orfs(GenBankID, GenBankSeq, TranslTable, payload['ProteinLength_Cutoff'],
+            prot, prot_id, _ = find_orfs(GenBankID, GenBankSeq, TranslTable, payload['ProteinLength_Cutoff'], call_locs=True,
                                             taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
             ProtList += prot
             ProtIDList += prot_id
@@ -88,13 +88,15 @@ def PPHMMSignatureTable_Constructor(
                 if C_EValue >= payload['HMMER_C_EValue_Cutoff'] or HitScore <= payload['HMMER_HitScore_Cutoff']:
                     '''Threshold at user-set values'''
                     continue
+
                 '''Determine the frame and the location of the hit'''
                 iden = int(Line[0].split('_')[-1])
-                HitFrom = int(Line[17])
-                HitTo = int(Line[18])
+                HitFrom = int(Line[3].split('|')[-1].replace("START",""))
+                HitTo = HitFrom + int(Line[5])
                 HitMid = float(HitFrom+HitTo)/2
                 Frame = int(np.ceil(HitMid/OriAASeqlen)) if np.ceil(HitMid/OriAASeqlen) <= 3 else int(-(np.ceil(HitMid/OriAASeqlen)-3))
                 LocFrom = int(HitFrom % OriAASeqlen)
+
                 if LocFrom == 0:
                     '''if the hit occurs preciously from the end of the sequence'''
                     LocFrom = int(OriAASeqlen)
@@ -112,11 +114,13 @@ def PPHMMSignatureTable_Constructor(
                     else:
                         HitFrom_Frame = int(
                             -(np.ceil(HitFrom/OriAASeqlen)-3))
+
                     if np.ceil(HitTo/OriAASeqlen) <= 3:
                         HitTo_Frame = int(
                             np.ceil(HitTo/OriAASeqlen))
                     else:
                         HitTo_Frame = int(-(np.ceil(HitTo/OriAASeqlen)-3))
+
                     if Frame == HitFrom_Frame:
                         LocTo = int(OriAASeqlen)
                     elif Frame == HitTo_Frame:

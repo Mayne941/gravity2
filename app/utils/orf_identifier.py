@@ -41,7 +41,7 @@ def no_orf_match():
     return "---M------**--*----M---------------M----------------------------"
 
 
-def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, taxonomy_annots=[
+def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, call_locs = False, taxonomy_annots=[
             "None", "None", "None", "None", "None", "None", "None"
         ]):
     orf_tranl_table = get_orf_trasl_table()
@@ -83,15 +83,16 @@ def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, taxonomy_a
             Coding_End_IndexList = np.array(
                 StopCodon_indices+[len(nuc_codonList)])
 
-            ProtSeqList = []
+            ProtSeqList, loc_list = [], []
             for i, j in zip(Coding_Start_IndexList, Coding_End_IndexList):
                 for k, codon in enumerate(nuc_codonList[i:j]):
                     if codon in StartCodonList:
                         ProtSeqList.append(
                             Seq("".join(nuc_codonList[i:j][k:])).translate(table=TranslTable))
+                        loc_list.append(i)
                         break
 
-            for ProtSeq in ProtSeqList:
+            for idx, ProtSeq in enumerate(ProtSeqList):
                 '''Exclude protein sequences with <'ProteinLength_Cutoff' aa'''
                 if len(ProtSeq) >= protein_length_cutoff:
                     ProtRecord = SeqRecord(ProtSeq,
@@ -100,8 +101,12 @@ def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, taxonomy_a
                                             description="~",
                                             annotations={'taxonomy': taxonomy_annots})
                     ProtList.append(ProtRecord)
-                    ProtIDList.append(
-                        f"{seq_id}|ORF{ORF_i}")
+                    if call_locs:
+                        ProtIDList.append(
+                            f"{seq_id}|ORF{ORF_i}|START{loc_list[idx]}")
+                    else:
+                        ProtIDList.append(
+                            f"{seq_id}|ORF{ORF_i}")
                     ORF_i += 1
 
     return ProtList, ProtIDList, raw_nas
