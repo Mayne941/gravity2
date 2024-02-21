@@ -65,7 +65,10 @@ def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, call_locs 
         if j == "*":
             StopCodonList.append(CodonList[i])
 
+    # if type(GenBankSeq) == tuple: ########### TODO REMOVE REQUIREMENT FOR THIS IN SIG TABLE CONSTR (I.E. IF NOT A MULTI-SEGMENTED VIR)
+    #     GenBankSeq = GenBankSeq[0]
     SeqLength, ORF_i = len(GenBankSeq), 0
+
     for _, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
         '''Split into multiple of 3, get in-frame nucleotide seq, split sequence into codons'''
         raw_nas[seq_id].append(str(GenBankSeq.translate()))

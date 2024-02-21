@@ -1,4 +1,5 @@
 from Bio import SeqIO
+from Bio.Seq import Seq
 import numpy as np
 import random, string, os
 from alive_progress import alive_it
@@ -7,6 +8,7 @@ from .line_count import LineCount
 from app.utils.shell_cmds import shell
 from app.utils.stdout_utils import warning_msg, progress_msg
 from app.utils.orf_identifier import find_orfs
+from app.utils.error_handlers import raise_gravity_error
 
 def PPHMMSignatureTable_Constructor(
             genomes,
@@ -43,24 +45,33 @@ def PPHMMSignatureTable_Constructor(
     PPHMMLocMiddleBestHitTable = np.empty((0, N_PPHMMs))
 
     for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(genomes["SeqIDLists"], genomes["TranslTableList"], genomes["BaltimoreList"], genomes["OrderList"], genomes["FamilyList"], genomes["SubFamList"], genomes["GenusList"], genomes["VirusNameList"], genomes["TaxoGroupingList"])):
-        GenBankSeqList, GenBankIDList, GenBankDescList = [], [], []
+        GenBankSeqList, GenBankIDList = [], []
         for SeqID in SeqIDList:
             GenBankRecord = Records_dict[SeqID]
             GenBankSeqList.append(GenBankRecord.seq)
             GenBankIDList.append(GenBankRecord.id)
-            GenBankDescList.append(GenBankRecord.description)
 
-        '''Sort lists by sequence/segment lengths'''
-        _, GenBankSeqList, GenBankIDList, GenBankDescList = list(zip(
-            *sorted(zip(list(map(len, list(map(str, GenBankSeqList)))), GenBankSeqList, GenBankIDList, GenBankDescList), reverse=True)))
+        '''Sort lists by sequence/segment lengths, then concat to single seq'''
+        _, GenBankSeqList, GenBankIDList = list(zip(
+            *sorted(zip(list(map(len, list(map(str, GenBankSeqList)))), GenBankSeqList, GenBankIDList), reverse=True))) # TODO WAS TRUE 17/02
+
+        if len(GenBankSeqList) > 1:
+            GenBankSeqList = sum(GenBankSeqList, Seq(""))
+            GenBankIDList = "/".join([i.split(".")[0] for i in SeqIDList])
+        else:
+            GenBankSeqList = GenBankSeqList[0]
+            GenBankIDList = GenBankIDList[0]
 
         '''Get each orf for a genome'''
         ProtList, ProtIDList = [], []
-        for GenBankSeq, GenBankID in zip(GenBankSeqList, GenBankIDList):
-            prot, prot_id, _ = find_orfs(GenBankID, GenBankSeq, TranslTable, payload['ProteinLength_Cutoff'], call_locs=True,
-                                            taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
-            ProtList += prot
-            ProtIDList += prot_id
+        # for GenBankSeq, GenBankID in zip(GenBankSeqList, GenBankIDList):
+        prot, prot_id, _ = find_orfs(GenBankIDList, GenBankSeqList, TranslTable, payload['ProteinLength_Cutoff'], call_locs=True,
+                                        taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+        ProtList += prot
+        ProtIDList += prot_id ## TODO de nest this
+
+        if len(ProtList) < 1:
+            raise_gravity_error(f"GRAViTy couldn't detect any reading frames in your input sequence(s) ({ProtIDList}). Check that your sequences are labelled properly.")
 
         with open(PPHMMQueryFile, "w") as f:
             '''Write each translated ORF to the PPHMM Query File'''
@@ -83,7 +94,7 @@ def PPHMMSignatureTable_Constructor(
                 Line = Line[:23]
                 C_EValue = float(Line[11])
                 HitScore = float(Line[7])
-                OriAASeqlen = float(len(GenBankSeq))/3
+                OriAASeqlen = float(len(GenBankSeqList))/3
 
                 if C_EValue >= payload['HMMER_C_EValue_Cutoff'] or HitScore <= payload['HMMER_HitScore_Cutoff']:
                     '''Threshold at user-set values'''
@@ -151,7 +162,6 @@ def PPHMMSignatureTable_Constructor(
                 else:
                     '''Not new hit and score not as good as last'''
                     continue
-
         '''Absolute coordinate with orientation info encoded into it: +ve if the gene is present on the (+)strand, otherwise -ve'''
         FeatureLocMiddleBestHitList = np.zeros(N_PPHMMs)
         FeatureLocMiddleBestHitList[PPHMMIDList] = np.mean(np.array([FeatureLocFromBestHitList, FeatureLocToBestHitList]), axis=0)*(

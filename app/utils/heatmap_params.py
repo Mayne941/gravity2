@@ -41,16 +41,16 @@ def get_hmap_params(n_viruses, n_pphmms=99, is_square=True):
     if not is_square:
         if n_pphmms > 3000:
             hmap_params['Heatmap_width'] = float(60)
-            hmap_params['Heatmap_height'] = float(6)
+            hmap_params['Heatmap_height'] = float(15)
         elif n_pphmms > 500 and n_pphmms <= 3000:
             hmap_params['Heatmap_width'] = float(30)
-            hmap_params['Heatmap_height'] = float(6)
+            hmap_params['Heatmap_height'] = float(15)
         elif n_pphmms > 100 and n_pphmms <= 500:
             hmap_params['Heatmap_width'] = float(15)
-            hmap_params['Heatmap_height'] = float(6)
+            hmap_params['Heatmap_height'] = float(10)
         else:
             hmap_params['Heatmap_width'] = float(10)
-            hmap_params['Heatmap_height'] = float(6)
+            hmap_params['Heatmap_height'] = float(8)
     else:
         hmap_params['Heatmap_width'] = float(12)
         hmap_params['Heatmap_height'] = hmap_params['Heatmap_width']

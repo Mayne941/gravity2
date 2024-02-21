@@ -1,10 +1,12 @@
 import json
 import requests
 import os
+import time
 
 def batch(indir, host):
     errors = []
     for fname in os.listdir(indir):
+        st = time.time()
         with open(f"{indir}/{fname}") as f:
             payload = json.load(f)
 
@@ -13,6 +15,7 @@ def batch(indir, host):
                 continue
             else:
                 errors.append(fname)
+        print(f"TTC {fname}: {st - time.time()}")
 
     print(f"FINISHED PROCESSING {len(os.listdir(indir))} SAMPLES\n{len(errors)} ERRORS:\n{errors}")
 

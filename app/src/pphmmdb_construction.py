@@ -25,6 +25,7 @@ from app.utils.mkdirs import mkdir_pphmmdbc
 from app.utils.error_handlers import raise_gravity_error
 from app.utils.taxo_label_constructor import TaxoLabel_Constructor
 from app.utils.generate_fnames import generate_file_names
+from app.utils.blast import blastp_analysis
 
 class PPHMMDBConstruction:
     def __init__(self,
@@ -180,8 +181,15 @@ class PPHMMDBConstruction:
                         SeenPair_i += 1
 
         MashMatrix = np.array(MashMatrix)
+
         if MashMatrix.shape[0] == 0:
-            raise_gravity_error(f"No Mash results were extracted from protein sequences. Check Mash is installed and that your parameters aren't too restrictive.")
+            # TODO PARAMETERISE THIS!!
+            try:
+                blastp_analysis(ProtList, self.fnames, self.payload)
+            except:
+                raise_gravity_error(f"No Mash results were extracted from protein sequences. Check Mash is installed and that your parameters aren't too restrictive."
+                                    f"Turning mash similarity below 0.4 can make false positives frequent: possibly your sequence is very unlike what's in your VMR?"
+                                    f"If so, try enabling BLASTp instead, which will replace the Mash call.")
         np.savetxt(fname=self.fnames['MashSimFile'],
                    X=MashMatrix,
                    fmt='%s',
