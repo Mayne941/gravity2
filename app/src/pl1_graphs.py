@@ -200,7 +200,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             OrderedDistMat, cmap='magma', aspect='auto', vmin=0, vmax=1, interpolation='none')
 
         '''Draw grouping major & minor lines'''
-        ax_Heatmap = construct_hmap_lines(ax_Heatmap, LineList_major, LineList_minor,
+        ax_Heatmap = construct_hmap_lines(ax_Heatmap, len(ClassLabelList_y), LineList_major, LineList_minor,
                                           hmap_params, ClassLabelList_x, ClassLabelList_y,
                                           TickLocList = np.arange(0, len(ClassLabelList_y)))
 

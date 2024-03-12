@@ -163,15 +163,17 @@ def get_hmap_params(n_viruses, n_pphmms=99, is_square=True):
 
     return hmap_params, fig, ax_dendrogram, ax_Heatmap
 
-def construct_hmap_lines(ax_Heatmap, LineList_major, LineList_minor, hmap_params, ClassLabelList_x, ClassLabelList_y, TickLocList):
+def construct_hmap_lines(ax_Heatmap, len_x, LineList_major, LineList_minor, hmap_params, ClassLabelList_x, ClassLabelList_y, TickLocList):
     '''Draw grouping major & minor lines on heatmap'''
-    for l in LineList_major:
-        ax_Heatmap.axvline(l, color='k', lw=hmap_params['linewidth_major'])
-        ax_Heatmap.axhline(l, color='k', lw=hmap_params['linewidth_major'])
+    if len_x < 200: ## TODO TEST
+        for l in LineList_major:
+            ax_Heatmap.axvline(l, color='k', lw=hmap_params['linewidth_major'])
+            ax_Heatmap.axhline(l, color='k', lw=hmap_params['linewidth_major'])
 
-    for l in LineList_minor:
-        ax_Heatmap.axhline(l, color='gray', lw=hmap_params['linewidth_minor'])
-        ax_Heatmap.axvline(l, color='gray', lw=hmap_params['linewidth_minor'])
+    if len_x < 200:
+        for l in LineList_minor:
+            ax_Heatmap.axhline(l, color='gray', lw=hmap_params['linewidth_minor'])
+            ax_Heatmap.axvline(l, color='gray', lw=hmap_params['linewidth_minor'])
 
     ax_Heatmap			.set_xticks(TickLocList)
     ax_Heatmap			.set_xticklabels(

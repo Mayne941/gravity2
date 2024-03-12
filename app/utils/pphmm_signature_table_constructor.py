@@ -78,8 +78,7 @@ def PPHMMSignatureTable_Constructor(
             for i in range(len(ProtIDList)):
                 f.write(f">{ProtIDList[i]}\n{str(ProtList[i].seq)}\n")
 
-        # TODO build in e value and hit score (-E, -T) thresholds, remove filter logic beneath
-        shell(f"hmmscan --cpu {payload['N_CPUs']} --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDB} {PPHMMQueryFile}")
+        shell(f"hmmscan --cpu {payload['N_CPUs']} -E {payload['HMMER_C_EValue_Cutoff']} --noali --nobias --domtblout {PPHMMScanOutFile} {HMMER_PPHMMDB} {PPHMMQueryFile}")
 
         PPHMMIDList, PPHMMScoreList, FeatureFrameBestHitList, FeatureLocFromBestHitList, \
             FeatureLocToBestHitList, FeatureDescList = [], [], [], [], [], []
@@ -96,7 +95,7 @@ def PPHMMSignatureTable_Constructor(
                 HitScore = float(Line[7])
                 OriAASeqlen = float(len(GenBankSeqList))/3
 
-                if C_EValue >= payload['HMMER_C_EValue_Cutoff'] or HitScore <= payload['HMMER_HitScore_Cutoff']:
+                if HitScore <= payload['HMMER_HitScore_Cutoff']:
                     '''Threshold at user-set values'''
                     continue
 

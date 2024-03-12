@@ -40,10 +40,11 @@ class Pipeline_II:
             GenomeDescTableFile=self.options['GenomeDescTableFile_UcfVirus'],
             GenomeSeqFile=self.options['GenomeSeqFile_UcfVirus'],
             ExpDir=self.options['ShelveDir_UcfVirus'],
-            RefreshGenbank=refresh_genbank
+            RefreshGenbank=refresh_genbank,
+            is_secondpass=True
         )
         rgdt.entrypoint()
-        self.pphmmdb_construction()
+        self.pphmmdb_construction() #################################################
 
     @timing
     def pphmmdb_construction(self):

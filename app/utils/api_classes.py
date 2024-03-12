@@ -50,10 +50,6 @@ class Data_e2e_unique_fns(BaseModel):
 
 '''PL1'''
 class Data_pl1_unique_params(BaseModel):
-    TaxoGrouping_Header: Literal["Taxonomic grouping", "Family"] = Query('Taxonomic grouping',
-                                                                         description="The header of the Taxonomic grouping column.")
-    AnnotateIncompleteGenomes: bool = Query(False,
-                                            description="Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes.")
     RemoveSingletonPPHMMs: bool = Query(False,
                                         description="Remove singleton PPHMMs from the database if True.")
     N_VirusesOfTheClassToIgnore: int = Field(1, gt=0,
@@ -87,6 +83,10 @@ class Data_pl2_unique_params(BaseModel):
 
 '''General pipeline'''
 class Data_common_pipeline_params(BaseModel):
+    AnnotateIncompleteGenomes: bool = Query(False,
+                                            description="Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes.")
+    TaxoGrouping_Header: Literal["Taxonomic grouping", "Family"] = Query('Taxonomic grouping',
+                                                                         description="The header of the Taxonomic grouping column.")
     genbank_email: str = Query('name@provider.com',
                                description="A valid email address is required to download genbank files.")
     ProteinLength_Cutoff: int = Field(100, gt=0,

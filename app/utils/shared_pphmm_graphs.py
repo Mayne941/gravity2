@@ -243,7 +243,7 @@ def supplementary_pphmm_heatmaps(pl1_ref_annotations, TaxoLabelList_AllVirus, N_
 
     '''Draw grouping major & minor lines'''
     if is_square:
-        ax_Heatmap = construct_hmap_lines(ax_Heatmap, LineList_major, LineList_minor,
+        ax_Heatmap = construct_hmap_lines(ax_Heatmap, len(ClassLabelList_y), LineList_major, LineList_minor,
                                         hmap_params, ClassLabelList_x, ClassLabelList_y,
                                         TickLocList = np.array(
                                             list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:])))))

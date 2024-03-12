@@ -347,8 +347,10 @@ class VirusClassificationAndEvaluation:
             shell(f"./booster_linux64 -i {self.fnames['VirusDendrogramFile']} -b {self.fnames['VirusDendrogramDistFile']} -o {self.fnames['BootstrappedDendrogramFile']} -@ {self.payload['N_CPUs']} ")
 
         elif self.payload['Bootstrap_method'] == "sumtrees":
-            shell(f"sumtrees.py --decimals=2 --no-annotations --preserve-underscores --force-rooted --output-tree-format=newick --output-tree-filepath={self.fnames['BootstrappedDendrogramFile']} --target={self.fnames['VirusDendrogramFile']} {self.fnames['VirusDendrogramDistFile']}")
-
+            out = shell(f"sumtrees.py --decimals=2 --no-annotations --preserve-underscores --force-rooted --output-tree-format=newick --output-tree-filepath={self.fnames['BootstrappedDendrogramFile']} --target={self.fnames['VirusDendrogramFile']} {self.fnames['VirusDendrogramDistFile']}",
+                        ret_output=True)
+            if "[ERROR]" in str(out):
+                raise_gravity_error(f"Bootstrapping failed, see error report: {str(out).split('[ERROR]')[-1]}")
         else:
             print("WARNING ** Bootstrap dendrogram not constructed: 'Bootstrap_method' can either be 'booster' or 'sumtrees'.")
 
@@ -462,7 +464,7 @@ class VirusClassificationAndEvaluation:
                             aspect='auto', vmin=0, vmax=1, interpolation='none')
 
         '''Draw grouping major & minor lines'''
-        ax_Heatmap = construct_hmap_lines(ax_Heatmap, LineList_major, LineList_minor,
+        ax_Heatmap = construct_hmap_lines(ax_Heatmap, len(ClassLabelList_y),  LineList_major, LineList_minor,
                                           hmap_params, ClassLabelList_x, ClassLabelList_y,
                                           TickLocList = np.array(
                                             list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:]))))))

@@ -10,7 +10,7 @@ def shell(args, calling_fn="Misc shell function", ret_output=False):
         sp_error_handler(
             out, err, f"{colored('ERROR', 'red')}: Something went wrong with CLI call: {calling_fn}, dumping STDOUT/STDERR to shell.")
     if ret_output:
-        return out
+        return out + err
 
 def sp_error_handler(out, err, name):
     '''Kill program if error found; used in combo with POpen commands.'''

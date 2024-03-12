@@ -1,4 +1,4 @@
-from Bio import Phylo, AlignIO, SeqIO
+from Bio import Phylo, AlignIO
 from io import StringIO
 from collections import Counter
 from copy import copy

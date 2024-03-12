@@ -67,8 +67,8 @@ class PPHMMDBConstruction:
         ], [], 1
         raw_seqs = {}
 
-        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"])):
-
+        # for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"])):
+        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]):
             for SeqID in SeqIDList:
                 '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
                 try:
@@ -222,6 +222,8 @@ class PPHMMDBConstruction:
             self.fnames['MashProtClusterFile'])+1, 0, {}
         with open(self.fnames['MashProtClusterFile'], 'r') as MashProtCluster_txt:
             for Cluster in alive_it(MashProtCluster_txt.readlines()):
+            # for Cluster in MashProtCluster_txt.readlines():
+
                 HitList, TaxoLists, DescList, Cluster = [], [], [], Cluster.split("\n")[
                     0].split("\t")
                 for ProtID in Cluster:
@@ -234,14 +236,14 @@ class PPHMMDBConstruction:
                 '''Cluster file'''
                 AlnClusterFile = f"{self.fnames['ClustersDir']}/Cluster_{Cluster_i}.fasta"
                 with open(AlnClusterFile, "w") as UnAlnClusterTXT: ################# TODO this likely very slow.
-                    p = SeqIO.write(HitList, UnAlnClusterTXT, "fasta")
+                    _= SeqIO.write(HitList, UnAlnClusterTXT, "fasta")
                 # with open(AlnClusterFile, "w") as UnAlnClusterTXT: # In progress......
                 #     UnAlnClusterTXT.write(f">{AlnClusterFile.name} {AlnClusterFile.description}\n{str(AlnClusterFile.seq)}")
 
                 temp_aln_fname = f"{self.fnames['ClustersDir']}/temp.fasta"
                 '''Align cluster using Mafft'''
-                shell(f"mafft --thread {self.payload['N_CPUs']} --localpair --maxiterate 1000  {AlnClusterFile} > {temp_aln_fname}",
-                        "PPHMMDB Construction: make alignments, main Mafft call")
+                shell(f"mafft --thread {self.payload['N_CPUs']} --anysymbol --localpair --maxiterate 1000  {AlnClusterFile} > {temp_aln_fname}",
+                        "PPHMMDB Construction: make alignments, main Mafft call") # TODO Find out why it occasionally fails without anysymbol
                 shell(f"rm {AlnClusterFile} && mv {temp_aln_fname} {AlnClusterFile}",
                       "PPHMMDB COnstruction: move temp mafft file")
 
