@@ -40,29 +40,50 @@ class ReadGenomeDescTable:
     def open_table(self) -> None:
         '''Open VMR file and read in relevant data to volatile'''
         print("- Read the GenomeDesc table")
-        df = pd.read_csv(self.GenomeDescTableFile, index_col=0)
-
-        df["Virus name(s)"] = df.apply(lambda x: self.get_names(x), axis=1)
-        df["Genetic code table"] = df.apply(lambda x: self.transl_table_check(x), axis=1)
-        df["Virus GENBANK accession"] = df.apply(lambda x: self.get_accession(x), axis=1)
+        try:
+            df = pd.read_csv(self.GenomeDescTableFile, index_col=0)
+        except:
+            raise_gravity_error(f"Failed to read your input VMR-like document (GenomeDescTableFile). Check it's a valid CSV.")
         df = df.fillna("")
+        crap_pandas = [i for i in df.columns if "Unnamed" in i]
+        for i in crap_pandas:
+            df = df.drop(columns=i)
+
+        try:
+            df["Virus name(s)"] = df.apply(lambda x: self.get_names(x), axis=1)
+            df["Genetic code table"] = df.apply(lambda x: self.transl_table_check(x), axis=1)
+            df["Virus GENBANK accession"] = df.apply(lambda x: self.get_accession(x), axis=1)
+        except KeyError as e:
+            raise_gravity_error(f"Your input VMR-like document isn't structured appropriately, see documentation for instructions.\nException: {e}")
+
         self.VirusIndexList = [i for i in range(1, df.shape[0] + 1)]
-        self.BaltimoreList = df["Baltimore Group"].tolist()
-        self.OrderList = df["Order"].tolist()
+        try: # TODO < TIDY THIS
+            self.BaltimoreList = df["Baltimore Group"].tolist()
+        except KeyError:
+            self.BaltimoreList = ["" for i in df["Virus GENBANK accession"].tolist()]
+        try:
+            self.OrderList = df["Order"].tolist()
+        except KeyError:
+            self.OrderList = ["" for i in df["Virus GENBANK accession"].tolist()]
         self.FamilyList = df["Family"].tolist()
         self.SubFamList = df["Subfamily"].tolist()
         self.GenusList = df["Genus"].tolist()
         self.VirusNameList = df["Virus name(s)"].tolist()
         self.TaxoGroupingList = df[self.payload['TaxoGrouping_Header']].tolist()
-        self.SeqStatusList = df["Genome coverage"].tolist()
+        try:
+            self.SeqStatusList = df["Genome coverage"].tolist()
+        except KeyError:
+            self.SeqStatusList = [1 for i in df["Virus GENBANK accession"].tolist()]
         self.SeqIDLists = [i.split(", ") for i in df["Virus GENBANK accession"].tolist()]
         self.TranslTableList = df["Genetic code table"].tolist()
 
     def get_names(self, row):
         try:
             if not self.is_secondpass:
-                self.VirusNameList.append(re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(
-                    r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"])))))
+                if not row["Virus name(s)"]:
+                    row["Virus name(s)"] == ""
+                return re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(
+                    r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
             else:
                 '''If PL2, append virus description to accession ID'''
                 part1 = re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
@@ -71,9 +92,9 @@ class ReadGenomeDescTable:
                 part2 = re.sub(r"[^\w\s]", "", row["Virus isolate designation"][0:39]).replace(" ", "_")
                 if len(row["Virus isolate designation"]) > 40:
                     part2 += "..."
-
                 return f'{part1}_{part2}'
         except Exception as ex:
+
             raise_gravity_error(f"At least one line in your input CSV (genome desc table) has empty fields (or fields causing another error): {ex}")
 
     def transl_table_check(self, row):
@@ -92,7 +113,8 @@ class ReadGenomeDescTable:
             return ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", row["Virus GENBANK accession"]))
         except:
             self.no_acc_cnt += 1
-            return f'No_acc_{row["Virus GENBANK accession"]}' if not row["Virus GENBANK accession"] == "" else f'No_data_{self.no_acc_cnt - 1}'
+            raise_gravity_warning(f"No accession number for {row['Virus name(s)']}: this might cause GRAViTy to error later on if you're not providing your own GenBank file!")
+            return f'{row["Virus GENBANK accession"]}' if not row["Virus GENBANK accession"] == "" else f'No_data_{self.no_acc_cnt - 1}'
 
     def update_desc_table(self) -> dict:
         '''Create dictionary in GRAViTy structure for saving to persistent storage'''
@@ -154,10 +176,9 @@ class ReadGenomeDescTable:
         if len(duplicates) > 0:
             '''Check if there exist duplicated accession numbers, fail IF TRUE'''
             print("The following accession numbers appear more than once: ")
-            raise SystemExit(
+            raise_gravity_error(
                 f"Error parsing VMR."
-                f"The following accession numbers appear more than once: {duplicates}"
-                f"GRAViTy terminated."
+                f"The following accession numbers appear more than once and GRAViTy only supports unique entries:\n{duplicates}"
             )
 
         '''Update master data. Arrays are LINKED.'''

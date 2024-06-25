@@ -1,7 +1,13 @@
 import numpy as np
+import re
 from Bio import SeqIO, AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+import warnings
+from Bio import BiopythonWarning # Silence biopython warning when len(seq) % 3 != 0
+warnings.simplefilter('ignore', BiopythonWarning)
+
+from app.utils.error_handlers import raise_gravity_warning
 
 def get_orf_trasl_table():
     return {1: "---M------**--*----M---------------M----------------------------",
@@ -65,10 +71,8 @@ def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, call_locs 
         if j == "*":
             StopCodonList.append(CodonList[i])
 
-    # if type(GenBankSeq) == tuple: ########### TODO REMOVE REQUIREMENT FOR THIS IN SIG TABLE CONSTR (I.E. IF NOT A MULTI-SEGMENTED VIR)
-    #     GenBankSeq = GenBankSeq[0]
     SeqLength, ORF_i = len(GenBankSeq), 0
-
+    best_frame_finder = {}
     for _, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
         '''Split into multiple of 3, get in-frame nucleotide seq, split sequence into codons'''
         raw_nas[seq_id].append(str(GenBankSeq.translate()))
@@ -95,21 +99,83 @@ def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, call_locs 
                         loc_list.append(i)
                         break
 
+
             for idx, ProtSeq in enumerate(ProtSeqList):
                 '''Exclude protein sequences with <'ProteinLength_Cutoff' aa'''
-                if len(ProtSeq) >= protein_length_cutoff:
-                    ProtRecord = SeqRecord(ProtSeq,
-                                            id=f"{seq_id}|ORF{ORF_i}",
-                                            name=f"{seq_id}|ORF{ORF_i}",
-                                            description="~",
-                                            annotations={'taxonomy': taxonomy_annots})
-                    ProtList.append(ProtRecord)
-                    if call_locs:
-                        ProtIDList.append(
-                            f"{seq_id}|ORF{ORF_i}|START{loc_list[idx]}")
+                if not call_locs:
+                    '''If on first call, count Xs and report to user to alert to mistranslated regions'''
+                    x_count = ProtSeq.count("X")
+                    if x_count > 10:
+                        raise_gravity_warning(f"(PPHMMDB Construction: orf_identifier()). Putative ORF {seq_id}_{idx} has {x_count} mistranslated residues.")
+
+                if len(ProtSeq.replace("X","")) >= protein_length_cutoff:
+                    if ProtSeq.count("X") > 100:
+                        raise_gravity_warning(f"TRIMMING {seq_id}|ORF{ORF_i} OF {ProtSeq.count('X')} MISTRANSLATED RESIDUES. Recommend user checks input sequence.")
+                        ProtSeq = ProtSeq.replace("X","")
+                    n = 1000000 # RM < TODO WIP, subsetting of large orfs
+                    if len(ProtSeq) > n:
+                        ProtSeqs = [ProtSeq[i:i + n] for i in range(0, len(ProtSeq), n)]
+                        for orf_idx, ProtSeq in enumerate(ProtSeqs):
+                            if not len(ProtSeq) < protein_length_cutoff:
+                                ProtRecord = SeqRecord(ProtSeq,
+                                                        id=f"{seq_id}|ORF{ORF_i}.{orf_idx}",
+                                                        name=f"{seq_id}|ORF{ORF_i}.{orf_idx}",
+                                                        description="~",
+                                                        annotations={'taxonomy': taxonomy_annots})
+                                ProtList.append(ProtRecord)
+                                if call_locs:
+                                    ProtIDList.append(
+                                        f"{seq_id}|ORF{ORF_i}.{orf_idx}|START{loc_list[idx]}")
+                                else:
+                                    ProtIDList.append(
+                                        f"{seq_id}|ORF{ORF_i}.{orf_idx}")
+
                     else:
-                        ProtIDList.append(
-                            f"{seq_id}|ORF{ORF_i}")
+                        ProtRecord = SeqRecord(ProtSeq,
+                                                id=f"{seq_id}|ORF{ORF_i}.0",
+                                                name=f"{seq_id}|ORF{ORF_i}.0",
+                                                description="~",
+                                                annotations={'taxonomy': taxonomy_annots})
+                        ProtList.append(ProtRecord)
+                        if call_locs:
+                            ProtIDList.append(
+                                f"{seq_id}|ORF{ORF_i}.0|START{loc_list[idx]}")
+                        else:
+                            ProtIDList.append(
+                                f"{seq_id}|ORF{ORF_i}.0")
                     ORF_i += 1
 
+                    # if call_locs:
+                    #     ProtIDList.append(
+                    #         f"{seq_id}|ORF{ORF_i}|START{loc_list[idx]}|DOOBLY{frame}")
+                    # else:
+                    #     ProtIDList.append(
+                    #         f"{seq_id}|ORF{ORF_i}|DOOBLY{frame}")
+                    # ORF_i += 1
+
+                    # RM TODO 1704 delete non-dominant frame orfs
+    #                 if not frame in best_frame_finder.keys():
+    #                     best_frame_finder[frame] = []
+    #                 best_frame_finder[frame].append([ORF_i, len(ProtSeq)])
+    #     if len(best_frame_finder.keys()) > 1:
+    #         frame_totals = {}
+    #         for frame in best_frame_finder.keys():
+    #             total_orfs_len = 0
+    #             for orf in best_frame_finder[frame]:
+    #                 total_orfs_len += orf[1]
+    #             frame_totals[frame] = total_orfs_len
+    #         best_frame = max(frame_totals)
+
+    #         del_idxs = []
+    #         for idx, prot in enumerate(ProtIDList):
+    #             if f"DOOBLY{best_frame}" not in prot:
+    #                 del_idxs.append(idx)
+
+    #         for idx in sorted(del_idxs, reverse=True):
+    #             del ProtList[idx]
+    #             del ProtIDList[idx]
+
+    # for idx, name in enumerate(ProtIDList):
+    #     ProtIDList[idx] = re.sub(r"\|DOOBLY[0-9]{1}","",name)
+    # if seq_id == "MW423802": breakpoint()
     return ProtList, ProtIDList, raw_nas

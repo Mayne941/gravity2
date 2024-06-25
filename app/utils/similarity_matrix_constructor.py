@@ -2,17 +2,19 @@ import numpy as np
 
 from app.utils.stdout_utils import clean_stdout
 from app.utils.dcor import dcor
+from app.utils.error_handlers import raise_gravity_error
 
-def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocationTable, pphmm_neighbourhood_weight, pphmm_signature_score_threshold, SimilarityMeasurementScheme="PG", p=1.0, fnames=False):
+def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocationTable, SPRSignatureTable, pphmm_neighbourhood_weight, pphmm_signature_score_threshold, SimilarityMeasurementScheme="PG", p=1.0, fnames=False):
     '''Construct similarity matrix according to specified scheme and p value'''
-    if SimilarityMeasurementScheme not in ["P", "G", "L", "PG", "PL"]:
-        return "'SimilarityMeasurementScheme' should be one of the following: 'P', 'G', 'L', 'PG', 'PL'."
+    # if SimilarityMeasurementScheme not in ["P", "G", "L", "PG", "PL", "R", "RG", "PR"]: # TODO < Deprecate, not needed now the API does typing
+    #     raise_gravity_error("'SimilarityMeasurementScheme' should be one of the following: 'P', 'G', 'L', 'PG', 'PL', 'R', 'RG', 'PR'.")
     N_Viruses = PPHMMSignatureTable.shape[0]
     p = float(p)
 
     PPHMMSignature_GJMat = np.zeros((N_Viruses, N_Viruses))
     GOMSignature_GJMat = np.zeros((N_Viruses, N_Viruses))
     PPHMMLocation_dCorMat = np.zeros((N_Viruses, N_Viruses))
+    SPRSignature_SimMat = SPRSignatureTable
 
     import pandas as pd
     loc_df = pd.read_csv(fnames["PphmmLocs"], index_col=False)
@@ -174,7 +176,6 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
                         GOMSignature_i, GOMSignature_j))/np.sum(np.maximum(GOMSignature_i, GOMSignature_j)) if not np.sum(np.maximum(GOMSignature_i, GOMSignature_j)) == 0 else 0
                     GOMSignature_GJMat[j, i] = GOMSignature_GJMat[i, j]
 
-
                 if "L" in SimilarityMeasurementScheme:
                     PPHMMLocation_i = PPHMMLocationTable[i]
                     PPHMMLocation_j = PPHMMLocationTable[j]
@@ -195,7 +196,7 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
     sim_settings = {
             "P": PPHMMSignature_GJMat,
             "G": GOMSignature_GJMat,
-            "L": PPHMMLocation_dCorMat
+            "L": PPHMMLocation_dCorMat,
         }
     for k,v in sim_settings.items():
         '''Clear NaNs and negative numbers from GJ matrices for each scheme'''
@@ -213,6 +214,12 @@ def SimilarityMat_Constructor(PPHMMSignatureTable, GOMSignatureTable, PPHMMLocat
         SimilarityMat = (PPHMMSignature_GJMat*GOMSignature_GJMat)**0.5
     elif SimilarityMeasurementScheme == "PL":
         SimilarityMat = PPHMMSignature_GJMat*PPHMMLocation_dCorMat
+    elif SimilarityMeasurementScheme == "R":
+        SimilarityMat = SPRSignature_SimMat
+    elif SimilarityMeasurementScheme == "RG":
+        SimilarityMat = (SPRSignature_SimMat*GOMSignature_GJMat)**0.5
+    elif SimilarityMeasurementScheme == "PR":
+        SimilarityMat = (SPRSignature_SimMat*PPHMMSignature_GJMat)**0.5
 
     SimilarityMat[SimilarityMat < 0] = 0
 

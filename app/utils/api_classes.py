@@ -50,7 +50,7 @@ class Data_e2e_unique_fns(BaseModel):
 
 '''PL1'''
 class Data_pl1_unique_params(BaseModel):
-    RemoveSingletonPPHMMs: bool = Query(False,
+    RemoveSingletonPPHMMs: bool = Query(True,
                                         description="Remove singleton PPHMMs from the database if True.")
     N_VirusesOfTheClassToIgnore: int = Field(1, gt=0,
                                              description="When 'RemoveSingletonPPHMMs' == TRUE, singleton PPHMMs are removed from the PPHMM database only if they show similarity to viruses that belong to taxonomic groups with more than NUMBER members.")
@@ -85,7 +85,7 @@ class Data_pl2_unique_params(BaseModel):
 class Data_common_pipeline_params(BaseModel):
     AnnotateIncompleteGenomes: bool = Query(False,
                                             description="Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes.")
-    TaxoGrouping_Header: Literal["Taxonomic grouping", "Family"] = Query('Taxonomic grouping',
+    TaxoGrouping_Header: Literal["Taxonomic grouping", "Family", "Genus"] = Query('Taxonomic grouping',
                                                                          description="The header of the Taxonomic grouping column.")
     genbank_email: str = Query('name@provider.com',
                                description="A valid email address is required to download genbank files.")
@@ -95,7 +95,7 @@ class Data_common_pipeline_params(BaseModel):
                                                        description="Include protein sequences from incomplete genomes to the database if True.")
     Mash_p_val_cutoff: float = Field(0.05,
                                         description="P value threshold below which results in Mash analysis will be ignored.")
-    Mash_sim_score_cutoff: float = Field(0.5,
+    Mash_sim_score_cutoff: float = Field(0.95,
                                               description="Similarity score threshold below which results in Mash analysis will be ignored.")
     ProtClustering_MCLInflation: int = Field(2, gt=0,
                                              description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
@@ -129,8 +129,8 @@ class Data_common_pipeline_params(BaseModel):
                                                              description="Two METHODs for tree summary construction are implemented in GRAViTy. If METHOD = 'sumtrees', SumTrees (Sukumaran, J & MT Holder, 2010, Bioinformatics; https://dendropy.org/programs/sumtrees.html) will be used to summarize non-parameteric bootstrap support for splits on the best estimated dendrogram. The calculation is based on the standard Felsenstein bootstrap method. If METHOD = 'booster', BOOSTER (Lemoine et al., 2018, Nature; https://booster.pasteur.fr/) will be used. With large trees and moderate phylogenetic signal, BOOSTER tends to be more informative than the standard Felsenstein bootstrap method.")
     VirusGrouping: bool = Query(True,
                                 description="Perform virus grouping if True.")
-    SimilarityMeasurementScheme: Literal["P", "G", "L", "PG", "PL"] = Query("PG",
-                                                                            description="Virus similarity measurement SCHEMEs. If SCHEME = 'P', an overall similarity between two viruses is their GJ_P. If SCHEME = 'L', an overall similarity between two viruses is their GJ_L. If SCHEME = 'G', an overall similarity between two viruses is their GJ_G. If SCHEME = 'PG', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_G. If SCHEME = 'PL', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_L.")
+    SimilarityMeasurementScheme: Literal["P", "G", "L", "PG", "PL", "R", "RG", "PR"] = Query("PG",
+                                                                            description="Virus similarity measurement SCHEMEs. If SCHEME = 'P', an overall similarity between two viruses is their GJ_P. If SCHEME = 'L', an overall similarity between two viruses is their GJ_L. If SCHEME = 'G', an overall similarity between two viruses is their GJ_G. If SCHEME = 'PG', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_G. If SCHEME = 'PL', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_L. If SCHEME = 'R', compile on shared normalized shared PPHMM ratio (less sensitive to input data quality; possibly better for very large datasets).")
     Heatmap_DendrogramSupport_Cutoff: float = Field(0.75, ge=0, le=1,
                                                     description="Threshold for the BOOTSTRAP SUPPORT to be shown on the dendrogram on the heatmap.")
     PphmmNeighbourhoodWeight: float = Field(0.0125, ge=0, le=1,

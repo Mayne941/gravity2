@@ -4,12 +4,15 @@ from fastapi.encoders import jsonable_encoder
 
 from app.pipeline_i import Pipeline_I
 from app.pipeline_ii import Pipeline_II
+from app.utils.banner import print_banner
 from app.utils.scrape_vmr import scrape, first_pass_taxon_filter, second_pass
 from app.utils.process_fasta import fasta_to_genbank, combine_segments
 from app.utils.end_to_end_entrypoint import split_payloads_for_e2e
 from app.utils.api_classes import (Pipeline_i_data, Pipeline_ii_data, Endp_data_scrape_data,
                                    Endp_data_first_pass_taxon_filter, Endp_data_second_pass_filter,
                                    Endp_data_fasta_to_gb, CombineGenomeSegs, E2e_data)
+
+print_banner()
 
 description = """
     Genome Relationships Applied to Virus Taxonomy is a software framework for identifying and classifying viruses, based on analysis of entire genomes.
@@ -80,6 +83,25 @@ async def end_to_end(payload: E2e_data):
     run_end_to_end(payload)
     return True
 
+@app.post("/pipeline_i_programmatic/", tags=["Dev Utilities"])
+async def end_to_end_pr(payload: Pipeline_i_data):
+    import time
+    st = time.time()
+    payload = process_json(payload)
+    run_pipeline_i_full(payload)
+    t = time.time() - st
+
+    import numpy as np
+    with open(f'{payload["ExpDir"]}/output/ref_seqs.fasta', "r") as f: seqs = f.readlines()
+    seqlen = np.mean([len(i) for i in seqs if not i[0] == ">"])
+    with open(f'{payload["ExpDir"]}/BENCHMARKING.txt', "w") as f:
+        f.write(f"Time for end-to-end: {t}")
+        f.write(f"Mean seq len: {seqlen}")
+    print(f"Time for end-to-end: {time.time() - st}")
+
+    return True
+
+
 def run_end_to_end(payload):
     import time
     st = time.time()
@@ -87,9 +109,21 @@ def run_end_to_end(payload):
     if not payload["SkipFirstPass"]:
         run_pipeline_i_full(payload_fp_pl1)
         run_pipeline_ii_full(payload_fp_pl2)
-    run_pipeline_i_full(payload_sp_pl1, refresh_genbank=True)
+    run_pipeline_i_full(payload_sp_pl1, refresh_genbank=True) ############
     run_pipeline_ii_full(payload_sp_pl2, refresh_genbank=True)
+
+    ## RM < TODO BENCHMARKING FOR PAPER
+    import numpy as np
+    with open(f'{payload_sp_pl2["ExpDir_Pl1"]}/output/ref_seqs.fasta', "r") as f: refs = f.readlines()
+    with open(f'{payload_sp_pl2["ExpDir_Pl1"].replace("pipeline_1","pipeline_2")}/output/ref_seqs.fasta', "r") as f: ucfs = f.readlines()
+    seqs = refs + ucfs
+    seqlen = np.mean([len(i) for i in seqs if not i[0] == ">"])
+
+    with open(f'{payload_sp_pl2["ExpDir_Pl1"].replace("pipeline_1", "pipeline_2")}/BENCHMARKING.txt', "w") as f:
+        f.write(f"Time for end-to-end: {time.time() - st}")
+        f.write(f"Mean seq len: {seqlen}")
     print(f"Time for end-to-end: {time.time() - st}")
+    ##
 
 
 '''PL1 Entrypoints'''

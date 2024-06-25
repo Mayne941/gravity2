@@ -79,8 +79,8 @@ class Pipeline_I:
             payload=self.options,
             ExpDir=self.options['ExpDir'],
         )
-        ghm.main()
-        self.mutual_info_calculator()
+        ghm.main() # RM < TODO DISABLED FOR TEST
+        # self.mutual_info_calculator()
 
     @timing
     def mutual_info_calculator(self):

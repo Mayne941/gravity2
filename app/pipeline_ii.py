@@ -44,7 +44,7 @@ class Pipeline_II:
             is_secondpass=True
         )
         rgdt.entrypoint()
-        self.pphmmdb_construction() #################################################
+        self.pphmmdb_construction()
 
     @timing
     def pphmmdb_construction(self):

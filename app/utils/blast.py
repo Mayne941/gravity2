@@ -5,18 +5,20 @@ import pandas as pd
 
 from app.utils.stdout_utils import clean_stdout, progress_msg
 from app.utils.shell_cmds import shell
+from app.utils.error_handlers import raise_gravity_warning, raise_gravity_error
 
 def blastp_analysis(ProtList, fnames, payload):
     '''6/10: Perform ALL-VERSUS-ALL BLASTp analysis'''
+    raise_gravity_warning("No similar matches were found using Mash. Entering failover with a less sensitive search method (BLASTp)...")
     progress_msg("Performing ALL-VERSUS-ALL BLASTp analysis")
-    progress_msg("Building BLASTp DB")
     with open(fnames['MashSubjectFile'], "w") as BLASTSubject_txt:
         SeqIO.write(ProtList, BLASTSubject_txt, "fasta")
     shell(f"makeblastdb -in {fnames['MashSubjectFile']} -dbtype prot", "PPHMMDB Construction: make BLASTp db")
 
     BitScoreMat, SeenPair, SeenPair_i, N_ProtSeqs = [
         ], {}, 0, len(ProtList)
-    for ProtSeq_i in alive_it(range(N_ProtSeqs)):
+    for ProtSeq_i in alive_it(range(N_ProtSeqs)):#############
+    # for ProtSeq_i in range(N_ProtSeqs):
         '''BLAST query fasta file'''
         BLASTQuery = ProtList[ProtSeq_i]
         with open(fnames['MashQueryFile'], "w") as BLASTQuery_txt: _ = SeqIO.write(BLASTQuery, BLASTQuery_txt, "fasta")
@@ -29,7 +31,7 @@ def blastp_analysis(ProtList, fnames, payload):
         try:
             blast_df = pd.read_csv(mash_fname, sep="\t", names=["qseqid", "sseqid", "pident", "qcovs", "qlen", "slen", "evalue", "bitscore"])
         except Exception as e:
-            raise FileNotFoundError(f"Could not open BLASTp output with exception: {e}")
+            raise raise_gravity_error(f"Could not open BLASTp output with exception: {e}")
 
         if blast_df.empty:
             '''If no hits in sequence, continue'''
@@ -39,27 +41,40 @@ def blastp_analysis(ProtList, fnames, payload):
         blast_iter = blast_df.to_dict(orient="records")
         for i in blast_iter:
             pair = ", ".join(sorted([i["qseqid"], i["sseqid"]]))
-            if ((i["qseqid"] != i["sseqid"]) and (i["pident"] >= 50)
-                and (i["qcovs"] >= 75)
-                and ((i["qcovs"]*i["qlen"]/i["slen"]) >= 75)):
-                '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
-                if pair in SeenPair:
-                    '''If the pair has already been seen...'''
-                    if i["bitscore"] > BitScoreMat[SeenPair[pair]][2]:
-                        '''...and if the new bitscore is higher'''
-                        BitScoreMat[SeenPair[pair]][2] = i["bitscore"]
-                else:
-                    SeenPair[pair] = SeenPair_i
-                    BitScoreMat.append(
-                        [pair.split(", ")[0], pair.split(", ")[1], i["bitscore"]])
-                    SeenPair_i += 1
-    clean_stdout()
 
-    BitScoreMat = np.array(BitScoreMat)
-    '''Save protein-protein similarity scores (BLASTp bit scores)'''
-    np.savetxt(fname=fnames['MashSimFile'],
-                X=BitScoreMat,
-                fmt='%s',
-                delimiter="\t",
-                header="SeqID_I\tSeqID_II\tBit score"
-                )
+            # if i["slen"] / i["qlen"] < 0.6 and i["slen"] / i["qlen"] > 0.10: # TODO PUT IN SEPARATE LOGIC FOR V DIFF LEN ORFS
+            if min(i["slen"],i["qlen"]) / max(i["slen"],i["qlen"]) < 0.6 and i["slen"] / i["qlen"] > 0.10: # TODO PUT IN SEPARATE LOGIC FOR V DIFF LEN ORFS
+
+                if ((i["qseqid"] != i["sseqid"]) and
+                    # ((i["qcovs"]*i["qlen"]/i["slen"]) >= 30)):
+                    ((i["pident"]*i["qlen"]/i["slen"]) >= 30)): # WAS 60
+                    # ((i["qcovs"]/i["pident"]*i["qlen"]/i["slen"]) >= 0.5)): # TODO THIS WORKED BUT WAS GREEDY
+
+                    if pair in SeenPair:
+                        '''If the pair has already been seen...'''
+                        if i["bitscore"] > BitScoreMat[SeenPair[pair]][2]:
+                            '''...and if the new bitscore is higher'''
+                            BitScoreMat[SeenPair[pair]][2] = i["bitscore"]
+                    else:
+                        SeenPair[pair] = SeenPair_i
+                        BitScoreMat.append(
+                            [pair.split(", ")[0], pair.split(", ")[1], i["bitscore"]])
+                        SeenPair_i += 1
+            else:
+                if ((i["qseqid"] != i["sseqid"]) and
+                    (i["pident"] >= 50) and  # was 50 / 70
+                    (i["qcovs"] >= 75)       # was 75 / 90
+                    and ((i["qcovs"]*i["qlen"]/i["slen"]) >= 75)): # was 75 / 95
+                    '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
+                    if pair in SeenPair:
+                        '''If the pair has already been seen...'''
+                        if i["bitscore"] > BitScoreMat[SeenPair[pair]][2]:
+                            '''...and if the new bitscore is higher'''
+                            BitScoreMat[SeenPair[pair]][2] = i["bitscore"]
+                    else:
+                        SeenPair[pair] = SeenPair_i
+                        BitScoreMat.append(
+                            [pair.split(", ")[0], pair.split(", ")[1], i["bitscore"]])
+                        SeenPair_i += 1
+    clean_stdout()
+    return np.array(BitScoreMat)

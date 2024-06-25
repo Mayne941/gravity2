@@ -74,27 +74,27 @@ def get_hmap_params(n_viruses, n_pphmms=99, is_square=True):
     hmap_params['linewidth_major'] = 0.4
     hmap_params['linewidth_minor'] = 0.2
 
-    if n_viruses < 20:
-        hmap_params['FontSize'] = 10
+    if n_viruses < 100:
+        hmap_params['FontSize'] = 14
 
-    elif n_viruses >= 200:
+    elif n_viruses >= 200 and n_viruses <400:
         '''Reduce draw parameter size if large n'''
         hmap_params['FontSize'] = hmap_params['FontSize']/2
         hmap_params['linewidth_major'] = hmap_params['linewidth_major']/2
         hmap_params['linewidth_minor'] = hmap_params['linewidth_minor']/2
-        hmap_params['dpi']=hmap_params['dpi']*1.5
+        # hmap_params['dpi']=hmap_params['dpi']*1.5
 
-    elif n_viruses >= 400:
-        hmap_params['FontSize'] = hmap_params['FontSize']/4
+    elif n_viruses >= 400 and n_viruses <600:
+        hmap_params['FontSize'] = hmap_params['FontSize']/8
         hmap_params['linewidth_major'] = hmap_params['linewidth_major']/4
         hmap_params['linewidth_minor'] = hmap_params['linewidth_minor']/4
-        hmap_params['dpi']=hmap_params['dpi']*3
+        # hmap_params['dpi']=hmap_params['dpi']*1.5 ## RM TODO << FLAVI SET IS LESS THAN 600!!
 
     elif n_viruses >= 600:
-        hmap_params['FontSize'] = 1
-        hmap_params['linewidth_major'] = hmap_params['linewidth_major']/8
-        hmap_params['linewidth_minor'] = hmap_params['linewidth_minor']/8
-        hmap_params['dpi']=hmap_params['dpi']*3
+        hmap_params['FontSize'] = 0.5
+        hmap_params['linewidth_major'] = hmap_params['linewidth_major']/10
+        hmap_params['linewidth_minor'] = hmap_params['linewidth_minor']/10
+        # hmap_params['dpi']=hmap_params['dpi']*1.5
         hmap_params['Heatmap_width'] = float(24)
 
     hmap_params['Fig_width'] = hmap_params['Outer_margin'] + hmap_params['Dendrogram_width'] + hmap_params['Dendrogram_Heatmap_gap'] + \
@@ -177,11 +177,11 @@ def construct_hmap_lines(ax_Heatmap, len_x, LineList_major, LineList_minor, hmap
 
     ax_Heatmap			.set_xticks(TickLocList)
     ax_Heatmap			.set_xticklabels(
-        ClassLabelList_x, rotation=90, size=hmap_params['FontSize'])
+        ClassLabelList_x, rotation=90, fontsize=hmap_params['FontSize'])
 
     ax_Heatmap			.set_yticks(TickLocList)
     ax_Heatmap			.set_yticklabels(
-        ClassLabelList_y, rotation=0, size=hmap_params['FontSize'])
+        ClassLabelList_y, rotation=0, fontsize=hmap_params['FontSize'])
 
     ax_Heatmap			.tick_params(top=True,
                             bottom=False,

@@ -96,45 +96,111 @@ def shared_norm_pphmm_ratio(label_order, fnames, labels) -> None:
     # build_hm(shared_pphmms_ratio, fnames, labels, "norm")
     return shared_pphmms_ratio
 
+def assemble_fragments(seqs):
+    '''Find seqs with duplicate names'''
+    seen, dupes = {}, {}
+    for idx, val in enumerate(seqs):
+        if val[0] == ">":
+            if not val in seen.keys():
+                seen[val] = idx
+            else:
+                if not val in dupes.keys():
+                    dupes[val] = [seen[val], idx]
+                else:
+                    dupes[val].append(idx)
+
+    '''Assemble lengths of fragments'''
+    assembled_lens = {}
+    assembled_seqs = {}
+    for fragment in dupes.keys():
+        composite_len = 0
+        composite_seq = ""
+        for idx in dupes[fragment]:
+            composite_len += len(seqs[idx+1].replace("\n",""))
+            composite_seq += seqs[idx+1].replace("\n","")
+        assembled_lens[fragment] = composite_len
+        assembled_seqs[fragment] = composite_seq
+
+    '''Build dict of all lengths'''
+    seq_lens = {}
+    seq_seqs = {}
+    for idx, seq in enumerate(seqs):
+        if seq[0] == ">":
+            if not seq in seq_lens.keys():
+                seq_lens[seq] = len(seqs[idx+1].replace("\n",""))
+                seq_seqs[seq] = seqs[idx+1].replace("\n","")
+            else:
+                seq_lens[seq] = assembled_lens[seq]
+                seq_seqs[seq] = assembled_seqs[seq]
+
+    return [i for i in seq_lens.values()], [i for i in seq_seqs.values()]
+
 def get_dist_data(fnames, label_order):
     loc_df = pd.read_csv(fnames["PphmmLocs"], index_col=False)
     trim_df = loc_df.iloc[:,1:]
     trim_df = trim_df.apply(pd.to_numeric)
     '''Replace non-hits with NaN so as to not mess up mean calculations'''
     trim_df = trim_df.replace(0, np.nan)
-    # means = trim_df.mean().to_list()
     means = np.nanmedian(trim_df, axis=0)
     means_indices = np.argsort(means)
+    '''Get refseqs to measure lengths, for normalising profile pos on graph (assumes file is in experiment's root)'''
+    with open(fnames["RefSeqFile"], "r") as f:
+        seq_lens, seq_seqs = assemble_fragments(f.readlines())
+    '''If PL2, load in PL1 seq lens and mix with PL2'''
+    if len(seq_lens) != loc_df.shape[0]: # TODO < DEPRECATED - OLD 2 PL SYSTEM ASSUMED UCF AT END
+        with open(fnames["RefSeqFile"].replace("pipeline_2", "pipeline_1"), "r") as f: ref_seq_lens, ref_seq_seqs = assemble_fragments(f.readlines())
+        seq_lens = ref_seq_lens + seq_lens
+        seq_seqs = ref_seq_seqs + seq_seqs
 
     all_dists = []
     for row in np.array(trim_df):
         dists = []
         for i in range(row.shape[0]):
-            # dists.append(row[i] - means[i] if not row[i] == np.nan else np.nan) # nan for blank squares # TODO HOW IT WAS 02/02/24
             dists.append(row[i] if not row[i] == np.nan else np.nan) # nan for blank squares
         all_dists.append(dists)
     '''Rearrange matrix X to PPHMM loc order and Y to match GRAViTy heatmap (i.e. calculated tree)'''
     distance_arr = np.array(all_dists).T[means_indices].T[label_order]
 
     ROUNDING = 2
+    '''Distance from mean location graph (PPHMM loc distances)'''
     cscale = np.round(np.array(means)[means_indices], ROUNDING)
-    loc_dist_frm_mean_arr = np.copy(distance_arr)
+    loc_dist_frm_mean_arr = np.copy(distance_arr) # TODO < Why isn't this reindexed?
     for row in loc_dist_frm_mean_arr:
         row_tot = np.nanmax(row) #new
         for idx, val in enumerate(row):
             if not np.isnan(val):
                 row[idx] = round((cscale[idx] + val) / row_tot, ROUNDING)
 
-
-    discrete_dist_arr = np.copy(distance_arr)
-    for row in discrete_dist_arr:
-        row_tot = np.nanmax(row)
+    # '''Mean location graph (PPHMM locations)'''
+    # discrete_dist_arr = np.copy(distance_arr)
+    # for row in discrete_dist_arr:
+    #     row_tot = np.nanmax(row)
+    #     for idx, val in enumerate(row):
+    #         if not np.isnan(val):
+    #             row[idx] = round(val / row_tot, ROUNDING)
+    '''Mean location graph (PPHMM locations)'''
+    discrete_dist_arr = np.array(all_dists)#[label_order]
+    for row_idx, row in enumerate(discrete_dist_arr):
+        # row_tot = np.nanmax(row)
+        row_tot = seq_lens[row_idx]
         for idx, val in enumerate(row):
             if not np.isnan(val):
-                # row[idx] = round(cscale[idx] + val, ROUNDING) # TODO HOW IT WAS 02/02/24
-                row[idx] = round(val / row_tot, ROUNDING)
+                vals = [val, row_tot]
+                # row[idx] = round(val / row_tot, ROUNDING) # RM < TODO IN PROGRESS 1106 cf, ln 177 presumably it's sml/lrg?!
+                row[idx] = round(min(vals)/max(vals), ROUNDING)
+                # if row[idx] > 1 : breakpoint() # RM < TODO TEST
 
-    return loc_dist_frm_mean_arr, means_indices, discrete_dist_arr
+    '''Sort X axis according to median normalised position'''
+    row_medians_indices = np.argsort(np.nanmedian(discrete_dist_arr, axis=0))
+    discrete_dist_arr_sorted = discrete_dist_arr.T[row_medians_indices].T[label_order]
+
+    '''Save sorted distance matrix for PPHMM retrieval tool'''
+    th = pd.DataFrame(discrete_dist_arr_sorted)
+    th.index = loc_df["Virus name"]
+    th["len"] = seq_lens
+    th["seq"] = seq_seqs
+    th.to_csv(f"{fnames['ExpDir']}/output/sorted_pphmm_loc_table.csv")
+    return loc_dist_frm_mean_arr, means_indices, discrete_dist_arr_sorted
 
 def pphmm_loc_distances(fnames, pphmm_names, label_order, labels):
     '''Reindex output df by mean position of PPHMM (NOT distance from mean)'''
@@ -254,8 +320,6 @@ def supplementary_pphmm_heatmaps(pl1_ref_annotations, TaxoLabelList_AllVirus, N_
                                             list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:]))))),
                                             data
                                             )
-        # n = 500 # TODO test, custom labels for v large dna graphs
-        # [l.set_visible(False) for (i,l) in enumerate(ax_Heatmap.xaxis.get_ticklabels()) if i % n != 0]
 
     '''Selectively colour tick labels red if a UCF sample'''
     [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
