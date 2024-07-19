@@ -62,9 +62,9 @@ def blastp_analysis(ProtList, fnames, payload):
                         SeenPair_i += 1
             else:
                 if ((i["qseqid"] != i["sseqid"]) and
-                    (i["pident"] >= 50) and  # was 50 / 70
-                    (i["qcovs"] >= 75)       # was 75 / 90
-                    and ((i["qcovs"]*i["qlen"]/i["slen"]) >= 75)): # was 75 / 95
+                    (i["pident"] >= 70) and  # was 50 / 70
+                    (i["qcovs"] >= 90)       # was 75 / 90
+                    and ((i["qcovs"]*i["qlen"]/i["slen"]) >= 95)): # was 75 / 95
                     '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
                     if pair in SeenPair:
                         '''If the pair has already been seen...'''

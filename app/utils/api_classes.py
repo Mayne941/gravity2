@@ -137,6 +137,20 @@ class Data_common_pipeline_params(BaseModel):
                                             description="Apply weighting to protein profile scores where multiple, adjacent (i.e. very similar) profiles exist. This can help to resolve minor violations at the sub-family level: sensible range is 0-0.05.")
     PphmmSigScoreThreshold: int = Field(0,
                                         description="Disregard profiles where signature scores are less than this threshold. This can help to resolve minor violations at the sub-family level: sensible range is 0-300.")
+    UseBlast: bool = Field(False,
+                           description="If 'false', use MASH for initial ORF grouping, if 'true' use BLASTp. Mash is quicker and will more easily discriminate between similar sequences.")
+    NThreads: Union[int, str] = Query('auto',
+                                      description="Specify the number of threads for multi-core processing. Options: integer == this many threads; 'auto' == let GRAViTy choose number of threads; 'hpc' == select when running on a compute cluster (hard codes to 1).")
+    ClustAlnScheme: Literal["local", "global", "auto"] = Query("local",
+                                                               description="After extracting and clustering ORFs, choose Mafft scheme to align them. 'local' = FFT-NS-i scheme (recommended); 'global' = G-INS-i scheme (use to enhance sensitivity for distantly-related genomes); 'auto': let Mafft decide best scheme.")
+
+class DataInputMinimal(BaseModel):
+    GenomeDescTableFile: FilePath = Query('./data/latest_vmr.csv',
+                                          description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
+    ExpDir: str = Query('./output/myexperiment_pipeline_1',
+                           description="Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")
+    GenomeSeqFile: str = Query('./output/ref_sequences.gb',
+                               description="Full path to the genome sequence GenBank file. If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column")
 
 
 
@@ -163,13 +177,8 @@ class E2e_data(Data_common_pipeline_params, Data_pl1_unique_params, Data_pl2_uni
     '''PL1 (no unique PL2/General)'''
     pass
 
-class Pipeline_i_data(Data_pl1_unique_params, Data_common_pipeline_params):
-    GenomeDescTableFile: FilePath = Query('./data/latest_vmr.csv',
-                                          description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
-    ExpDir: str = Query('./output/myexperiment_pipeline_1',
-                           description="Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")
-    GenomeSeqFile: str = Query('./output/ref_sequences.gb',
-                               description="Full path to the genome sequence GenBank file. If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column")
+class Pipeline_i_data(Data_pl1_unique_params, Data_common_pipeline_params,DataInputMinimal):
+    pass
 
 
 class Pipeline_ii_data(Data_pl2_unique_params, Data_common_pipeline_params):
@@ -184,6 +193,8 @@ class Pipeline_ii_data(Data_pl2_unique_params, Data_common_pipeline_params):
     GenomeSeqFiles_RefVirus: str = Query('output/ref_sequences.gb',
                                          description="Full path(s) to the genome sequence GenBank file(s) of reference viruses. For example: 'path/to/GenBank/ref1, path/to/GenBank/ref2, ...' This cannot be 'None' if UseUcfVirusPPHMMs = True. ")
 
+class Premade_data(DataInputMinimal):
+    pass
 
 '''Deprecated'''
 # class FirstPassBaltimoreFilter(BaseModel):

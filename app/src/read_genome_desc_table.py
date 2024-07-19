@@ -69,7 +69,11 @@ class ReadGenomeDescTable:
         self.SubFamList = df["Subfamily"].tolist()
         self.GenusList = df["Genus"].tolist()
         self.VirusNameList = df["Virus name(s)"].tolist()
-        self.TaxoGroupingList = df[self.payload['TaxoGrouping_Header']].tolist()
+        try:
+            self.TaxoGroupingList = df[self.payload['TaxoGrouping_Header']].tolist()
+        except KeyError:
+            raise_gravity_error(f"You specified to group your input VMR by the column header: {self.payload['TaxoGrouping_Header']}"
+                                f"but GRAViTy couldn't find this column in the file! Please check and amend your TaxoGrouping_Header parameter.")
         try:
             self.SeqStatusList = df["Genome coverage"].tolist()
         except KeyError:

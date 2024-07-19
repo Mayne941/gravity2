@@ -17,7 +17,7 @@ from app.utils.line_count import LineCount
 from app.utils.ordered_set import OrderedSet
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.gomdb_constructor import GOMDB_Constructor
-from app.utils.parallel_gom_sig_generator import GOMSignatureTable_Constructor
+from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
 from app.utils.error_handlers import raise_gravity_error
@@ -48,23 +48,34 @@ class RefVirusAnnotator:
         '''Remove singleton PPHMMs from the PPHMM databases'''
         progress_msg(f"- Determining and removing PPHMMs shared by less than {self.payload['N_VirusesOfTheClassToIgnore']} genomes")
 
-        '''Identify and remove non informative singleton PPHMMs from the database'''
-        N_VirusesPerClass = Counter(self.genomes["TaxoGroupingList"])
-        CandSingletonPPHMM_IndexList = np.where(
-            np.sum(self.PPHMMSignatureTable > 0, axis=0) <= 1)[0]
-        InfoSingletonPPHMM_IndexList = [PPHMM_i for PresentPPHMM_IndexList in [np.where(PPHMMSignature > 0)[0] for PPHMMSignature in self.PPHMMSignatureTable] if set(
-            PresentPPHMM_IndexList).issubset(CandSingletonPPHMM_IndexList) for PPHMM_i in PresentPPHMM_IndexList]
-        CandSingletonPPHMM_IndexList = [
-            PPHMM_i for PPHMM_i in CandSingletonPPHMM_IndexList if PPHMM_i not in InfoSingletonPPHMM_IndexList]
+        # TODO < RM BETTER SINGLETON INDEX FINDER
+        sig_table = pd.DataFrame(self.PPHMMSignatureTable)
+        sig_table_bin = sig_table.applymap(lambda x: 1 if x > 0 else 0)
+        pphmm_usage_counts = sig_table_bin.apply(lambda x: sum(x)).tolist()
         SingletonPPHMM_IndexList = []
-        for PPHMM_i in CandSingletonPPHMM_IndexList:
-            VirusWithTheSingletonPPHMM_i = np.where(
-                self.PPHMMSignatureTable[:, PPHMM_i] != 0)[0]
-            if len(VirusWithTheSingletonPPHMM_i) == 0:
-                SingletonPPHMM_IndexList.append(PPHMM_i)
-            else:
-                if N_VirusesPerClass[self.genomes["TaxoGroupingList"][VirusWithTheSingletonPPHMM_i[0]]] > self.payload['N_VirusesOfTheClassToIgnore']:
-                    SingletonPPHMM_IndexList.append(PPHMM_i)
+        for idx, pphmm_count in enumerate(pphmm_usage_counts):
+            if pphmm_count == 0 or pphmm_count < self.payload['N_VirusesOfTheClassToIgnore']:
+                SingletonPPHMM_IndexList.append(idx)
+        #
+
+        '''Identify and remove non informative singleton PPHMMs from the database'''
+        # N_VirusesPerClass = Counter(self.genomes["TaxoGroupingList"])
+        # CandSingletonPPHMM_IndexList = np.where(
+        #     np.sum(self.PPHMMSignatureTable > 0, axis=0) <= 1)[0]
+        # InfoSingletonPPHMM_IndexList = [PPHMM_i for PresentPPHMM_IndexList in [np.where(PPHMMSignature > 0)[0] for PPHMMSignature in self.PPHMMSignatureTable] if set(
+        #     PresentPPHMM_IndexList).issubset(CandSingletonPPHMM_IndexList) for PPHMM_i in PresentPPHMM_IndexList]
+        # CandSingletonPPHMM_IndexList = [
+        #     PPHMM_i for PPHMM_i in CandSingletonPPHMM_IndexList if PPHMM_i not in InfoSingletonPPHMM_IndexList]
+        # SingletonPPHMM_IndexList = []
+        # for PPHMM_i in CandSingletonPPHMM_IndexList:
+        #     VirusWithTheSingletonPPHMM_i = np.where(
+        #         self.PPHMMSignatureTable[:, PPHMM_i] != 0)[0]
+        #     if len(VirusWithTheSingletonPPHMM_i) == 0:
+        #         '''If zero hits''' # TODO Why would there be zero hits?
+        #         SingletonPPHMM_IndexList.append(PPHMM_i)
+        #     else:
+        #         if N_VirusesPerClass[self.genomes["TaxoGroupingList"][VirusWithTheSingletonPPHMM_i[0]]] > self.payload['N_VirusesOfTheClassToIgnore']:
+        #             SingletonPPHMM_IndexList.append(PPHMM_i)
 
         SelectedPPHMM_IndexList = np.array(
             list(range(self.PPHMMSignatureTable.shape[1])))

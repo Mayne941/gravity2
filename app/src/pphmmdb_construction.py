@@ -154,11 +154,12 @@ class PPHMMDBConstruction:
         progress_msg("Creating Mash sketches")
         SeenPair, SeenPair_i, MashMatrix, N_ProtSeqs = {}, 0, [], len(ProtList)
 
-        UseBlast = True # TODO: PARAMETERISE BLAST
-        if UseBlast:
+        if self.payload["UseBlast"]:
+            '''Use BLASTp instead of Mash, if user specifies'''
             MashMatrix = blastp_analysis(ProtList, self.fnames, self.payload)
 
         else:
+            '''Do Mash'''
             out = shell(f"mash-Linux64-v2.3/mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashSubjectFile']}", ret_output=True) # TODO PARAMETERISE MASH CALL
             error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), initial sketch)")
             for ProtSeq_i in alive_it(range(N_ProtSeqs)):
@@ -263,13 +264,12 @@ class PPHMMDBConstruction:
                     [UnAlnClusterTXT.write(f">{i.name} {i.description}\n{str(i.seq).replace('X','')}\n") for i in HitList]
                 temp_aln_fname = f"{self.fnames['ClustersDir']}/temp.fasta"
 
-                ALN_SCHEME = "auto" # TODO < PARAMETERISE
 
                 if len(HitList) > 1:
                     '''Align cluster using Mafft'''
-                    if ALN_SCHEME == "global":
+                    if self.payload["ClustAlnScheme"] == "global":
                         option = "--globalpair --maxiterate 1000"
-                    elif ALN_SCHEME == "local":
+                    elif self.payload["ClustAlnScheme"] == "local":
                         option = "--localpair --maxiterate 1000"
                     else:
                         option = "--auto"

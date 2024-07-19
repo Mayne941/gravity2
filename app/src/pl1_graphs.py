@@ -145,7 +145,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                               VirusNameList=self.genomes["VirusNameList"]
                                               )
 
-        ######## RM TODO TEST
+        ######## RM TODO TEST BOOSTER ISSUES WITH VirusDendrogram.get_terminals()[Virus_i].confidence
         for Virus_i in range(N_Viruses):
             Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
             if not "Query" in str(Taxolabel):
