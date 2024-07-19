@@ -47,19 +47,10 @@ class Data_e2e_unique_fns(BaseModel):
                                           description="FIRST PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
     GenomeDescTableFile_SecondPass: FilePath = Query('./data/latest_vmr_secondpass.csv',
                                           description="SECOND PASS PIPELINE 1: Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
-    TaxoGroupingFile_FirstPass: Union[FilePath, None] = Query(None,
-                                                    description="FIRST PASS PIPELINE 1: It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
-    TaxoGroupingFile_SecondPass: Union[FilePath, None] = Query(None,
-                                                    description="SECOND PASS PIPELINE 1: It is possible that the user might want to associate different viruses with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
-
 
 '''PL1'''
 class Data_pl1_unique_params(BaseModel):
-    TaxoGrouping_Header: Literal["Taxonomic grouping", "Family"] = Query('Taxonomic grouping',
-                                                                         description="The header of the Taxonomic grouping column.")
-    AnnotateIncompleteGenomes: bool = Query(False,
-                                            description="Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes.")
-    RemoveSingletonPPHMMs: bool = Query(False,
+    RemoveSingletonPPHMMs: bool = Query(True,
                                         description="Remove singleton PPHMMs from the database if True.")
     N_VirusesOfTheClassToIgnore: int = Field(1, gt=0,
                                              description="When 'RemoveSingletonPPHMMs' == TRUE, singleton PPHMMs are removed from the PPHMM database only if they show similarity to viruses that belong to taxonomic groups with more than NUMBER members.")
@@ -92,6 +83,10 @@ class Data_pl2_unique_params(BaseModel):
 
 '''General pipeline'''
 class Data_common_pipeline_params(BaseModel):
+    AnnotateIncompleteGenomes: bool = Query(False,
+                                            description="Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes.")
+    TaxoGrouping_Header: Literal["Taxonomic grouping", "Family", "Genus"] = Query('Taxonomic grouping',
+                                                                         description="The header of the Taxonomic grouping column.")
     genbank_email: str = Query('name@provider.com',
                                description="A valid email address is required to download genbank files.")
     ProteinLength_Cutoff: int = Field(100, gt=0,
@@ -100,7 +95,7 @@ class Data_common_pipeline_params(BaseModel):
                                                        description="Include protein sequences from incomplete genomes to the database if True.")
     Mash_p_val_cutoff: float = Field(0.05,
                                         description="P value threshold below which results in Mash analysis will be ignored.")
-    Mash_sim_score_cutoff: float = Field(0.5,
+    Mash_sim_score_cutoff: float = Field(0.95,
                                               description="Similarity score threshold below which results in Mash analysis will be ignored.")
     ProtClustering_MCLInflation: int = Field(2, gt=0,
                                              description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
@@ -134,10 +129,29 @@ class Data_common_pipeline_params(BaseModel):
                                                              description="Two METHODs for tree summary construction are implemented in GRAViTy. If METHOD = 'sumtrees', SumTrees (Sukumaran, J & MT Holder, 2010, Bioinformatics; https://dendropy.org/programs/sumtrees.html) will be used to summarize non-parameteric bootstrap support for splits on the best estimated dendrogram. The calculation is based on the standard Felsenstein bootstrap method. If METHOD = 'booster', BOOSTER (Lemoine et al., 2018, Nature; https://booster.pasteur.fr/) will be used. With large trees and moderate phylogenetic signal, BOOSTER tends to be more informative than the standard Felsenstein bootstrap method.")
     VirusGrouping: bool = Query(True,
                                 description="Perform virus grouping if True.")
-    SimilarityMeasurementScheme: Literal["P", "G", "L", "PG", "PL"] = Query("PG",
-                                                                            description="Virus similarity measurement SCHEMEs. If SCHEME = 'P', an overall similarity between two viruses is their GJ_P. If SCHEME = 'L', an overall similarity between two viruses is their GJ_L. If SCHEME = 'G', an overall similarity between two viruses is their GJ_G. If SCHEME = 'PG', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_G. If SCHEME = 'PL', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_L.")
+    SimilarityMeasurementScheme: Literal["P", "G", "L", "PG", "PL", "R", "RG", "PR"] = Query("PG",
+                                                                            description="Virus similarity measurement SCHEMEs. If SCHEME = 'P', an overall similarity between two viruses is their GJ_P. If SCHEME = 'L', an overall similarity between two viruses is their GJ_L. If SCHEME = 'G', an overall similarity between two viruses is their GJ_G. If SCHEME = 'PG', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_G. If SCHEME = 'PL', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_L. If SCHEME = 'R', compile on shared normalized shared PPHMM ratio (less sensitive to input data quality; possibly better for very large datasets).")
     Heatmap_DendrogramSupport_Cutoff: float = Field(0.75, ge=0, le=1,
                                                     description="Threshold for the BOOTSTRAP SUPPORT to be shown on the dendrogram on the heatmap.")
+    PphmmNeighbourhoodWeight: float = Field(0.0125, ge=0, le=1,
+                                            description="Apply weighting to protein profile scores where multiple, adjacent (i.e. very similar) profiles exist. This can help to resolve minor violations at the sub-family level: sensible range is 0-0.05.")
+    PphmmSigScoreThreshold: int = Field(0,
+                                        description="Disregard profiles where signature scores are less than this threshold. This can help to resolve minor violations at the sub-family level: sensible range is 0-300.")
+    UseBlast: bool = Field(False,
+                           description="If 'false', use MASH for initial ORF grouping, if 'true' use BLASTp. Mash is quicker and will more easily discriminate between similar sequences.")
+    NThreads: Union[int, str] = Query('auto',
+                                      description="Specify the number of threads for multi-core processing. Options: integer == this many threads; 'auto' == let GRAViTy choose number of threads; 'hpc' == select when running on a compute cluster (hard codes to 1).")
+    ClustAlnScheme: Literal["local", "global", "auto"] = Query("local",
+                                                               description="After extracting and clustering ORFs, choose Mafft scheme to align them. 'local' = FFT-NS-i scheme (recommended); 'global' = G-INS-i scheme (use to enhance sensitivity for distantly-related genomes); 'auto': let Mafft decide best scheme.")
+
+class DataInputMinimal(BaseModel):
+    GenomeDescTableFile: FilePath = Query('./data/latest_vmr.csv',
+                                          description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
+    ExpDir: str = Query('./output/myexperiment_pipeline_1',
+                           description="Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")
+    GenomeSeqFile: str = Query('./output/ref_sequences.gb',
+                               description="Full path to the genome sequence GenBank file. If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column")
+
 
 
 '''ENDPOINT MODEL COLLECTIONS'''
@@ -163,15 +177,8 @@ class E2e_data(Data_common_pipeline_params, Data_pl1_unique_params, Data_pl2_uni
     '''PL1 (no unique PL2/General)'''
     pass
 
-class Pipeline_i_data(Data_pl1_unique_params, Data_common_pipeline_params):
-    GenomeDescTableFile: FilePath = Query('./data/latest_vmr.csv',
-                                          description="Full path to the Virus Metadata Resource (VMR) tab delimited file, wth headers. VMR can be downloaded using the scrape endpoint.")
-    ExpDir: str = Query('./output/myexperiment_pipeline_1',
-                           description="Full path to the shelve directory, storing GRAViTy outputs. Makes new dir if not exists.")
-    TaxoGroupingFile: Union[FilePath, None] = Query(None,
-                                                    description="If different viruses need to be associated with different taxonomic assignment levels, e.g. family assignments for some viruses, and subfamily or genus assignments for some other viruses, etc. To accomodate this need, the user can either add a column in the VMR file, and use --TaxoGrouping_Header to specify the column (see --TaxoGrouping_Header). Alternatively, the user can provide a file (with no header) that contains a single column of taxonomic groupings for all viruses in the order that appears in the VMR file. The user can specify the full path to the taxonomic grouping file using this options. If this option is used, it will override the one specified by --TaxoGrouping_Header.")
-    GenomeSeqFile: str = Query('./output/ref_sequences.gb',
-                               description="Full path to the genome sequence GenBank file. If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column")
+class Pipeline_i_data(Data_pl1_unique_params, Data_common_pipeline_params,DataInputMinimal):
+    pass
 
 
 class Pipeline_ii_data(Data_pl2_unique_params, Data_common_pipeline_params):
@@ -186,6 +193,8 @@ class Pipeline_ii_data(Data_pl2_unique_params, Data_common_pipeline_params):
     GenomeSeqFiles_RefVirus: str = Query('output/ref_sequences.gb',
                                          description="Full path(s) to the genome sequence GenBank file(s) of reference viruses. For example: 'path/to/GenBank/ref1, path/to/GenBank/ref2, ...' This cannot be 'None' if UseUcfVirusPPHMMs = True. ")
 
+class Premade_data(DataInputMinimal):
+    pass
 
 '''Deprecated'''
 # class FirstPassBaltimoreFilter(BaseModel):

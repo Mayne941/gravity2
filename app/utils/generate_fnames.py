@@ -119,7 +119,7 @@ def generate_virus_classifier_fnames(fnames):
     fnames['HMMER_PPHMMDB_UcfVirus'] = f"{fnames['HMMER_PPHMMDBDir_UcfVirus']}/HMMER_PPHMMDb"
     fnames['VirusDendrogramFile'] = f"{fnames['OutputDir']}/Dendrogram.nwk"
     fnames['DendrogramDist'] = f"{fnames['OutputDir']}/DendrogramDist.nwk"
-    fnames['BootstrappedVirusDendrogramFile'] = f"{fnames['OutputDir']}/BootstrappedDendrogram.nwk"
+    fnames['BootstrappedDendrogramFile'] = f"{fnames['OutputDir']}/BootstrappedDendrogram.nwk"
     fnames['HeatmapWithDendrogramFile'] = f"{fnames['OutputDir']}/GRAViTy_heatmap.pdf"
     fnames['ClassificationResultFile'] = f"{fnames['OutputDir']}/ClassificationResults.txt"
     fnames['VirusGroupingFile'] = f"{fnames['OutputDir']}/VirusGrouping.txt"

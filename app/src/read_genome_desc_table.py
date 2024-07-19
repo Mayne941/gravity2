@@ -1,11 +1,14 @@
 from app.utils.console_messages import section_header
 from app.utils.generate_fnames import generate_file_names
+from app.utils.error_handlers import raise_gravity_error, raise_gravity_warning
 
+import pandas as pd
 import numpy as np
 from collections import Counter
 import os
 import re
 import pickle
+import csv
 
 
 class ReadGenomeDescTable:
@@ -15,7 +18,8 @@ class ReadGenomeDescTable:
                  GenomeDescTableFile,
                  GenomeSeqFile,
                  ExpDir,
-                 RefreshGenbank=False
+                 RefreshGenbank=False,
+                 is_secondpass=False
                  ) -> None:
         self.payload = payload
         self.GenomeDescTableFile = GenomeDescTableFile
@@ -24,79 +28,97 @@ class ReadGenomeDescTable:
         if not os.path.exists(self.fnames["OutputDir"]):
             os.makedirs(self.fnames["OutputDir"])
         self.refresh_genbank = RefreshGenbank
+        self.is_secondpass = is_secondpass
+        self.no_acc_cnt = 1
         self.BaltimoreList, self.OrderList, self.FamilyList, \
             self.SubFamList, self.GenusList, self.VirusNameList, \
             self.SeqIDLists, self.SeqStatusList, self.TaxoGroupingList, \
-            self.TranslTableList, self.DatabaseList, self.VirusIndexList = [], [], [], [],\
-            [], [], [], [],\
-            [], [], [], []
+            self.TranslTableList, self.DatabaseList, self.VirusIndexList,\
+            self.transl_table_errors = [], [], [], [],\
+                [], [], [], [], [], [], [], [], []
 
     def open_table(self) -> None:
         '''Open VMR file and read in relevant data to volatile'''
         print("- Read the GenomeDesc table")
-        with open(self.GenomeDescTableFile, "r") as GenomeDescTable_txt:
-            header_raw = next(GenomeDescTable_txt)
-            header = header_raw.replace("\n", "").replace(
-                "\r", "").replace("\t", "").split(",")
-            Baltimore_i = header.index("Baltimore Group")
-            Order_i = header.index("Order")
-            Family_i = header.index("Family")
-            Subfamily_i = header.index("Subfamily")
-            Genus_i = header.index("Genus")
-            VirusName_i = header.index("Virus name(s)")
-            SeqID_i = header.index("Virus GENBANK accession")
-            SeqStatus_i = header.index("Genome coverage")
-            TranslTable_i = header.index("Genetic code table")
+        try:
+            df = pd.read_csv(self.GenomeDescTableFile, index_col=0)
+        except:
+            raise_gravity_error(f"Failed to read your input VMR-like document (GenomeDescTableFile). Check it's a valid CSV.")
+        df = df.fillna("")
+        crap_pandas = [i for i in df.columns if "Unnamed" in i]
+        for i in crap_pandas:
+            df = df.drop(columns=i)
 
-            if self.payload['TaxoGrouping_Header'] != None:
-                TaxoGrouping_i = header.index(self.payload['TaxoGrouping_Header'])
+        try:
+            df["Virus name(s)"] = df.apply(lambda x: self.get_names(x), axis=1)
+            df["Genetic code table"] = df.apply(lambda x: self.transl_table_check(x), axis=1)
+            df["Virus GENBANK accession"] = df.apply(lambda x: self.get_accession(x), axis=1)
+        except KeyError as e:
+            raise_gravity_error(f"Your input VMR-like document isn't structured appropriately, see documentation for instructions.\nException: {e}")
+
+        self.VirusIndexList = [i for i in range(1, df.shape[0] + 1)]
+        try: # TODO < TIDY THIS
+            self.BaltimoreList = df["Baltimore Group"].tolist()
+        except KeyError:
+            self.BaltimoreList = ["" for i in df["Virus GENBANK accession"].tolist()]
+        try:
+            self.OrderList = df["Order"].tolist()
+        except KeyError:
+            self.OrderList = ["" for i in df["Virus GENBANK accession"].tolist()]
+        self.FamilyList = df["Family"].tolist()
+        self.SubFamList = df["Subfamily"].tolist()
+        self.GenusList = df["Genus"].tolist()
+        self.VirusNameList = df["Virus name(s)"].tolist()
+        try:
+            self.TaxoGroupingList = df[self.payload['TaxoGrouping_Header']].tolist()
+        except KeyError:
+            raise_gravity_error(f"You specified to group your input VMR by the column header: {self.payload['TaxoGrouping_Header']}"
+                                f"but GRAViTy couldn't find this column in the file! Please check and amend your TaxoGrouping_Header parameter.")
+        try:
+            self.SeqStatusList = df["Genome coverage"].tolist()
+        except KeyError:
+            self.SeqStatusList = [1 for i in df["Virus GENBANK accession"].tolist()]
+        self.SeqIDLists = [i.split(", ") for i in df["Virus GENBANK accession"].tolist()]
+        self.TranslTableList = df["Genetic code table"].tolist()
+
+    def get_names(self, row):
+        try:
+            if not self.is_secondpass:
+                if not row["Virus name(s)"]:
+                    row["Virus name(s)"] == ""
+                return re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(
+                    r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
             else:
-                TaxoGrouping_i = header.index("Family")
+                '''If PL2, append virus description to accession ID'''
+                part1 = re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
+                if len(row["Virus isolate designation"]) == 0:
+                    part2 = ""
+                part2 = re.sub(r"[^\w\s]", "", row["Virus isolate designation"][0:39]).replace(" ", "_")
+                if len(row["Virus isolate designation"]) > 40:
+                    part2 += "..."
+                return f'{part1}_{part2}'
+        except Exception as ex:
 
-            for Virus_i, Line in enumerate(GenomeDescTable_txt):
-                Line = Line.replace("\n", "").replace(
-                    "\r", "").replace("\t", "").split(",")
-                if not os.path.isfile(self.GenomeSeqFile) or self.refresh_genbank:
-                    try:
-                        '''Regular exp to extract accession numbers'''
-                        SeqIDList = re.findall(
-                            r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", Line[SeqID_i])
-                    except IndexError as ex:
-                        raise SystemExit(
-                            f"Error parsing VMR: exception {ex}"
-                            f"On line {Line}"
-                            f"Accession ID could not be extracted."
-                            f"GRAViTy terminated."
-                        )
-                else:
-                    '''If we specify the genbank file, don't extract accession IDS and consequently download'''
-                    SeqIDList = []
+            raise_gravity_error(f"At least one line in your input CSV (genome desc table) has empty fields (or fields causing another error): {ex}")
 
-                if SeqIDList != [] or Line[SeqID_i] != "":
-                    '''Ignore record without sequences'''
-                    self.VirusIndexList.append(Virus_i)
-                    self.BaltimoreList.append(Line[Baltimore_i])
-                    self.OrderList.append(Line[Order_i])
-                    self.FamilyList.append(Line[Family_i])
-                    self.SubFamList.append(Line[Subfamily_i])
-                    self.GenusList.append(Line[Genus_i])
-                    self.VirusNameList.append(re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(
-                        r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", Line[VirusName_i])))))
-                    self.TaxoGroupingList.append(Line[TaxoGrouping_i])
-                    self.SeqStatusList.append(Line[SeqStatus_i])
+    def transl_table_check(self, row):
+        if row["Genetic code table"] != 1:
+            if not "complete" in str(row["Genome coverage"]).lower():
+                self.transl_table_errors.append(row["Virus name(s)"])
+            return int(1)
+        else:
+            return int(row["Genetic code table"])
 
-                    if SeqIDList != []:
-                        self.SeqIDLists.append(SeqIDList)
-                    else:
-                        self.SeqIDLists.append([Line[SeqID_i]])
-
-                    try:
-                        self.TranslTableList.append(int(Line[TranslTable_i]))
-                    except ValueError:
-                        print(
-                            f"Genetic code is not specified. GRAViTy will use the standard code for {self.VirusNameList[-1]}")
-                        self.TranslTableList.append(1)
-
+    def get_accession(self, row):
+        try:
+            th = ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", row["Virus GENBANK accession"]))
+            if th == "":
+                raise
+            return ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", row["Virus GENBANK accession"]))
+        except:
+            self.no_acc_cnt += 1
+            raise_gravity_warning(f"No accession number for {row['Virus name(s)']}: this might cause GRAViTy to error later on if you're not providing your own GenBank file!")
+            return f'{row["Virus GENBANK accession"]}' if not row["Virus GENBANK accession"] == "" else f'No_data_{self.no_acc_cnt - 1}'
 
     def update_desc_table(self) -> dict:
         '''Create dictionary in GRAViTy structure for saving to persistent storage'''
@@ -135,16 +157,6 @@ class ReadGenomeDescTable:
         '''Open & parse input VMR (txt) file'''
         self.open_table()
 
-        if self.payload['TaxoGroupingFile'] != None:
-            '''PL1 has option to specify taxonomic grouping level.'''
-            self.TaxoGroupingList = []
-            with open(self.payload['TaxoGroupingFile'], "r") as TaxoGrouping_txt:
-                for TaxoGrouping in TaxoGrouping_txt:
-                    TaxoGrouping = TaxoGrouping.split("\r\n")[0].split("\n")[0]
-                    self.TaxoGroupingList.append(TaxoGrouping)
-            self.TaxoGroupingList = np.array(self.TaxoGroupingList)
-            self.TaxoGroupingList = self.TaxoGroupingList[self.VirusIndexList]
-
         '''Generate rows for output'''
         all_desc_table = {}
         self.BaltimoreList = all_desc_table["BaltimoreList"] = np.array(
@@ -163,15 +175,14 @@ class ReadGenomeDescTable:
 
         SeqIDFlatList = [
             SeqID for SeqIDList in self.SeqIDLists for SeqID in SeqIDList]
-        if len(SeqIDFlatList) != len(set(SeqIDFlatList)):
+        duplicates = [SeqID for SeqID, count in Counter(
+            SeqIDFlatList).items() if count > 1 and not SeqID == ""]
+        if len(duplicates) > 0:
             '''Check if there exist duplicated accession numbers, fail IF TRUE'''
             print("The following accession numbers appear more than once: ")
-            duplicates = [SeqID for SeqID, count in Counter(
-                SeqIDFlatList).items() if count > 1]
-            raise SystemExit(
+            raise_gravity_error(
                 f"Error parsing VMR."
-                f"The following accession numbers appear more than once: {duplicates}"
-                f"GRAViTy terminated."
+                f"The following accession numbers appear more than once and GRAViTy only supports unique entries:\n{duplicates}"
             )
 
         '''Update master data. Arrays are LINKED.'''
@@ -184,6 +195,9 @@ class ReadGenomeDescTable:
             self.TranslTableList)
         self.DatabaseList = all_desc_table["DatabaseList"] = np.array(
             self.DatabaseList)
+
+        if self.no_acc_cnt > 1:
+            raise_gravity_warning(f"{self.no_acc_cnt} genomes specified in your desc file had no accession IDs.")
 
         '''Create ReadGenomeDescTable "all genomes' db'''
         print("- Save variables to ReadGenomeDescTable pickle")

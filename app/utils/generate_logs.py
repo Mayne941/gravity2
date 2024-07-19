@@ -18,7 +18,6 @@ class Log_Generator_Pl1:
                 f"GenomeDescTableFile: {self.options['GenomeDescTableFile']}",
                 f"ExpDir: {self.options['ExpDir']}",
                 f"TaxoGrouping_Header: {self.options['TaxoGrouping_Header']}",
-                f"TaxoGroupingFile: {self.options['TaxoGroupingFile']}",
                 "="*80
                 ]
 
