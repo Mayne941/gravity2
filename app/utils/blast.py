@@ -5,7 +5,7 @@ import pandas as pd
 
 from app.utils.stdout_utils import clean_stdout, progress_msg
 from app.utils.shell_cmds import shell
-from app.utils.error_handlers import raise_gravity_warning, raise_gravity_error
+from app.utils.error_handlers import raise_gravity_warning, raise_gravity_error, error_handler_blast
 
 def blastp_analysis(ProtList, fnames, payload):
     '''6/10: Perform ALL-VERSUS-ALL BLASTp analysis'''
@@ -25,8 +25,9 @@ def blastp_analysis(ProtList, fnames, payload):
         mash_fname = f'{"/".join(fnames["MashOutputFile"].split("/")[:-1])}/mashup_scores.tab'
         '''Perform BLASTp, load output to dataframe'''
         outfmat = '"6 qseqid sseqid pident qcovs qlen slen evalue bitscore"'
-        shell(f'blastp -query {fnames["MashQueryFile"]} -db {fnames["MashSubjectFile"]} -out {mash_fname} -evalue 1E-6 -outfmt {outfmat} -num_alignments 1000000 -num_threads {payload["N_CPUs"]}',
-                f"PPHMMDB Construction: BLASTp (protein ID = {ProtList[ProtSeq_i].id})")
+        out = shell(f'blastp -query {fnames["MashQueryFile"]} -db {fnames["MashSubjectFile"]} -out {mash_fname} -evalue 1E-6 -outfmt {outfmat} -num_alignments 1000000 -num_threads {payload["N_CPUs"]}',
+                ret_output=True)
+        error_handler_blast(out, "BLASTp, PPHMMDB construction")
 
         try:
             blast_df = pd.read_csv(mash_fname, sep="\t", names=["qseqid", "sseqid", "pident", "qcovs", "qlen", "slen", "evalue", "bitscore"])

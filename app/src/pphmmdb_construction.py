@@ -22,7 +22,7 @@ from app.utils.stdout_utils import clean_stdout, progress_msg, warning_msg
 from app.utils.retrieve_pickle import retrieve_genome_vars
 from app.utils.shell_cmds import shell
 from app.utils.mkdirs import mkdir_pphmmdbc
-from app.utils.error_handlers import raise_gravity_error, raise_gravity_warning, error_handler_hmmbuild, error_handle_mafft, error_handler_mash_sketch, error_handler_mash_dist
+from app.utils.error_handlers import raise_gravity_error, raise_gravity_warning, error_handler_hmmbuild, error_handle_mafft, error_handler_mash_sketch, error_handler_mash_dist, error_handler_mcl
 from app.utils.taxo_label_constructor import TaxoLabel_Constructor
 from app.utils.generate_fnames import generate_file_names
 from app.utils.blast import blastp_analysis
@@ -160,7 +160,7 @@ class PPHMMDBConstruction:
 
         else:
             '''Do Mash'''
-            out = shell(f"mash-Linux64-v2.3/mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashSubjectFile']}", ret_output=True) # TODO PARAMETERISE MASH CALL
+            out = shell(f"mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashSubjectFile']}", ret_output=True) # TODO PARAMETERISE MASH CALL
             error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), initial sketch)")
             for ProtSeq_i in alive_it(range(N_ProtSeqs)):
                 '''Mash query fasta file'''
@@ -169,9 +169,9 @@ class PPHMMDBConstruction:
                     MashQuery_txt.write(f">{MashQuery.name} {MashQuery.description}\n{str(MashQuery.seq)}")
 
                 mash_fname = f'{"/".join(self.fnames["MashOutputFile"].split("/")[:-1])}/mashup_scores.tab'
-                out = shell(f"mash-Linux64-v2.3/mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashQueryFile']}", ret_output=True)
+                out = shell(f"mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashQueryFile']}", ret_output=True)
                 error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), iterative sketch)")
-                out = shell(f"mash-Linux64-v2.3/mash dist -p {self.payload['N_CPUs']} -v {self.payload['Mash_p_val_cutoff']} -d {self.payload['Mash_sim_score_cutoff']} -i {self.fnames['MashSubjectFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}",
+                out = shell(f"mash dist -p {self.payload['N_CPUs']} -v {self.payload['Mash_p_val_cutoff']} -d {self.payload['Mash_sim_score_cutoff']} -i {self.fnames['MashSubjectFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}",
                             ret_output=True)
                 error_handler_mash_dist(out, "Mash (PPHMMDB Construction, mash_analysis(), dist)")
 
@@ -227,9 +227,9 @@ class PPHMMDBConstruction:
     def mcl_clustering(self, ProtIDList):
         '''7/10: Use Mcl to do clustering on Mash bit scores'''
         progress_msg("- Doing protein sequence clustering based on Mash bit scores, using the MCL algorithm")
-        shell(f"mcl {self.fnames['MashSimFile']} --abc -o {self.fnames['MashProtClusterFile']} -I {self.payload['ProtClustering_MCLInflation']}",
-                    "PPHMMDB Contruction: mcl clustering, call mcl")
-        # TODO < ERROR HANDLER; CHECK IF N CLUSTERS = N ORFS. BIG ISSUE AS WILL CONTINUE TO RUN IF DOESNT WORK!
+        out = shell(f"mcl {self.fnames['MashSimFile']} --abc -o {self.fnames['MashProtClusterFile']} -I {self.payload['ProtClustering_MCLInflation']}",
+                    ret_output=True)
+        error_handler_mcl(out, "Mcl, PPHMMDB construction")
         '''For each cluster found, pull out seen proteins by ID'''
         SeenProtIDList = []
         with open(self.fnames['MashProtClusterFile'], 'r') as MashProtCluster_txt:

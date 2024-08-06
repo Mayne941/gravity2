@@ -174,7 +174,6 @@ def run_pipeline_i_full(payload, refresh_genbank=False):
     pl = Pipeline_I(payload)
     pl.read_genome_desc_table(refresh_genbank)
 
-
 @app.post("/pipeline_i_from_pphmmdb_construction/", tags=["Custom pipelines"])
 async def pipeline_i__from_pphmmdb_construction(payload: Pipeline_i_data, background_tasks: BackgroundTasks):
     payload = process_json(payload)

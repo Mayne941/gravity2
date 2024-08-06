@@ -217,13 +217,11 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                           hmap_params, ClassLabelList_x, ClassLabelList_y,
                                           TickLocList = np.arange(0, len(ClassLabelList_y)))
 
-        #### RM TODO TEST'''Selectively colour tick labels red if a UCF sample'''
         import re
         [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
          if bool(re.search(r"Query", i.get_text().replace(" ","")))]
         [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
          if bool(re.search(r"Query", i.get_text()))]
-        #####
 
         '''Heatmap colourbars'''
         ax_CBar = fig.add_axes(

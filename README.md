@@ -38,23 +38,20 @@ flowchart TD
 ```
 
 ## Installation instructions:
-This guide is tested on Windows Subsystems Linux 20.04, Ubuntu 20.04 LTS and Ubuntu Server 20.04 LTS. We anticipate that variations in operating system and system architecture (in particular, servers) will necessitate amendments to the process outlined below, hence this guide is advisory only. Please see the Troubleshooting section for further details.
+This guide is tested on Windows Subsystems Linux 22.04, Ubuntu 22.04 LTS and Ubuntu Server 22.04 LTS. We anticipate that variations in operating system and system architecture (in particular, servers) will necessitate amendments to the process outlined below, hence this guide is advisory only. Always check the terminal output. This guide is not a substite for computing expertise and users who don't understand the installation instructions should defer to their system administrator's guidance.
 
-Where parameters appear in curly brackets, replace these with values that correspond to your environment.
-
-### Shell (developed for Ubuntu Linux 20.04 LTS)
+1. Ensure you have Conda installed:
+1. Create a new Conda environment called `gravity` with python 3.10: ```conda create -n gravity python=3.10```
+1. Activate your Conda environment: ```conda activate gravity```
 1. Navigate to directory: ```cd {path-to-dir}```
 1. Install command line tool requirements: ```bash install-reqs-local.sh```
 1. Install Python libraries with pip: ```pip install -r requirements.txt```
-1. Source vars and start API: ```source env_vars.sh && python3 -m uvicorn app.api:app --reload```
-1. Navigate to http://localhost:8000/docs in browser
-1. Follow instructions on Swagger UI
 
-### Docker
-1. Download and install Docker, see https://docs.docker.com/get-docker/
-1. Build and start Docker container: ```bash build.sh && bash run.sh```
-1. Check Docker container has built successfully and is running: ```docker ps```
-1. Navigate to API: http://{docker-container-ip}:8000/docs  (container IP may be found by in the Docker Desktop app, or through ```docker inspect {container-id}```, using container ID from previous step)
+## Quick-start: GUI
+xxxxxxxxxxxxx
+
+## Quick-start: CLI
+xxxxxxxxxxxxx
 
 ## GRAViTyV2 Workflows
 GRAViTyV2 is a resource-intensive application and it would be intractable to construct databases comprising every known viral genome. For this reason, we advise breaking down queries into several stages which should begin with constructing several databases based on significantly restricted datasets using Pipeline I, then comparing your samples against these with Pipeline II to get an approximate indication of taxonomy (hereafter known as doing a FIRST PASS run). First pass databases may be constructed with the scrape_vmr and construct_first_pass_vmr endpoints; we may choose to create several first pass databases where a simple filtering function may be used to ensure that single representative members of each family are included, or otherwise single members of each genus or species are included if upper taxonomic ranks contain only a small number of examples. It is good practice to keep databases under 800 samples, as compute time scales non-linearly with sample size: we may choose therefore, to find a logical way to split first pass databases into multiple portions, such as into RNA, dsDNA and ssDNA. First pass databases take the longest time to compute, but need only be constructed each time a new VMR is issued.

@@ -41,8 +41,12 @@ def error_handler_mash_sketch(out, msg):
 def error_handler_mash_dist(out, msg):
     out = decode_stdout(out)
     if out != "":
-        raise_gravity_error(f"{main_error_msg(msg)}."
-                            f"Ensure Mash is installed and active in your environment.")
+        if "mash <command> [options]" in out:
+            '''For dependency test - empty call contents'''
+            return
+        else:
+            raise_gravity_error(f"{main_error_msg(msg)}."
+                                f"Ensure Mash is installed and active in your environment.")
 
 def error_handler_hmmscan(out, msg):
     out = decode_stdout(out)
@@ -55,3 +59,23 @@ def error_handler_hmmscan(out, msg):
             raise_gravity_error(f"{main_error_msg(msg)}."
                                 f"Ensure HMMER 3 is installed and active in your environment."
                                 f"Check that input .hmm files are being generatedby hmmpress, in PPHMMDB construction step.")
+
+def error_handler_blast(out, msg):
+    out = decode_stdout(out)
+    if not out == "":
+        if "BLAST query/options error:" in out:
+            '''For dependency test - empty call contents'''
+            return
+        else:
+            raise_gravity_error(f"{main_error_msg(msg)}."
+                                f"Ensure BLAST is installed and active in your environment.")
+
+def error_handler_mcl(out, msg):
+    out = decode_stdout(out)
+    if not "[mcl] new tab created" in out:
+        if "[mcl] usage:" in out:
+            '''For dependency test - empty call contents'''
+            return
+        else:
+            raise_gravity_error(f"{main_error_msg(msg)}."
+                                f"Ensure Mcl is installed and active in your environment.")

@@ -1,27 +1,27 @@
 #!/bin/bash
+conda config --add channels conda-forge
+conda config --add channels bioconda
 
 # make folders
 mkdir output
 
 # mcl installation
-apt-get install mcl -y
+conda install -y -c bioconda mcl
 
 # hmmer installation
-apt-get install hmmer -y
+conda install -y -c bioconda hmmer
 
-# blast installation. Assumes Linux x64 build!
-apt install ncbi-blast+
+# blast installation
+conda install -y -c bioconda blast
 
-# RM < TODO Install MAFFT
+# samtools installation
+conda install -y -c bioconda samtools
 
-# RM < TODO install mash
+# mash installation
+conda install -y -c bioconda mash
 
-# hhsuite installation # RM < TODO deprecate for conda install as some users have issues
-mkdir -p ~/programs/hh-suite && cd ~/programs/hh-suite
-git clone https://github.com/soedinglab/hh-suite.git .
-mkdir build && cd build
-cmake ..
-make
+# hhsuite installation
+conda install -y -c bioconda hhsuite
 
 # booster installation
 wget https://github.com/evolbioinfo/booster/releases/download/v0.1.2/booster_linux64

@@ -164,31 +164,21 @@ def get_dist_data(fnames, label_order):
     ROUNDING = 2
     '''Distance from mean location graph (PPHMM loc distances)'''
     cscale = np.round(np.array(means)[means_indices], ROUNDING)
-    loc_dist_frm_mean_arr = np.copy(distance_arr) # TODO < Why isn't this reindexed?
+    loc_dist_frm_mean_arr = np.copy(distance_arr)
     for row in loc_dist_frm_mean_arr:
         row_tot = np.nanmax(row) #new
         for idx, val in enumerate(row):
             if not np.isnan(val):
                 row[idx] = round((cscale[idx] + val) / row_tot, ROUNDING)
 
-    # '''Mean location graph (PPHMM locations)'''
-    # discrete_dist_arr = np.copy(distance_arr)
-    # for row in discrete_dist_arr:
-    #     row_tot = np.nanmax(row)
-    #     for idx, val in enumerate(row):
-    #         if not np.isnan(val):
-    #             row[idx] = round(val / row_tot, ROUNDING)
     '''Mean location graph (PPHMM locations)'''
-    discrete_dist_arr = np.array(all_dists)#[label_order]
+    discrete_dist_arr = np.array(all_dists)
     for row_idx, row in enumerate(discrete_dist_arr):
-        # row_tot = np.nanmax(row)
         row_tot = seq_lens[row_idx]
         for idx, val in enumerate(row):
             if not np.isnan(val):
                 vals = [val, row_tot]
-                # row[idx] = round(val / row_tot, ROUNDING) # RM < TODO IN PROGRESS 1106 cf, ln 177 presumably it's sml/lrg?!
                 row[idx] = round(min(vals)/max(vals), ROUNDING)
-                # if row[idx] > 1 : breakpoint() # RM < TODO TEST
 
     '''Sort X axis according to median normalised position'''
     row_medians_indices = np.argsort(np.nanmedian(discrete_dist_arr, axis=0))
@@ -206,8 +196,6 @@ def pphmm_loc_distances(fnames, pphmm_names, label_order, labels):
     '''Reindex output df by mean position of PPHMM (NOT distance from mean)'''
     distance_arr, means_indices, discrete_dist_arr = get_dist_data(fnames, label_order)
     reindexed_xlabels = np.array(pphmm_names)[means_indices]
-    # build_hm(distance_arr, fnames, [reindexed_xlabels, labels[1]])
-    # build_discrete_hm(discrete_dist_arr, fnames, [reindexed_xlabels, labels[1]])
 
     return distance_arr, reindexed_xlabels, discrete_dist_arr
 
@@ -215,7 +203,7 @@ def pphmm_loc_diffs_pairwise(fnames, label_order, labels):
     '''Do pairwise distances of PPHMM location from mean'''
     distance_arr, _, _ = get_dist_data(fnames, label_order)
     out_arr = pairwise_distances(np.nan_to_num(distance_arr, nan=0), metric="braycurtis")
-    # build_hm(out_arr, fnames, labels, map_type="loc")
+
     return out_arr
 
 def supplementary_pphmm_heatmaps(pl1_ref_annotations, TaxoLabelList_AllVirus, N_RefViruses, TaxoLabelList_RefVirus,
@@ -323,17 +311,18 @@ def supplementary_pphmm_heatmaps(pl1_ref_annotations, TaxoLabelList_AllVirus, N_
 
     '''Selectively colour tick labels red if a UCF sample'''
     [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
-    if bool(re.match(r"Query", i.get_text()))]
+         if bool(re.search(r"Query", i.get_text().replace(" ","")))]
     [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
-    if bool(re.match(r"Query", i.get_text()))]
+         if bool(re.search(r"Query", i.get_text()))]
 
     '''Reference virus colour bar'''
     ax_CBar = fig.add_axes(
         [hmap_params['ax_CBar_L'], hmap_params['ax_CBar_B'], hmap_params['ax_CBar_W'], hmap_params['ax_CBar_H']], frame_on=True, facecolor="white")
     CBar_Graphic = fig.colorbar(
-        Heatmap_Graphic, cax=ax_CBar, orientation="horizontal", ticks=[round(i, -1) for i in np.linspace(0, vmax, 5)]) # DYNAMIC TICKS
+        Heatmap_Graphic, cax=ax_CBar, orientation="horizontal", ticks=[0, 0.25, 0.50, 0.75, 1])
     CBar_Graphic		.ax.set_xticklabels(
         ['0', '0.25', '0.50', '0.75', '1'], rotation=0, size=hmap_params['FontSize'])
+
     CBar_Graphic		.ax.set_xlabel('Distance', rotation=0, size=hmap_params['FontSize']+2)
     CBar_Graphic		.ax.tick_params(top=False,
                                 bottom=True,
