@@ -20,10 +20,14 @@ def decode_stdout(out):
 
 def error_handler_hmmbuild(out, msg):
     out = decode_stdout(out)
-    if "input parse error" in out:
-        raise_gravity_error(f"{main_error_msg(msg)}."
-                            f"Ensure HMMER 3 is installed and active in your environment."
-                            f"Check that input fasta files (Mash/Clusters/Cluster_x.fasta) are being generated and are not empty.")
+    if out != "":
+        if "Usage: hmmbuild" in out:
+            '''Dependency test'''
+            return
+        elif "input parse error" in out:
+            raise_gravity_error(f"{main_error_msg(msg)}."
+                                f"Ensure HMMER 3 is installed and active in your environment."
+                                f"Check that input fasta files (Mash/Clusters/Cluster_x.fasta) are being generated and are not empty.")
 
 def error_handle_mafft(out, msg):
     out = decode_stdout(out)
@@ -79,3 +83,10 @@ def error_handler_mcl(out, msg):
         else:
             raise_gravity_error(f"{main_error_msg(msg)}."
                                 f"Ensure Mcl is installed and active in your environment.")
+
+def error_handler_hhsuite(out, msg):
+    out = decode_stdout(out)
+    if not out == "":
+        if not "Usage: cstranslate" in out:
+            raise_gravity_error(f"{main_error_msg(msg)}."
+                                f"Ensure hhsuite is installed and active in your environment.")

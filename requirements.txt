@@ -13,3 +13,4 @@ openpyxl==3.0.10
 dendropy==4.6.1
 alive-progress==3.1.4
 pyarrow==16.1.0
+pyparsing==3.1.2

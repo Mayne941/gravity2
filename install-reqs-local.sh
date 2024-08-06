@@ -6,22 +6,19 @@ conda config --add channels bioconda
 mkdir output
 
 # mcl installation
-conda install -y -c bioconda mcl
+conda install -y -c bioconda mcl=22.282
 
 # hmmer installation
-conda install -y -c bioconda hmmer
+conda install -y -c bioconda hmmer=3.4
 
 # blast installation
-conda install -y -c bioconda blast
-
-# samtools installation
-conda install -y -c bioconda samtools
+conda install -y -c bioconda blast=2.16.0
 
 # mash installation
-conda install -y -c bioconda mash
+conda install -y -c bioconda mash=2.3
 
 # hhsuite installation
-conda install -y -c bioconda hhsuite
+conda install -y -c bioconda hhsuite=3.3.0
 
 # booster installation
 wget https://github.com/evolbioinfo/booster/releases/download/v0.1.2/booster_linux64
