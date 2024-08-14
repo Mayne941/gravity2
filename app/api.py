@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 
@@ -10,6 +11,7 @@ from app.utils.scrape_vmr import scrape, first_pass_taxon_filter, second_pass
 from app.utils.process_fasta import fasta_to_genbank, combine_segments
 from app.utils.stdout_utils import progress_msg
 from app.utils.end_to_end_entrypoint import split_payloads_for_e2e
+from app.test.dep_test import DepTest
 from app.utils.api_classes import (Pipeline_i_data, Pipeline_ii_data, Endp_data_scrape_data,
                                    Endp_data_first_pass_taxon_filter, Endp_data_second_pass_filter,
                                    Endp_data_fasta_to_gb, CombineGenomeSegs, E2e_data, Premade_data)
@@ -29,13 +31,13 @@ tags_metadata = [
         "name": "Custom pipelines",
         "description": "Users can fully specify their parameters and run pipeline from any stage.",
     },
+    # {
+    #     "name": "Pipeline II",
+    #     "description": "PL2 description & user info.",
+    # },
     {
-        "name": "Pipeline II",
-        "description": "PL2 description & user info.",
-    },
-    {
-        "name": "VMR Utilities",
-        "description": "Refresh Virus Metadata Resource (VMR) from ICTV and construct datasets."
+        "name": "Utilities",
+        "description": "Utility functions to support main GRAViTy-V2 pipeline."
     },
     {
         "name": "Automated Workflows",
@@ -126,7 +128,6 @@ async def end_to_end_pr(payload: Pipeline_i_data):
     run_pipeline_i_full(payload)
     t = time.time() - st
 
-    import numpy as np
     with open(f'{payload["ExpDir"]}/output/ref_seqs.fasta', "r") as f: seqs = f.readlines()
     seqlen = np.mean([len(i) for i in seqs if not i[0] == ">"])
     with open(f'{payload["ExpDir"]}/BENCHMARKING.txt', "w") as f:
@@ -147,8 +148,7 @@ def run_end_to_end(payload):
     run_pipeline_i_full(payload_sp_pl1, refresh_genbank=True) ############
     # run_pipeline_ii_full(payload_sp_pl2, refresh_genbank=True)
 
-    ## RM < TODO BENCHMARKING FOR PAPER
-    import numpy as np
+    ## RM < TODO BENCHMARKING FOR PAPE
     with open(f'{payload_sp_pl2["ExpDir_Pl1"]}/output/ref_seqs.fasta', "r") as f: refs = f.readlines()
     with open(f'{payload_sp_pl2["ExpDir_Pl1"].replace("pipeline_1","pipeline_2")}/output/ref_seqs.fasta', "r") as f: ucfs = f.readlines()
     seqs = refs + ucfs
@@ -279,42 +279,46 @@ def run_pipeline_i_from_mutual_info_calculator(payload):
 
 
 '''Utility entrypoints'''
+@app.get("/dependency_test/", tags=["Utilities"])
+async def run_dep_test():
+    clf = DepTest()
+    clf.main()
+    return "See terminal window for details."
 
-
-@app.post("/scrape_vmr/", tags=["VMR Utilities"])
+@app.post("/scrape_vmr/", tags=["Utilities"])
 async def run_vmr_scrape(trigger: Endp_data_scrape_data):
     payload = process_json(trigger)
     return scrape(payload)
 
-@app.post("/construct_first_pass_vmr_taxon_filter/", tags=["VMR Utilities"])
+@app.post("/construct_first_pass_vmr_taxon_filter/", tags=["Utilities"])
 async def vmr_first_pass_taxon_filter(trigger: Endp_data_first_pass_taxon_filter):
     payload = process_json(trigger)
     return first_pass_taxon_filter(payload)
 
-@app.post("/construct_second_pass_vmr/", tags=["VMR Utilities"])
+@app.post("/construct_second_pass_vmr/", tags=["Utilities"])
 async def vmr_second_pass(trigger: Endp_data_second_pass_filter):
     payload = process_json(trigger)
     return second_pass(payload)
 
-@app.post("/convert_fasta_to_genbank_and_vmr/", tags=["VMR Utilities"])
+@app.post("/convert_fasta_to_genbank_and_vmr/", tags=["Utilities"])
 async def convert_fasta_to_genbank(trigger: Endp_data_fasta_to_gb):
     payload = process_json(trigger)
     return fasta_to_genbank(payload)
 
-@app.post("/combine_genome_segments/", tags=["VMR Utilities"])
+@app.post("/combine_genome_segments/", tags=["Utilities"])
 async def convert_genome_segments(trigger: CombineGenomeSegs):
     payload = process_json(trigger)
     return combine_segments(payload)
 
 '''Deprecated Endpoints'''
 # Baltimore filter
-# @app.post("/construct_first_pass_vmr_baltimore_filter/", tags=["VMR Utilities"])
+# @app.post("/construct_first_pass_vmr_baltimore_filter/", tags=["Utilities"])
 # async def vmr_first_pass_baltimore_filter(trigger: FirstPassBaltimoreFilter):
 #     payload = process_json(trigger)
 #     return first_pass_baltimore_filter(payload)
 
 # Generic filter
-# @app.post("/filter_vmr/", tags=["VMR Utilities"])
+# @app.post("/filter_vmr/", tags=["Utilities"])
 # async def filter_that_vmr(trigger: VmrFilter):
 #     payload = process_json(trigger)
 #     return vmr_filter(payload)
