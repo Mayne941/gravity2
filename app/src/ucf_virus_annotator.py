@@ -35,7 +35,7 @@ class UcfVirusAnnotator:
 
         '''Generate PPHMMSignatureTable, PPHMMLocationTable, and GOMSignatureTable for unclassified viruses using the reference PPHMM and GOM database'''
         '''Generate PPHMMSignatureTable and PPHMMLocationTable'''
-        PPHMMSignatureTable, PPHMMLocationTable = PPHMMSignatureTable_Constructor(
+        PPHMMSignatureTable, PPHMMLocationTable, NaivePPHMMLocationTable = PPHMMSignatureTable_Constructor(
                                                 self.genomes,
                                                 self.payload,
                                                 self.fnames,
@@ -50,6 +50,7 @@ class UcfVirusAnnotator:
 
         '''Construct out dict, dump to pickle'''
         all_ucf_genomes = {}
+        all_ucf_genomes["NaivePPHMMLocationTable"] = NaivePPHMMLocationTable
         all_ucf_genomes["PPHMMSignatureTable_coo"] = coo_matrix(PPHMMSignatureTable).toarray()
         all_ucf_genomes["PPHMMLocationTable_coo"] = coo_matrix(PPHMMLocationTable).toarray()
         all_ucf_genomes["GOMSignatureTable_Dict"] = GOMSignatureTable

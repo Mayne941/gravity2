@@ -1,32 +1,24 @@
 #!/bin/bash
+conda config --add channels conda-forge
+conda config --add channels bioconda
 
 # make folders
 mkdir output
 
 # mcl installation
-apt-get install mcl -y
+conda install -y -c bioconda mcl=22.282
 
 # hmmer installation
-apt-get install hmmer -y
+conda install -y -c bioconda hmmer=3.4
 
-# blast installation. Assumes Linux x64 build!
-apt install ncbi-blast+
+# blast installation
+conda install -y -c bioconda blast=2.16.0
 
-# RM < TODO Install MAFFT
-# hhsuite installation # RM < TODO deprecate for conda install as some users have issues
-mkdir -p ~/programs/hh-suite && cd ~/programs/hh-suite
-git clone https://github.com/soedinglab/hh-suite.git .
-mkdir build && cd build
-cmake ..
-make
+# mash installation
+conda install -y -c bioconda mash=2.3
 
-# muscle installation. Assumes Linux x64 build!
-mkdir -p ~/programs/muscle && cd ~/programs/muscle
-wget https://drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux64.tar.gz
-tar -zxvf muscle3.8.31_i86linux64.tar.gz
-mv muscle3.8.31_i86linux64 muscle
-chmod 777 muscle
-alias muscle="~/programs/muscle/muscle"
+# hhsuite installation
+conda install -y -c bioconda hhsuite=3.3.0
 
 # booster installation
 wget https://github.com/evolbioinfo/booster/releases/download/v0.1.2/booster_linux64

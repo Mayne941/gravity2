@@ -62,5 +62,5 @@ def mkdir_virus_classifier(fnames):
         os.remove(fnames['VirusDendrogramDistFile'])
 
     '''Define path to bootstrapped dendrogram file'''
-    if os.path.isfile(fnames['BootstrappedVirusDendrogramFile']):
-        os.remove(fnames['BootstrappedVirusDendrogramFile'])
+    if os.path.isfile(fnames['BootstrappedDendrogramFile']):
+        os.remove(fnames['BootstrappedDendrogramFile'])

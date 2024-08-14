@@ -13,10 +13,11 @@ from app.utils.generate_fnames import generate_file_names
 from app.utils.mkdirs import mkdir_pl1_graphs
 from app.utils.heatmap_params import get_hmap_params, construct_hmap_lines
 from app.utils.error_handlers import raise_gravity_error
-from app.utils.shared_pphmm_graphs import shared_norm_pphmm_ratio, shared_pphmm_ratio
+from app.utils.shared_pphmm_graphs import supplementary_pphmm_heatmaps, shared_norm_pphmm_ratio, shared_pphmm_ratio, pphmm_loc_distances, pphmm_loc_diffs_pairwise
 
 import os
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from Bio import Phylo
 import matplotlib
@@ -35,19 +36,23 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         self.ref_annotations = retrieve_pickle(self.fnames['RefAnnotatorPickle'])
         mkdir_pl1_graphs(self.fnames, self.payload)
 
-    def est_pairwise_dists(self):
+    def dist_mat_constructor(self, PPHMMSignatureTable, GOMSignatureTable, PPHMMLocationTable, SPRSignatureTable):
         '''Estimate pairwise distances between viruses, return distance matrix (recip. sim matrix)'''
-        SimMat = SimilarityMat_Constructor(PPHMMSignatureTable=self.ref_annotations["PPHMMSignatureTable"],
-                                           GOMSignatureTable=self.ref_annotations["GOMSignatureTable"],
-                                           PPHMMLocationTable=self.ref_annotations["PPHMMLocationTable"],
-                                           SimilarityMeasurementScheme=self.payload['SimilarityMeasurementScheme'],
-                                           p=self.payload['p']
+        SimMat = SimilarityMat_Constructor(PPHMMSignatureTable,
+                                           GOMSignatureTable,
+                                           PPHMMLocationTable,
+                                           SPRSignatureTable,
+                                           self.payload["PphmmNeighbourhoodWeight"],
+                                           self.payload["PphmmSigScoreThreshold"],
+                                           self.payload['SimilarityMeasurementScheme'],
+                                           self.payload['p'],
+                                           self.fnames
                                            )
         DistMat = 1 - SimMat
         DistMat[DistMat < 0] = 0
         return DistMat
 
-    def dendrogram(self, DistMat):
+    def dendrogram(self, DistMat, interim_Rscheme_matrix):
         '''Build dendrogram'''
         progress_msg("Constructing Dendrogram")
         '''Make TaxoLabelList'''
@@ -92,14 +97,11 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                                                                   )
 
                 '''Construct a dendrogram from the bootstrapped data'''
-                BootstrappedSimMat = SimilarityMat_Constructor(PPHMMSignatureTable=BootstrappedPPHMMSignatureTable,
-                                                               GOMSignatureTable=BootstrappedGOMSignatureTable,
-                                                               PPHMMLocationTable=BootstrappedPPHMMLocationTable,
-                                                               SimilarityMeasurementScheme=self.payload['SimilarityMeasurementScheme'],
-                                                               p=self.payload['p']
+                BootstrappedDistMat = self.dist_mat_constructor(BootstrappedPPHMMSignatureTable,
+                                                               BootstrappedGOMSignatureTable,
+                                                               BootstrappedPPHMMLocationTable,
+                                                               interim_Rscheme_matrix
                                                                )
-                BootstrappedDistMat = 1 - BootstrappedSimMat
-                BootstrappedDistMat[BootstrappedDistMat < 0] = 0
 
                 '''Generate bs dist matrix tree'''
                 BootstrappedVirusDendrogram = DistMat2Tree(DistMat=BootstrappedDistMat,
@@ -131,8 +133,10 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         N_Viruses = len(DistMat)
 
         '''Load tree'''
-        VirusDendrogram = Phylo.read(self.fnames['BootstrappedDendrogramFile'], "newick")
-
+        if self.payload["Bootstrap"]:
+            VirusDendrogram = Phylo.read(self.fnames['BootstrappedDendrogramFile'], "newick")
+        else:
+            VirusDendrogram = Phylo.read(self.fnames['Heatmap_DendrogramFile'], "newick")
         '''Determine virus order'''
         _ = VirusDendrogram.ladderize(reverse=True)
         TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
@@ -140,6 +144,15 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                               GenusList=self.genomes["GenusList"],
                                               VirusNameList=self.genomes["VirusNameList"]
                                               )
+
+        ######## RM TODO TEST BOOSTER ISSUES WITH VirusDendrogram.get_terminals()[Virus_i].confidence
+        for Virus_i in range(N_Viruses):
+            Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
+            if not "Query" in str(Taxolabel):
+                VirusDendrogram.get_terminals()[Virus_i].color = "blue"
+            else:
+                VirusDendrogram.get_terminals()[Virus_i].color = "red"
+        ############
 
         OrderedTaxoLabelList = [
             Clade.name for Clade in VirusDendrogram.get_terminals()]
@@ -163,8 +176,12 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 
         '''Labels, label positions, and ticks'''
         ClassDendrogram_grp = VirusDendrogram
-        ClassDendrogram_label = Phylo.read(  # Needs to be separately read in as Bio entities are linked
-            self.fnames['BootstrappedDendrogramFile'], "newick")
+        if self.payload["Bootstrap"]:
+            ClassDendrogram_label = Phylo.read(  # Needs to be separately read in as Bio entities are linked
+                self.fnames['BootstrappedDendrogramFile'], "newick")
+        else:
+            ClassDendrogram_label = Phylo.read(self.fnames['Heatmap_DendrogramFile'], "newick")
+
 
         '''Construct taxo labels in ordered list for heatmap axis labels'''
         _, LineList_major = make_labels(ClassDendrogram_grp, zip(
@@ -176,9 +193,11 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         '''Plot configuration'''
         hmap_params, fig, ax_Dendrogram, ax_Heatmap = get_hmap_params(len(ClassLabelList_x))
 
+
         try:
             Phylo.draw(VirusDendrogram, label_func=lambda x: "",
                     do_show=False,  axes=ax_Dendrogram)
+            plt.rcParams['lines.linewidth'] = 1.0 ##########################
         except Exception as ex:
             raise raise_gravity_error(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try disabling this feature and trying again.")
 
@@ -194,9 +213,15 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             OrderedDistMat, cmap='magma', aspect='auto', vmin=0, vmax=1, interpolation='none')
 
         '''Draw grouping major & minor lines'''
-        ax_Heatmap = construct_hmap_lines(ax_Heatmap, LineList_major, LineList_minor,
+        ax_Heatmap = construct_hmap_lines(ax_Heatmap, len(ClassLabelList_y), LineList_major, LineList_minor,
                                           hmap_params, ClassLabelList_x, ClassLabelList_y,
                                           TickLocList = np.arange(0, len(ClassLabelList_y)))
+
+        import re
+        [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
+         if bool(re.search(r"Query", i.get_text().replace(" ","")))]
+        [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
+         if bool(re.search(r"Query", i.get_text()))]
 
         '''Heatmap colourbars'''
         ax_CBar = fig.add_axes(
@@ -218,7 +243,9 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 
         '''Save fig'''
         plt.savefig(self.fnames['HeatmapWithDendrogramFile'], format="pdf", bbox_inches = "tight", dpi=hmap_params['dpi'])
-        return VirusOrder
+        plt.clf()
+        plt.cla()
+        return VirusOrder, TaxoLabelList, ClassLabelList_x
 
     def virus_grouping(self, DistMat):
         '''Group viruses via Thiels-U and other metrics; save as txt.'''
@@ -249,26 +276,71 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                 f"U(X,Y) == 1 means that knowing Y implies a perfect knowledge of X and vice-versa\n"
             )
 
-    def call_pphmm_sig_graphs(self, label_order):
-        '''Call PPHMM Heatmaps'''
-        labels = [self.genomes["VirusNameList"][label_order], list([i[0] for i in self.genomes["SeqIDLists"][label_order]])]
-        shared_pphmm_ratio(label_order, self.fnames, labels)
-        shared_norm_pphmm_ratio(label_order, self.fnames, labels)
+    def create_supplementary_pphmm_tables(self):
+        '''Combine PPHMM/GOM sigs, save as CSV for shared PPHMM heatmaps'''
+        pl1_ref_annotations = {**self.genomes, **self.ref_annotations}
+        TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
+                                              FamilyList=self.genomes["FamilyList"],
+                                              GenusList=self.genomes["GenusList"],
+                                              VirusNameList=self.genomes["VirusNameList"]
+                                              )
+        sigs_data = np.column_stack((TaxoLabelList,
+                                    pl1_ref_annotations["PPHMMSignatureTable"]))
+        pphmm_names = [f"PPHMM|{ClusterDesc}" for ClusterDesc in pl1_ref_annotations["ClusterDescList"].astype("str")]
+        pphmm_names = [pphmm_names[i] if not pphmm_names[i] == "PPHMM|~|" else f"PPHMM|UCF{i}|" for i in range(len(pphmm_names))]
+        sigs_df = pd.DataFrame(sigs_data, index=None, columns=
+                            ["Virus name"] + \
+                            pphmm_names
+                )
+        sigs_df.to_csv(self.fnames["PphmmAndGomSigs"])
+        '''Get PPHMM Locations, save as CSV for location heatmaps'''
+        pphmm_names = [i for i in range(0,len(pl1_ref_annotations["NaivePPHMMLocationTable"][0]))] # TODO TEST
+        locs_df = pd.DataFrame(np.column_stack((TaxoLabelList, pl1_ref_annotations["NaivePPHMMLocationTable"])), columns = ["Virus name"] + pphmm_names) # TODO FIND OUT WHY DIDNT WORK
+        locs_df.to_csv(self.fnames["PphmmLocs"], index=False)
+        interim_Rscheme_matrix = shared_norm_pphmm_ratio(TaxoLabelList, self.fnames, labels=[pphmm_names,  [int(i) for i in range(len(TaxoLabelList))]])
+        return pphmm_names, interim_Rscheme_matrix
+
+    def call_pphmm_sig_graphs(self, label_order, TaxoLabelList, x_labels, pphmm_names):
+        pl1_ref_annotations = {**self.genomes, **self.ref_annotations}
+        '''Call all heatmaps for PPHMM location and signatures'''
+        pphmm_tables = {}
+        y_label_acc_ids = np.array([i.split("_")[0] if not i[0:5] == "Query" else i.split("_")[-1] for i in TaxoLabelList])[label_order]
+        pphmm_tables["SharedPphmmRatioMatrix"] = shared_pphmm_ratio(label_order, self.fnames, labels=[x_labels, y_label_acc_ids])
+        pphmm_tables["SharedNormPphmmRatioMatrix"] = shared_norm_pphmm_ratio(label_order, self.fnames, labels=[x_labels, y_label_acc_ids])
+        pphmm_tables["PphmmLocDistances"], pphmm_tables["PphmLabels"], pphmm_tables["PphmmPos"] = pphmm_loc_distances(self.fnames, pphmm_names, label_order, labels=[x_labels, y_label_acc_ids])
+        pphmm_tables["PphmmLocMatrix"] = pphmm_loc_diffs_pairwise(self.fnames, label_order, labels=[x_labels, y_label_acc_ids])
+        pphmm_heatmaps = {
+            "Shared_norm_pphmm_ratio_matrix": [pphmm_tables["SharedNormPphmmRatioMatrix"], True],
+            "Pphmm_locations": [pphmm_tables["PphmmPos"], False],
+            "Shared_pphmm_ratio_matrix": [pphmm_tables["SharedPphmmRatioMatrix"], True],
+            "Pphmm_loc_distances_pairwise": [pphmm_tables["PphmmLocMatrix"], True],
+            "Pphmm_loc_distances": [pphmm_tables["PphmmLocDistances"], False]
+        }
+        for fname, data in pphmm_heatmaps.items():
+            _, _ = supplementary_pphmm_heatmaps(pl1_ref_annotations, TaxoLabelList,
+                                                     len(pl1_ref_annotations["SeqIDLists"]), TaxoLabelList, [],
+                                                     data[0], f"{self.fnames['OutputDir']}/{fname}.pdf",
+                                                     self.fnames, self.payload, pphmm_tables, is_square=data[1],
+                                                     )
 
     def main(self):
         '''Generate GRAViTy dendrogram and heat map	'''
         section_header("Generate GRAViTy dendrogram and heat map")
 
         '''Estimate virus pairwise distances'''
-        DistMat = self.est_pairwise_dists()
+        pphmm_names, interim_Rscheme_matrix = self.create_supplementary_pphmm_tables()
+        DistMat = self.dist_mat_constructor(self.ref_annotations["PPHMMSignatureTable"],
+                                           self.ref_annotations["GOMSignatureTable"],
+                                           self.ref_annotations["PPHMMLocationTable"],
+                                           interim_Rscheme_matrix)
 
         '''Do plotting'''
-        self.dendrogram(DistMat)
-        label_order = self.heatmap_with_dendro(DistMat)
+        self.dendrogram(DistMat, interim_Rscheme_matrix)
+        label_order, taxo_labels, x_labels = self.heatmap_with_dendro(DistMat)
 
         if self.payload['VirusGrouping'] == True:
             '''(OPT) Group viruses'''
             self.virus_grouping(DistMat)
 
         '''Call PPHMM Heatmaps'''
-        self.call_pphmm_sig_graphs(label_order)
+        self.call_pphmm_sig_graphs(label_order, taxo_labels, x_labels, pphmm_names)

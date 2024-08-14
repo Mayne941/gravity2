@@ -25,13 +25,12 @@ from app.utils.highest_posterior_density import hpd
 from app.utils.classification_utils import PairwiseSimilarityScore_Cutoff_Dict_Constructor, TaxonomicAssignmentProposerAndEvaluator
 from app.utils.make_heatmap_labels import make_labels, split_labels
 from app.utils.generate_fnames import generate_file_names
-from app.utils.error_handlers import error_handler_virus_classifier
+from app.utils.error_handlers import error_handler_virus_classifier, raise_gravity_error
 from app.utils.stdout_utils import progress_msg
 from app.utils.shell_cmds import shell
 from app.utils.mkdirs import mkdir_virus_classifier
 from app.utils.heatmap_params import get_blue_cmap, get_red_cmap, get_purple_cmap, get_hmap_params, construct_hmap_lines
-from app.utils.error_handlers import raise_gravity_error
-from app.utils.shared_pphmm_graphs import shared_norm_pphmm_ratio, shared_pphmm_ratio, pphmm_loc_distances, pphmm_loc_diffs_pairwise
+from app.utils.shared_pphmm_graphs import supplementary_pphmm_heatmaps, shared_norm_pphmm_ratio, shared_pphmm_ratio, pphmm_loc_distances, pphmm_loc_diffs_pairwise
 
 matplotlib.use('agg')
 sys.setrecursionlimit(10000)
@@ -47,13 +46,13 @@ class VirusClassificationAndEvaluation:
         self.genomes = retrieve_genome_vars(self.fnames['ReadGenomeDescTablePickle'])
         self.ucf_annots = retrieve_pickle(self.fnames['UcfAnnotatorPickle'])
         self.N_UcfViruses = len(self.genomes["SeqIDLists"])
-        self.TaxoLabelList_UcfVirus = [f"Query_{i+1}_{self.genomes['SeqIDLists'][i][0]}" for i in range(self.N_UcfViruses)]
+        self.TaxoLabelList_UcfVirus = [self.genomes['VirusNameList'][i] for i in range(self.N_UcfViruses)]
         self.final_results = {}
 
     def use_ucf_virus_pphmms(self):
         '''4/8: Scan unclassified viruses against their PPHMM DB to create additional PPHMMSignatureTable, and PPHMMLocationTable'''
         progress_msg('Generating PPHMMSignatureTable and PPHMMLocationTable tables for Unclassified Viruses')
-        PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB = PPHMMSignatureTable_Constructor(
+        PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB, NaivePPHMMLocationTable_UcfVirusVSUcfDB = PPHMMSignatureTable_Constructor(
                 self.genomes,
                 self.payload,
                 self.fnames,
@@ -65,6 +64,7 @@ class VirusClassificationAndEvaluation:
         '''Update unclassified viruses' PPHMMSignatureTables, and PPHMMLocationTables'''
         self.ucf_annots["PPHMMSignatureTable_Dict"] = np.hstack((self.ucf_annots["PPHMMSignatureTable_coo"], PPHMMSignatureTable_UcfVirusVSUcfDB))
         self.ucf_annots["PPHMMLocationTable_Dict"] = np.hstack((self.ucf_annots["PPHMMLocationTable_coo"], PPHMMLocationTable_UcfVirusVSUcfDB))
+        self.ucf_annots["NaivePPHMMLocationTable_Dict"] = np.hstack((self.ucf_annots["PPHMMLocationTable_coo"], NaivePPHMMLocationTable_UcfVirusVSUcfDB))
 
     def classify(self):
         '''6/8: Classify viruses'''
@@ -88,7 +88,7 @@ class VirusClassificationAndEvaluation:
         if self.payload['UseUcfVirusPPHMMs']:
             '''Scan reference viruses against the PPHMM database of unclassified viruses to generate additional PPHMMSignatureTable, and PPHMMLocationTable'''
             '''Make OR update HMMER_hmmscanDir'''
-            PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB = PPHMMSignatureTable_Constructor(
+            PPHMMSignatureTable_UcfVirusVSUcfDB, PPHMMLocationTable_UcfVirusVSUcfDB, NaivePPHMMLocationTable_UcfVirusVSUcfDB = PPHMMSignatureTable_Constructor(
                     retrieve_genome_vars(self.fnames['Pl1ReadDescTablePickle']),
                     self.payload,
                     self.fnames,
@@ -101,6 +101,9 @@ class VirusClassificationAndEvaluation:
                 (pl1_ref_annotations["PPHMMSignatureTable"], PPHMMSignatureTable_UcfVirusVSUcfDB))
             pl1_ref_annotations["PPHMMLocationTable"] = np.hstack(
                 (pl1_ref_annotations["PPHMMLocationTable"],  PPHMMLocationTable_UcfVirusVSUcfDB))
+            pl1_ref_annotations["NaivePPHMMLocationTable"] = np.hstack(
+                (pl1_ref_annotations["NaivePPHMMLocationTable"],  NaivePPHMMLocationTable_UcfVirusVSUcfDB))
+
             UpdatedGOMDB_RefVirus = GOMDB_Constructor(
                 pl1_ref_annotations["TaxoGroupingList"], pl1_ref_annotations["PPHMMLocationTable"], pl1_ref_annotations["GOMIDList"])
 
@@ -123,28 +126,39 @@ class VirusClassificationAndEvaluation:
             (pl1_ref_annotations["GOMSignatureTable"],   self.ucf_annots["GOMSignatureTable_Dict"]))
         PPHMMLocationTable_AllVirus = np.vstack(
             (pl1_ref_annotations["PPHMMLocationTable"],  self.ucf_annots["PPHMMLocationTable_Dict"]))
+        NaivePPHMMLocationTable_AllVirus = np.vstack(
+            (pl1_ref_annotations["NaivePPHMMLocationTable"],  self.ucf_annots["NaivePPHMMLocationTable_Dict"]))
         TaxoLabelList_AllVirus = TaxoLabelList_RefVirus + self.TaxoLabelList_UcfVirus
-        SimMat = SimilarityMat_Constructor(PPHMMSignatureTable_AllVirus, GOMSignatureTable_AllVirus,
-                                            PPHMMLocationTable_AllVirus, self.payload['SimilarityMeasurementScheme'], self.payload['p'])
-        DistMat = 1 - SimMat
-        DistMat[DistMat < 0] = 0
 
         '''Combine PPHMM/GOM sigs, save as CSV for shared PPHMM heatmaps'''
         sigs_data = np.column_stack((TaxoLabelList_AllVirus,
-                                    PPHMMSignatureTable_AllVirus,
-                                    GOMSignatureTable_AllVirus))
+                                    PPHMMSignatureTable_AllVirus))
         pphmm_names = [f"PPHMM|{ClusterDesc}" for ClusterDesc in pl1_ref_annotations["ClusterDescList"].astype("str")] + \
                         [f"PPHMM|{i}" for i in retrieve_pickle(self.fnames['PphmmdbPickle'])["ClusterDescList"]]
         pphmm_names = [pphmm_names[i] if not pphmm_names[i] == "PPHMM|~|" else f"PPHMM|UCF{i}|" for i in range(len(pphmm_names))]
         sigs_df = pd.DataFrame(sigs_data, index=None, columns=
                             ["Virus name"] + \
-                            pphmm_names + \
-                            ["GOM"]
+                            pphmm_names
                 )
         sigs_df.to_csv(self.fnames["PphmmAndGomSigs"])
         '''Get PPHMM Locations, save as CSV for location heatmaps'''
-        locs_df = pd.DataFrame(np.column_stack((TaxoLabelList_AllVirus, PPHMMLocationTable_AllVirus)), columns = ["Virus name"] + pphmm_names)
+        locs_df = pd.DataFrame(np.column_stack((TaxoLabelList_AllVirus, NaivePPHMMLocationTable_AllVirus)), columns = ["Virus name"] + pphmm_names)
         locs_df.to_csv(self.fnames["PphmmLocs"], index=False)
+        '''Draw PPHMM sig and loc heatmaps'''
+        self.draw_pphmm_heatmaps(TaxoLabelList_AllVirus,  [i for i in range(len(TaxoLabelList_AllVirus))], pphmm_names, None)
+
+        '''Call similarity matrix, build dist matrix from it'''
+        SimMat = SimilarityMat_Constructor(PPHMMSignatureTable_AllVirus,
+                                        GOMSignatureTable_AllVirus,
+                                        PPHMMLocationTable_AllVirus,
+                                        self.final_results["SharedNormPphmmRatioMatrix"],
+                                        self.payload["PphmmNeighbourhoodWeight"],
+                                        self.payload["PphmmSigScoreThreshold"],
+                                        self.payload['SimilarityMeasurementScheme'],
+                                        self.payload['p'], fnames=self.fnames)
+        DistMat = 1 - SimMat # RM < TODO Turn into function
+        DistMat[DistMat < 0] = 0
+
 
         '''Generate dendrogram'''
         VirusDendrogram = DistMat2Tree(
@@ -205,8 +219,23 @@ class VirusClassificationAndEvaluation:
         '''Draw hm/dendro'''
         label_order, x_labels = self.heatmap_with_dendrogram(pl1_ref_annotations, TaxoLabelList_AllVirus,
                                         DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList)
-        '''Draw PPHMM sig and loc heatmaps'''
         self.draw_pphmm_heatmaps(TaxoLabelList_AllVirus, label_order, pphmm_names, x_labels)
+
+        '''Iterate over each variety of additional heatmap. Key (fname): [data, is_square]'''
+        pphmm_heatmaps = {
+            "Shared_norm_pphmm_ratio_matrix": [self.final_results["SharedNormPphmmRatioMatrix"], True],
+            "Pphmm_locations": [self.final_results["PphmmPos"], False],
+            "Shared_pphmm_ratio_matrix": [self.final_results["SharedPphmmRatioMatrix"], True],
+            "Pphmm_loc_distances_pairwise": [self.final_results["PphmmLocMatrix"], True],
+            "Pphmm_loc_distances": [self.final_results["PphmmLocDistances"], False]
+        }
+        for fname, data in pphmm_heatmaps.items():
+            _, _ = supplementary_pphmm_heatmaps(pl1_ref_annotations, TaxoLabelList_AllVirus,
+                                                     N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList,
+                                                     data[0], f"{self.fnames['OutputDir']}/{fname}.pdf",
+                                                     self.fnames, self.payload, self.final_results, is_square=data[1],
+                                                     pl2_components=[self.N_UcfViruses, self.TaxoLabelList_UcfVirus])
+
 
     def do_virus_groupings(self, DistMat, N_RefViruses, pl1_ref_annotations) -> None:
         '''Accessory fn to CLASSIFY (6):  Group viruses with scipy fcluster/linkage, save results to txt'''
@@ -281,7 +310,8 @@ class VirusClassificationAndEvaluation:
 
             '''Construct a dendrogram from the bootstrapped data'''
             BootstrappedSimMat = SimilarityMat_Constructor(
-                BootstrappedPPHMMSignatureTable, BootstrappedGOMSignatureTable, BootstrappedPPHMMLocationTable, self.payload['SimilarityMeasurementScheme'], self.payload['p'])
+                BootstrappedPPHMMSignatureTable, BootstrappedGOMSignatureTable, BootstrappedPPHMMLocationTable, self.final_results["SharedNormPphmmRatioMatrix"], self.payload["PphmmNeighbourhoodWeight"],
+                self.payload["PphmmSigScoreThreshold"], self.payload['SimilarityMeasurementScheme'], self.payload['p'], self.fnames)
             BootstrappedDistMat = 1 - BootstrappedSimMat
             BootstrappedDistMat[BootstrappedDistMat < 0] = 0
             BootstrappedVirusDendrogram = DistMat2Tree(
@@ -323,11 +353,13 @@ class VirusClassificationAndEvaluation:
         '''Create a bootstrapped dendrogram'''
         if self.payload['Bootstrap_method'] == "booster":
             '''Can't call error handler here as tool writes to stderr'''
-            shell(f"./booster_linux64 -i {self.fnames['VirusDendrogramFile']} -b {self.fnames['VirusDendrogramDistFile']} -o {self.fnames['BootstrappedVirusDendrogramFile']} -@ {self.payload['N_CPUs']} ")
+            shell(f"./booster_linux64 -i {self.fnames['VirusDendrogramFile']} -b {self.fnames['VirusDendrogramDistFile']} -o {self.fnames['BootstrappedDendrogramFile']} -@ {self.payload['N_CPUs']} ")
 
         elif self.payload['Bootstrap_method'] == "sumtrees":
-            shell(f"sumtrees.py --decimals=2 --no-annotations --preserve-underscores --force-rooted --output-tree-format=newick --output-tree-filepath={self.fnames['BootstrappedVirusDendrogramFile']} --target={self.fnames['VirusDendrogramFile']} {self.fnames['VirusDendrogramDistFile']}")
-
+            out = shell(f"sumtrees.py --decimals=2 --no-annotations --preserve-underscores --force-rooted --output-tree-format=newick --output-tree-filepath={self.fnames['BootstrappedDendrogramFile']} --target={self.fnames['VirusDendrogramFile']} {self.fnames['VirusDendrogramDistFile']}",
+                        ret_output=True)
+            if "[ERROR]" in str(out):
+                raise_gravity_error(f"Bootstrapping failed, see error report: {str(out).split('[ERROR]')[-1]}")
         else:
             print("WARNING ** Bootstrap dendrogram not constructed: 'Bootstrap_method' can either be 'booster' or 'sumtrees'.")
 
@@ -336,7 +368,10 @@ class VirusClassificationAndEvaluation:
         progress_msg("Constructing GRAViTy Heatmap and Dendrogram")
         '''Load the tree'''
         if self.payload['Bootstrap']:
-            VirusDendrogramFile = self.fnames['BootstrappedVirusDendrogramFile']
+            try:
+                VirusDendrogramFile = self.fnames['BootstrappedDendrogramFile']
+            except:
+                raise_gravity_error(f"GRAViTy couldn't load your bootstrapped dendrogram file: this usually happens when the bootstrap program fails to process your data.")
         else:
             VirusDendrogramFile = self.fnames['VirusDendrogramFile']
 
@@ -438,7 +473,7 @@ class VirusClassificationAndEvaluation:
                             aspect='auto', vmin=0, vmax=1, interpolation='none')
 
         '''Draw grouping major & minor lines'''
-        ax_Heatmap = construct_hmap_lines(ax_Heatmap, LineList_major, LineList_minor,
+        ax_Heatmap = construct_hmap_lines(ax_Heatmap, len(ClassLabelList_y),  LineList_major, LineList_minor,
                                           hmap_params, ClassLabelList_x, ClassLabelList_y,
                                           TickLocList = np.array(
                                             list(map(np.mean, list(zip(LineList_minor[0:-1], LineList_minor[1:]))))))
@@ -509,6 +544,8 @@ class VirusClassificationAndEvaluation:
                                         labelright=True,
                                         direction='out')
         plt.savefig(self.fnames['HeatmapWithDendrogramFile'], format="pdf", bbox_inches = "tight", dpi=hmap_params['dpi'])
+        plt.clf()
+        plt.cla()
         return VirusOrder, ClassLabelList_x
 
     def draw_pphmm_heatmaps(self, TaxoLabelList_AllVirus, label_order, pphmm_names, x_labels):
@@ -516,8 +553,8 @@ class VirusClassificationAndEvaluation:
         y_label_acc_ids = np.array([i.split("_")[0] if not i[0:5] == "Query" else i.split("_")[-1] for i in TaxoLabelList_AllVirus])[label_order]
         self.final_results["SharedPphmmRatioMatrix"] = shared_pphmm_ratio(label_order, self.fnames, labels=[x_labels, y_label_acc_ids])
         self.final_results["SharedNormPphmmRatioMatrix"] = shared_norm_pphmm_ratio(label_order, self.fnames, labels=[x_labels, y_label_acc_ids])
-        pphmm_loc_distances(self.fnames, pphmm_names, labels=[x_labels, y_label_acc_ids])
-        self.final_results["PphmmLocMatrix"] = pphmm_loc_diffs_pairwise(self.fnames, labels=[x_labels, y_label_acc_ids])
+        self.final_results["PphmmLocDistances"], self.final_results["PphmLabels"], self.final_results["PphmmPos"] = pphmm_loc_distances(self.fnames, pphmm_names, label_order, labels=[x_labels, y_label_acc_ids])
+        self.final_results["PphmmLocMatrix"] = pphmm_loc_diffs_pairwise(self.fnames, label_order, labels=[x_labels, y_label_acc_ids])
 
     def group(self):
         '''7/8 : Pool results from all classfiers, and finalise the taxonomic assignment (and virus grouping)'''

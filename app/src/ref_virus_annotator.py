@@ -1,4 +1,4 @@
-from Bio import Phylo, AlignIO, SeqIO
+from Bio import Phylo, AlignIO
 from io import StringIO
 from collections import Counter
 from copy import copy
@@ -20,13 +20,14 @@ from app.utils.gomdb_constructor import GOMDB_Constructor
 from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
 from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
-from app.utils.orf_identifier import find_orfs
 from app.utils.error_handlers import raise_gravity_error
 from app.utils.shell_cmds import shell
 from app.utils.mkdirs import mkdir_ref_annotator
-from app.utils.stdout_utils import progress_msg, warning_msg
+from app.utils.stdout_utils import progress_msg
 from app.utils.generate_fnames import generate_file_names
-from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
+#
+from app.utils.parallel_sig_generator import PPHMMSignatureTable_Constructor
+# from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor_DEPRECATED as PPHMMSignatureTable_Constructor #########
 
 class RefVirusAnnotator:
     def __init__(self,
@@ -41,29 +42,40 @@ class RefVirusAnnotator:
         self.genomes = retrieve_genome_vars(self.fnames["ReadGenomeDescTablePickle"])
         mkdir_ref_annotator(self.fnames, self.payload['PPHMMSorting'])
         '''Placehodler dirs & objects'''
-        self.PPHMMSignatureTable, self.PPHMMLocationTable = [], []
+        self.PPHMMSignatureTable, self.PPHMMLocationTable, self.NaivePPHMMLocationTable = [], [], []
 
     def remove_singleton_pphmms(self):
         '''Remove singleton PPHMMs from the PPHMM databases'''
-        progress_msg("\tDetermining and removing PPHMMs ")
+        progress_msg(f"- Determining and removing PPHMMs shared by less than {self.payload['N_VirusesOfTheClassToIgnore']} genomes")
+
+        # TODO < RM BETTER SINGLETON INDEX FINDER
+        sig_table = pd.DataFrame(self.PPHMMSignatureTable)
+        sig_table_bin = sig_table.applymap(lambda x: 1 if x > 0 else 0)
+        pphmm_usage_counts = sig_table_bin.apply(lambda x: sum(x)).tolist()
+        SingletonPPHMM_IndexList = []
+        for idx, pphmm_count in enumerate(pphmm_usage_counts):
+            if pphmm_count == 0 or pphmm_count < self.payload['N_VirusesOfTheClassToIgnore']:
+                SingletonPPHMM_IndexList.append(idx)
+        #
 
         '''Identify and remove non informative singleton PPHMMs from the database'''
-        N_VirusesPerClass = Counter(self.genomes["TaxoGroupingList"])
-        CandSingletonPPHMM_IndexList = np.where(
-            np.sum(self.PPHMMSignatureTable > 0, axis=0) <= 1)[0]
-        InfoSingletonPPHMM_IndexList = [PPHMM_i for PresentPPHMM_IndexList in [np.where(PPHMMSignature > 0)[0] for PPHMMSignature in self.PPHMMSignatureTable] if set(
-            PresentPPHMM_IndexList).issubset(CandSingletonPPHMM_IndexList) for PPHMM_i in PresentPPHMM_IndexList]
-        CandSingletonPPHMM_IndexList = [
-            PPHMM_i for PPHMM_i in CandSingletonPPHMM_IndexList if PPHMM_i not in InfoSingletonPPHMM_IndexList]
-        SingletonPPHMM_IndexList = []
-        for PPHMM_i in CandSingletonPPHMM_IndexList:
-            VirusWithTheSingletonPPHMM_i = np.where(
-                self.PPHMMSignatureTable[:, PPHMM_i] != 0)[0]
-            if len(VirusWithTheSingletonPPHMM_i) == 0:
-                SingletonPPHMM_IndexList.append(PPHMM_i)
-            else:
-                if N_VirusesPerClass[self.genomes["TaxoGroupingList"][VirusWithTheSingletonPPHMM_i[0]]] > self.payload['N_VirusesOfTheClassToIgnore']:
-                    SingletonPPHMM_IndexList.append(PPHMM_i)
+        # N_VirusesPerClass = Counter(self.genomes["TaxoGroupingList"])
+        # CandSingletonPPHMM_IndexList = np.where(
+        #     np.sum(self.PPHMMSignatureTable > 0, axis=0) <= 1)[0]
+        # InfoSingletonPPHMM_IndexList = [PPHMM_i for PresentPPHMM_IndexList in [np.where(PPHMMSignature > 0)[0] for PPHMMSignature in self.PPHMMSignatureTable] if set(
+        #     PresentPPHMM_IndexList).issubset(CandSingletonPPHMM_IndexList) for PPHMM_i in PresentPPHMM_IndexList]
+        # CandSingletonPPHMM_IndexList = [
+        #     PPHMM_i for PPHMM_i in CandSingletonPPHMM_IndexList if PPHMM_i not in InfoSingletonPPHMM_IndexList]
+        # SingletonPPHMM_IndexList = []
+        # for PPHMM_i in CandSingletonPPHMM_IndexList:
+        #     VirusWithTheSingletonPPHMM_i = np.where(
+        #         self.PPHMMSignatureTable[:, PPHMM_i] != 0)[0]
+        #     if len(VirusWithTheSingletonPPHMM_i) == 0:
+        #         '''If zero hits''' # TODO Why would there be zero hits?
+        #         SingletonPPHMM_IndexList.append(PPHMM_i)
+        #     else:
+        #         if N_VirusesPerClass[self.genomes["TaxoGroupingList"][VirusWithTheSingletonPPHMM_i[0]]] > self.payload['N_VirusesOfTheClassToIgnore']:
+        #             SingletonPPHMM_IndexList.append(PPHMM_i)
 
         SelectedPPHMM_IndexList = np.array(
             list(range(self.PPHMMSignatureTable.shape[1])))
@@ -90,7 +102,7 @@ class RefVirusAnnotator:
             '''Change the PPHMM name annotation'''
             with open(HMMER_PPHMMFile_j, "r+") as HMMER_PPHMM_txt:
                 Contents = HMMER_PPHMM_txt.readlines()
-                Contents[1] = "NAME  Cluster_%s\n" % PPHMM_j
+                Contents[1] = f"NAME  Cluster_{PPHMM_j}\n"
                 Contents = "".join(Contents)
                 '''Put cursor at the beginning of the file'''
                 HMMER_PPHMM_txt.seek(0)
@@ -132,7 +144,8 @@ class RefVirusAnnotator:
             arr=self.PPHMMSignatureTable, obj=SingletonPPHMM_IndexList, axis=1)
         self.PPHMMLocationTable = np.delete(
             arr=self.PPHMMLocationTable, obj=SingletonPPHMM_IndexList, axis=1)
-
+        self.NaivePPHMMLocationTable = np.delete( # RM < TODO Fix 30/04/24
+            arr=self.NaivePPHMMLocationTable, obj=SingletonPPHMM_IndexList, axis=1)
         '''Reorganise the cluster meta data from PPHMMDBConstruction output'''
         parameters = retrieve_pickle(self.fnames['PphmmdbPickle'])
 
@@ -149,7 +162,7 @@ class RefVirusAnnotator:
 
     def sort_pphmm(self):
         '''Sort PPHMMs by similarity order, via AVA comparison. Overwrite db.'''
-        progress_msg("Sorting PPHMMs")
+        progress_msg("- Sorting PPHMMs in order of similarity and rewriting PPHMM database. This may take a while.")
 
         '''Determine the PPHMM order by 'virus profile' similarity'''
         TraitValueTable = copy(self.PPHMMSignatureTable.transpose())
@@ -177,6 +190,7 @@ class RefVirusAnnotator:
 
         '''Cluster PPHMMs by PPHMM similiarty, make dbs'''
         N_PPHMMs = self.PPHMMSignatureTable.shape[1]
+        progress_msg("\t- Clustering PPHMMs by similarity.")
         for PPHMM_i in alive_it(range(N_PPHMMs)):
             AlnClusterFile = f"{self.fnames['ClustersDir']}/Cluster_{PPHMM_i}.fasta"
             Aln = AlignIO.read(AlnClusterFile, "fasta")
@@ -213,9 +227,12 @@ class RefVirusAnnotator:
         SeenPair, SeenPair_i, PPHMMSimScoreCondensedMat = {}, 0, []
         hit_match = re.compile(
             r"[A-Z0-9]+\|[A-Z0-9]+.[0-9]{1}\s[a-zA-Z0-9_ ]{0,10}")
-        for PPHMM_i in range(0, N_PPHMMs):
+
+        progress_msg("\t- Regenerating protein profile scores.")
+        for PPHMM_i in alive_it(range(0, N_PPHMMs)):
             HHsuite_PPHMMFile = f"{self.fnames['HHsuite_PPHMMDir']}/PPHMM_{PPHMM_i}.hhm"
             shell(f"hhsearch -maxmem 9.0 -i {HHsuite_PPHMMFile} -d {fname} -o {hhsearchOutFile} -e {self.payload['HHsuite_evalue_Cutoff']} -E {self.payload['HHsuite_evalue_Cutoff']} -cov {self.payload['HHsuite_SubjectCoverage_Cutoff']} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.payload['N_CPUs']}")
+            # breakpoint()
 
             '''Open output from hhsearch'''
             with open(hhsearchOutFile, 'r') as hhsearchOut_txt:
@@ -270,7 +287,8 @@ class RefVirusAnnotator:
 
         '''Cluster PPHMMs based on hhsearch scores, using the MCL algorithm'''
         PPHMM_ClusterFile = f"{hhsearchDir}/PPHMM_Clusters.txt"
-        shell(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMM_ClusterFile} -I {self.fnames['PPHMMClustering_MCLInflation']}")
+        shell(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMM_ClusterFile} -I 2") # RM < Hard code for now
+        # shell(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMM_ClusterFile} -I {self.payload['PPHMMClustering_MCLInflation']}")
 
         SeenPPHMMIDList = []
         with open(PPHMM_ClusterFile, 'r') as PPHMM_Cluster_txt:
@@ -335,7 +353,7 @@ class RefVirusAnnotator:
             PPHMM_j += 1
 
         '''Make a new (ordered) PPHMM database'''
-        progress_msg("Building ordered PPHMM DB")
+        progress_msg("\t - Building ordered PPHMM DB")
         shell(f"find {self.fnames['HMMER_PPHMMDir']} -name '*.hmm' -exec cat {{}} \; > {self.fnames['HMMER_PPHMMDb']}")
         shell(f"hmmpress -f {self.fnames['HMMER_PPHMMDb']}")
 
@@ -357,7 +375,7 @@ class RefVirusAnnotator:
         with open(HMMER_PPHMMDbSummaryFile, "w") as HMMER_PPHMMDbSummary_txt:
             HMMER_PPHMMDbSummary_txt.write(Contents)
 
-        progress_msg("\tSort PPHMMSignatureTable and PPHMMLocationTable")
+        progress_msg("\t- Sorting new PPHMMSignatureTable and PPHMMLocationTable")
         self.PPHMMSignatureTable = self.PPHMMSignatureTable[:, PPHMMOrder]
         self.PPHMMLocationTable = self.PPHMMLocationTable[:, PPHMMOrder]
 
@@ -382,11 +400,9 @@ class RefVirusAnnotator:
         '''Combine with original data from VMR, save as CSV for shared PPHMM heatmaps'''
         PPHMMDesc = [
             f"PPHMM|{ClusterDesc}" for ClusterDesc in parameters["ClusterDescList"].astype("str")]
-        GOMDesc = [f"GOM|{TaxoGrouping}" for TaxoGrouping in GOMIDList]
-        header = ["Virus name"] + PPHMMDesc + GOMDesc
+        header = ["Virus name"] + PPHMMDesc
         table_data = np.column_stack((self.genomes["VirusNameList"],
-                                      self.PPHMMSignatureTable,
-                                      GOMSignatureTable))
+                                      self.PPHMMSignatureTable))
         out_df = pd.DataFrame(table_data, index=None, columns=header)
         out_df.to_csv(self.fnames["PphmmAndGomSigs"])
 
@@ -394,6 +410,7 @@ class RefVirusAnnotator:
         parameters["PPHMMSignatureTable"] = self.PPHMMSignatureTable
         parameters["GOMSignatureTable"] = GOMSignatureTable
         parameters["PPHMMLocationTable"] = self.PPHMMLocationTable
+        parameters["NaivePPHMMLocationTable"] = self.NaivePPHMMLocationTable
         parameters["GOMIDList"] = GOMIDList
         parameters["PPHMMSignatureTable_coo"] = coo_matrix(
             self.PPHMMSignatureTable)
@@ -416,7 +433,7 @@ class RefVirusAnnotator:
             "Generate PPHMM signature & loc tables, GOM database & GOM sig table")
 
         '''3/8 : Generate PPHMMSignatureTable and PPHMMLocationTable'''
-        self.PPHMMSignatureTable, self.PPHMMLocationTable = PPHMMSignatureTable_Constructor(
+        self.PPHMMSignatureTable, self.PPHMMLocationTable, self.NaivePPHMMLocationTable = PPHMMSignatureTable_Constructor(
                     self.genomes,
                     self.payload,
                     self.fnames,

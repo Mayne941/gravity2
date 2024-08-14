@@ -22,9 +22,10 @@ from app.utils.stdout_utils import clean_stdout, progress_msg, warning_msg
 from app.utils.retrieve_pickle import retrieve_genome_vars
 from app.utils.shell_cmds import shell
 from app.utils.mkdirs import mkdir_pphmmdbc
-from app.utils.error_handlers import raise_gravity_error
+from app.utils.error_handlers import raise_gravity_error, raise_gravity_warning, error_handler_hmmbuild, error_handle_mafft, error_handler_mash_sketch, error_handler_mash_dist, error_handler_mcl
 from app.utils.taxo_label_constructor import TaxoLabel_Constructor
 from app.utils.generate_fnames import generate_file_names
+from app.utils.blast import blastp_analysis
 
 class PPHMMDBConstruction:
     def __init__(self,
@@ -61,11 +62,11 @@ class PPHMMDBConstruction:
         '''4/10: Extract protein sequences from VMR using GenBank data; manually annotate ORFs if needed'''
         progress_msg(
             f"- Extract/predict protein sequences from virus genomes, excluding proteins with lengthes <{self.payload['ProteinLength_Cutoff']} aa")
-        ProtList, ProtIDList, Virus_i = [
-        ], [], 1
+        ProtList, ProtIDList = [
+        ], []
         raw_seqs = {}
 
-        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"])):
+        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]), total=self.genomes["TaxoGroupingList"].shape[0]):
             for SeqID in SeqIDList:
                 '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
                 try:
@@ -73,46 +74,50 @@ class PPHMMDBConstruction:
                 except KeyError as ex:
                     raise_gravity_error(f"{ex}\n"
                                         f"ERROR: I couldn't extract a sequence ID from the input Genbank file.\n"
-                                        f"This usually happens when you've tried to re-run the experiment with an old .gb file.\n"
-                                        f"Try deleting your input .gb file ({self.GenomeSeqFile}), then starting again.")
+                                        f"This usually happens when you've tried to re-run the experiment with an old .gb file, or if you didn't provide an accession number for sequences in your input VMR.\n"
+                                        f"Try deleting your input .gb file ({self.GenomeSeqFile}), then starting again. "
+                                        f"Otherwise it might be because your genbank file names don't match your VMR names, if you've provided your own file rather than downloading it automatically from genbank.")
 
                 GenBankID = GenBankRecord.name
                 GenBankFeatures = GenBankRecord.features
 
-                '''Extract protein sequences'''
+                allow_genbank_annotations = False # RM < TODO PARAMETERISE
                 ContainProtAnnotation = False
-                for Feature in GenBankFeatures:
-                    if(Feature.type == 'CDS' and "protein_id" in Feature.qualifiers and "translation" in Feature.qualifiers):
-                        ContainProtAnnotation = True
-                        try:
-                            ProtName = Feature.qualifiers["product"][0]
-                        except KeyError:
-                            try:
-                                ProtName = Feature.qualifiers["gene"][0]
+                if allow_genbank_annotations:
+                    '''Extract protein sequences'''
+                    for Feature in GenBankFeatures:
+                        if(Feature.type == 'CDS' and "protein_id" in Feature.qualifiers and "translation" in Feature.qualifiers):
+                            ContainProtAnnotation = True
+                            try: # TODO Triple exception makes me sad
+                                ProtName = Feature.qualifiers["product"][0]
                             except KeyError:
                                 try:
-                                    ProtName = Feature.qualifiers["note"][0]
+                                    ProtName = Feature.qualifiers["gene"][0]
                                 except KeyError:
-                                    ProtName = "Hypothetical protein"
-                        ProtID = Feature.qualifiers["protein_id"][0]
-                        ProtSeq = Feature.qualifiers["translation"][0]
-                        if len(ProtSeq) >= self.payload['ProteinLength_Cutoff']:
-                            ProtRecord = SeqRecord(Seq(ProtSeq),
-                                                   id=GenBankID+"|"+ProtID,
-                                                   name=GenBankID+"|"+ProtID,
-                                                   description=ProtName,
-                                                   annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
-                            ProtList.append(ProtRecord)
-                            ProtIDList.append(GenBankID+"|"+ProtID)
+                                    try:
+                                        ProtName = Feature.qualifiers["note"][0]
+                                    except KeyError:
+                                        ProtName = "Hypothetical protein"
+                            ProtID = Feature.qualifiers["protein_id"][0]
+                            ProtSeq = Feature.qualifiers["translation"][0]
+                            if len(ProtSeq) >= self.payload['ProteinLength_Cutoff']:
+                                ProtRecord = SeqRecord(Seq(ProtSeq),
+                                                        id=f"{GenBankID}|{ProtID}",
+                                                        name=f"{GenBankID}|{ProtID}",
+                                                        description=ProtName,
+                                                        annotations={'taxonomy': [BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping]})
+                                ProtList.append(ProtRecord)
+                                ProtIDList.append(f"{GenBankID}|{ProtID}")
 
                 '''If the genome isn't annotated with any ORFs, find some'''
                 if not ContainProtAnnotation:
                     prots, prot_ids, raw_nas = find_orfs(GenBankID, GenBankRecord.seq, TranslTable, self.payload['ProteinLength_Cutoff'],
                                                     taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+                    if len(prots) == 0:
+                        raise_gravity_warning(f"Sequence {SeqID} doesn't code for any ORFs!")
                     ProtList += prots
                     ProtIDList += prot_ids
                     raw_seqs.update(raw_nas)
-            Virus_i += 1
         clean_stdout()
 
         if len(ProtList) == 0:
@@ -121,6 +126,7 @@ class PPHMMDBConstruction:
         with open(self.fnames['MashSubjectFile'], "w") as MashSubject_txt:
             SeqIO.write(ProtList, MashSubject_txt, "fasta") # RM < TODO Swap to pure py?
 
+        # TODO < Break out into new fn
         '''Save ref seqs for comparative analysis'''
         ref_seqs = [[i, str(GenBankDict[i].seq)] for i in GenBankDict.keys()]
         TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
@@ -129,57 +135,87 @@ class PPHMMDBConstruction:
                                               VirusNameList=self.genomes["VirusNameList"]
                                               )
         for ref_idx in range(len(ref_seqs)):
+            '''Rename sequences'''
             hits = [s for s in TaxoLabelList if ref_seqs[ref_idx][0] in s]
-            if len(hits) > 0 and len(hits) < 2:
+            if len(hits) == 1:
                 ref_seqs[ref_idx][0] = hits[0]
-        with open(self.fnames['RefSeqFile'], "w") as f: [f.write(f">{i[0]}\n{i[1]}\n") for i in ref_seqs]
 
+        '''Sort seqs by input vmr order, if a custom genbank provided'''
+        sorted_seqs = []
+        for seq_id in self.genomes["SeqIDLists"]:
+            for output_seq in ref_seqs:
+                if seq_id[0] in output_seq[0]:
+                    sorted_seqs.append(output_seq)
+        with open(self.fnames['RefSeqFile'], "w") as f: [f.write(f">{i[0]}\n{i[1]}\n") for i in sorted_seqs]
         return ProtList, np.array(ProtIDList)
 
     def mash_analysis(self, ProtList):
         '''6/10: Perform ALL-VERSUS-ALL Mash analysis'''
         progress_msg("Creating Mash sketches")
-        SeenPair, SeenPair_i, MashMatrix, MashAllRes, N_ProtSeqs = {}, 0, [], pd.DataFrame(), len(ProtList)
-        mash_all_fname  = f'{"/".join(self.fnames["MashOutputFile"].split("/")[:-1])}/mashup_scores_all.tab'
-        shell(f"mash-Linux64-v2.3/mash sketch -a -i {self.fnames['MashSubjectFile']}") # PARAMETERISE MASH CALL
-        for ProtSeq_i in alive_it(range(N_ProtSeqs)):
-            '''Mash query fasta file'''
-            MashQuery = ProtList[ProtSeq_i]
-            with open(self.fnames['MashQueryFile'], "w") as MashQuery_txt: _ = SeqIO.write(MashQuery, MashQuery_txt, "fasta")
+        SeenPair, SeenPair_i, MashMatrix, N_ProtSeqs = {}, 0, [], len(ProtList)
 
-            mash_fname = f'{"/".join(self.fnames["MashOutputFile"].split("/")[:-1])}/mashup_scores.tab'
-            shell(f"mash-Linux64-v2.3/mash sketch -a -i {self.fnames['MashQueryFile']}")
-            shell(f"mash-Linux64-v2.3/mash dist {self.fnames['MashSubjectFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}")
+        if self.payload["UseBlast"]:
+            '''Use BLASTp instead of Mash, if user specifies'''
+            MashMatrix = blastp_analysis(ProtList, self.fnames, self.payload)
 
-            mash_df = pd.read_csv(mash_fname, sep="\t", header=None, names=["orf", "query", "dist", "p", "hashes"])
+        else:
+            '''Do Mash'''
+            out = shell(f"mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashSubjectFile']}", ret_output=True) # TODO PARAMETERISE MASH CALL
+            error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), initial sketch)")
+            for ProtSeq_i in alive_it(range(N_ProtSeqs)):
+                '''Mash query fasta file'''
+                MashQuery = ProtList[ProtSeq_i]
+                with open(self.fnames['MashQueryFile'], "w") as MashQuery_txt:
+                    MashQuery_txt.write(f">{MashQuery.name} {MashQuery.description}\n{str(MashQuery.seq)}")
 
-            mash_df["query"] = ProtList[ProtSeq_i].id
-            mash_df = mash_df[mash_df["orf"] != mash_df["query"]]
-            MashAllRes = pd.concat([MashAllRes, mash_df])
-            mash_df["p"] = mash_df["p"].astype(float)
-            mash_df["mash_sim"] = np.abs(1 - mash_df["dist"])
+                mash_fname = f'{"/".join(self.fnames["MashOutputFile"].split("/")[:-1])}/mashup_scores.tab'
+                out = shell(f"mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashQueryFile']}", ret_output=True)
+                error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), iterative sketch)")
+                out = shell(f"mash dist -p {self.payload['N_CPUs']} -v {self.payload['Mash_p_val_cutoff']} -d {self.payload['Mash_sim_score_cutoff']} -i {self.fnames['MashSubjectFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}",
+                            ret_output=True)
+                error_handler_mash_dist(out, "Mash (PPHMMDB Construction, mash_analysis(), dist)")
 
-            mash_iter = mash_df.to_dict(orient="records")
-            for i in mash_iter:
-                pair = ", ".join(sorted([ProtList[ProtSeq_i].id, i["orf"]]))
-                if  ((i["p"] < self.payload['Mash_p_val_cutoff'])
-                    and (i["mash_sim"] > self.payload['Mash_sim_score_cutoff'])):
-                    '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
-                    if pair in SeenPair:
-                        '''If the pair has already been seen...'''
-                        if i["mash_sim"] > MashMatrix[SeenPair[pair]][2]:
-                            '''...and if the new mash_sim is higher'''
-                            MashMatrix[SeenPair[pair]][2] = i["mash_sim"]
-                    else:
-                        SeenPair[pair] = SeenPair_i
-                        MashMatrix.append(
-                            [pair.split(", ")[0], pair.split(", ")[1], i["mash_sim"]])
-                        SeenPair_i += 1
+                try:
+                    mash_df = pd.read_csv(mash_fname, sep="\t", header=None, names=["orf", "query", "dist", "p", "hashes"], engine="pyarrow")
+                except:
+                    raise_gravity_warning(f"Mash output for protein sequence {ProtSeq_i} is empty. This usually happens when an ORF hasn't been translated properly.")
+                    continue
 
-        MashAllRes.to_csv(mash_all_fname)
-        MashMatrix = np.array(MashMatrix)
-        if MashMatrix.shape[0] == 0:
-            raise_gravity_error(f"No Mash results were extracted from protein sequences. Check Mash is installed and that your parameters aren't too restrictive.")
+                if mash_df.shape[0] == 0:
+                    raise_gravity_error(f"Output from Mash (PPHMMDB Construction, mash_analysis()) was empty. Check Mash is installed, active in your environment and your input fastas are valid. Check pandas and pyarrow are installed (used in reading Mash output).")
+                elif mash_df.shape[0] == 1:
+                    '''If 1 return, this is self vs self and can be ignored'''
+                    continue
+                else:
+                    mash_df["query"] = ProtList[ProtSeq_i].id
+                    mash_df = mash_df[mash_df["orf"] != mash_df["query"]]
+                    mash_df["p"] = mash_df["p"].astype(float)
+                    mash_df["mash_sim"] = np.abs(1 - mash_df["dist"])
+
+                    mash_iter = mash_df.to_dict(orient="records")
+                    for i in mash_iter:
+                        '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
+                        pair = ", ".join(sorted([ProtList[ProtSeq_i].id, i["orf"]]))
+                        if pair in SeenPair:
+                            '''If the pair has already been seen...'''
+                            if i["mash_sim"] > MashMatrix[SeenPair[pair]][2]:
+                                '''...and if the new mash_sim is higher'''
+                                MashMatrix[SeenPair[pair]][2] = i["mash_sim"]
+                        else:
+                            SeenPair[pair] = SeenPair_i
+                            MashMatrix.append(
+                                [pair.split(", ")[0], pair.split(", ")[1], i["mash_sim"]])
+                            SeenPair_i += 1
+
+            MashMatrix = np.array(MashMatrix)
+
+            if MashMatrix.shape[0] == 0:
+                try:
+                    MashMatrix = blastp_analysis(ProtList, self.fnames, self.payload)
+                except:
+                    raise_gravity_error(f"No Mash results were extracted from protein sequences, then failed to run BLASTp as a failover. "
+                                        f"Check Mash is installed and that your parameters aren't too restrictive."
+                                        f"Check BLAST is installed.")
         np.savetxt(fname=self.fnames['MashSimFile'],
                    X=MashMatrix,
                    fmt='%s',
@@ -187,12 +223,13 @@ class PPHMMDBConstruction:
                    header="SeqID_I\tSeqID_II\tBit score"
                    )
 
+
     def mcl_clustering(self, ProtIDList):
         '''7/10: Use Mcl to do clustering on Mash bit scores'''
         progress_msg("- Doing protein sequence clustering based on Mash bit scores, using the MCL algorithm")
-        shell(f"mcl {self.fnames['MashSimFile']} --abc -o {self.fnames['MashProtClusterFile']} -I {self.payload['ProtClustering_MCLInflation']}",
-                    "PPHMMDB Contruction: mcl clustering, call mcl")
-
+        out = shell(f"mcl {self.fnames['MashSimFile']} --abc -o {self.fnames['MashProtClusterFile']} -I {self.payload['ProtClustering_MCLInflation']}",
+                    ret_output=True)
+        error_handler_mcl(out, "Mcl, PPHMMDB construction")
         '''For each cluster found, pull out seen proteins by ID'''
         SeenProtIDList = []
         with open(self.fnames['MashProtClusterFile'], 'r') as MashProtCluster_txt:
@@ -221,25 +258,40 @@ class PPHMMDBConstruction:
                     DescList.append(HitList[-1].description.replace(", ", " ").replace(",", " ").replace(": ", "_").replace(
                         ":", "_").replace("; ", " ").replace(";", " ").replace(" (", "/").replace("(", "/").replace(")", ""))
 
-                '''Cluster file'''
+                '''Cluster file; remove 'X's for bad sequences'''
                 AlnClusterFile = f"{self.fnames['ClustersDir']}/Cluster_{Cluster_i}.fasta"
                 with open(AlnClusterFile, "w") as UnAlnClusterTXT:
-                    p = SeqIO.write(HitList, UnAlnClusterTXT, "fasta")
-
+                    [UnAlnClusterTXT.write(f">{i.name} {i.description}\n{str(i.seq).replace('X','')}\n") for i in HitList]
                 temp_aln_fname = f"{self.fnames['ClustersDir']}/temp.fasta"
-                '''Align cluster using Mafft'''
-                shell(f"mafft --thread {self.payload['N_CPUs']} --localpair --maxiterate 1000  {AlnClusterFile} > {temp_aln_fname}",
-                        "PPHMMDB Construction: make alignments, main Mafft call")
-                shell(f"rm {AlnClusterFile} && mv {temp_aln_fname} {AlnClusterFile}",
-                      "PPHMMDB COnstruction: move temp mafft file")
+
+
+                if len(HitList) > 1:
+                    '''Align cluster using Mafft'''
+                    if self.payload["ClustAlnScheme"] == "global":
+                        option = "--globalpair --maxiterate 1000"
+                    elif self.payload["ClustAlnScheme"] == "local":
+                        option = "--localpair --maxiterate 1000"
+                    else:
+                        option = "--auto"
+
+                    out = shell(f"mafft --thread {self.payload['N_CPUs']} --anysymbol {option} {AlnClusterFile} > {temp_aln_fname}", # TODO Fast version
+                        ret_output=True)
+                    error_handle_mafft(out, "mafft (PPHMMDB Construction: make_alignments)")
+
+                else:
+                    shell(f"cp {AlnClusterFile} {temp_aln_fname}")
 
                 '''Cluster annotations'''
                 Cluster_MetaDataDict[Cluster_i] = {"Cluster": Cluster,
                                                 "DescList": DescList,
                                                 "TaxoLists": TaxoLists,
-                                                "AlignmentLength": AlignIO.read(AlnClusterFile, "fasta").get_alignment_length()
+                                                "AlignmentLength": AlignIO.read(temp_aln_fname, "fasta").get_alignment_length()
                                                 }
+
+                shell(f"rm {AlnClusterFile} && mv {temp_aln_fname} {AlnClusterFile}",
+                      "PPHMMDB COnstruction: move temp mafft file")
                 Cluster_i += 1
+
         clean_stdout()
         return Cluster_MetaDataDict
 
@@ -268,23 +320,24 @@ class PPHMMDBConstruction:
 
         '''Merge protein alignments'''
         while True:
-            if self.payload['HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging'] == True:
-                progress_msg(
-                    f"\t\t - Building HMMER PPHMM DB...")
-                _ = self.Make_HMMER_PPHMM_DB(HMMER_PPHMMDb=f"{self.fnames['HMMER_PPHMMDbDir']}/HMMER_PPHMMDb_{AlignmentMerging_i_round}",
-                                             Cluster_MetaDataDict=Cluster_MetaDataDict)
+            # if self.payload['HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging'] == True:
+            progress_msg(
+                f"\t\t - Rebuilding HMMER PPHMM DB...")
+            _ = self.Make_HMMER_PPHMM_DB(PphmmDb=f"{self.fnames['HMMER_PPHMMDbDir']}/HMMER_PPHMMDb_{AlignmentMerging_i_round}",
+                                            Cluster_MetaDataDict=Cluster_MetaDataDict)
 
-                shell(f"find {self.fnames['HMMER_PPHMMDir']} -type f -name '*.hmm' -delete",
-                        "PPHMMDB Construction: merge alignments, hhsearch")
+            shell(f"find {self.fnames['HMMER_PPHMMDir']} -type f -name '*.hmm' -delete",
+                    "PPHMMDB Construction: merge alignments, hhsearch")
 
             '''Inter-PPHMM similarity scoring'''
-            progress_msg(f"\t - Round {AlignmentMerging_i_round + 1} - Determine PPHMM-PPHMM similarity scores (ALL-VERSUS-ALL hhsearch)")
+            progress_msg(f"\t - Alignment Merging Round {AlignmentMerging_i_round + 1} - Determine PPHMM-PPHMM similarity scores (ALL-VERSUS-ALL hhsearch)")
             hhsearchDir = f"{self.fnames['HHsuiteDir']}/hhsearch_{''.join(random.choice(string.ascii_uppercase + string.digits)for _ in range(10))}"
             os.makedirs(hhsearchDir)
             hhsearchOutFile = f"{hhsearchDir}/hhsearch.txt"
 
             '''Build hhm DBs'''
             progress_msg("\t\t - Building HMM Databases...")
+            # RM < TODO FUNCTION (ALSO CALLED IN REF VIRUS ANNOT), PARALLELISE
             SeenPair, SeenPair_i, PPHMMSimScoreCondensedMat = {}, 0, []
             N_PPHMMs = LineCount(f"{fname}_hhm.ffindex")
             for PPHMM_i in alive_it(range(0, N_PPHMMs)):
@@ -313,7 +366,7 @@ class PPHMMDBConstruction:
                                 Col = float(line_fil[7])
                                 # SubjectLength = int(line_fil[-1])
                             except ValueError as ex:
-                                warning_msg(f"Error parsing HHSuite output. Attempting to correct...")
+                                # warning_msg(f"Error parsing HHSuite output. Attempting to correct...")
                                 try:
                                     line_fil = line.split()
                                     PPHMM_j = int(line_fil[0])
@@ -321,14 +374,12 @@ class PPHMMDBConstruction:
                                     pvalue = float(line_fil[5])
                                     PPHMMSimScore = float(line_fil[6])
                                     Col = float(line_fil[8])
-                                    print(f"...corrected successfully!")
+                                    # print(f"...corrected successfully!")
                                 except:
                                     raise_gravity_error(f"Failed to extract PPHMM data from HHsearch output (pphmmdb construction, aln merging function). This happens when HHsearch outputs malformed text files, check the output for the entry listed in this exception: {ex}")
                             qcovs = Col/QueryLength*100
                             #scovs = Col/SubjectLength*100
-                            if ( evalue <= self.payload['HHsuite_evalue_Cutoff'] and # RM < TODO Why would we need these when in HHsuite search terms?
-                                 pvalue <= self.payload['HHsuite_pvalue_Cutoff'] and # RM < TODO ... so check output
-                                 qcovs >= self.payload['HHsuite_QueryCoverage_Cutoff']):
+                            if qcovs >= self.payload['HHsuite_QueryCoverage_Cutoff']:
                                 Pair = ", ".join(
                                     sorted(map(str, [PPHMM_i, PPHMM_j])))
                                 if Pair in SeenPair:
@@ -369,7 +420,8 @@ class PPHMMDBConstruction:
             progress_msg(
                 "\t\t - Cluster PPHMMs based on hhsearch scores, using the MCL algorithm")
             PPHMMClustersFile = f"{hhsearchDir}/PPHMMClusters.txt"
-            shell(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMMClustersFile} -I {self.payload['PPHMMClustering_MCLInflation']}",
+            # shell(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMMClustersFile} -I {self.payload['PPHMMClustering_MCLInflation']}",
+            shell(f"mcl {PPHMMSimScoreCondensedMatFile} --abc -o {PPHMMClustersFile} -I 5", # TODO REPARAMETERISE
                                  "PPHMMDB Construction: merge alignments, mcl call")
 
             SeenProtIDList = []
@@ -421,10 +473,11 @@ class PPHMMDBConstruction:
                         while True:
                             '''Iterate over tree looking for pairs'''
                             m = re.search(r"\((\d+),(\d+)\)", PPHMMTreeNewick)
-                            mafft_temp_fname = f"{self.ShelveDir}/temp.fasta"
+                            mafft_temp_fname = f"{self.fnames['ExpDir']}/temp.fasta"
                             if not m:
-                                shell(f"mafft --thread {self.payload['N_CPUs']} --localpair --maxiterate 1000  {ClusterFile_i} > {mafft_temp_fname}",
-                                        calling_fn="PPHMMDB Construction: merge alignments, mafft refine")
+                                out = shell(f"mafft --thread {self.payload['N_CPUs']} --auto --maxiterate 1000  {ClusterFile_i} > {mafft_temp_fname}",
+                                        ret_output=True)
+                                error_handle_mafft(out, "mafft (PPHMMDB Construction, pphmm_and_merge_alignments, terminal realignment)")
                                 shell(f"rm {ClusterFile_i} && mv {mafft_temp_fname} {ClusterFile_i}",
                                         "PPHMMDB Construction: merge alignments, rm mafft intermediates")
                                 break
@@ -438,9 +491,9 @@ class PPHMMDBConstruction:
                             ClusterFile_j = f"{self.fnames['ClustersDir']}/Cluster_{PPHMM_j}.fasta"
                             HHsuite_PPHMMFile_j = f"{self.fnames['HHsuite_PPHMMDir']}/PPHMM_{PPHMM_j}.hmm"
 
-                            # RM < TODO REPLACE WITH MAFFT
-                            shell(f"muscle -profile -in1 {ClusterFile_i} -in2 {ClusterFile_j} -out {mafft_temp_fname} -gapopen -3.0 -gapextend -0.0",
-                                                 "PPHMMDB Construction: merge alignments, muscle profile")
+                            out = shell(f"mafft --thread {self.payload['N_CPUs']} --auto --addfragments {ClusterFile_j} --reorder {ClusterFile_i} > {mafft_temp_fname}",
+                                  ret_output=True)
+                            error_handle_mafft(out, "mafft (PPHMMDB Construction, pphmm_and_merge_alignments, profile-profile alignment)")
                             shell(f"rm {ClusterFile_i} {ClusterFile_j} {HHsuite_PPHMMFile_j} && mv {mafft_temp_fname} {ClusterFile_i}",
                                     "PPHMMDB Construction: merge alignments, rm mafft intermediates")
 
@@ -497,6 +550,7 @@ class PPHMMDBConstruction:
 
     def rebuild_hhsuite_db(self, AlignmentMerging_i_round, fname, first=False):
         '''Rebuild the HHsuite PPHMM database'''
+        progress_msg(f"\t - Rebuilding PPHMM databases for alignment merging...")
         shell(f"rm {self.fnames['HHsuite_PPHMMDB']}_hhm.ffdata {self.fnames['HHsuite_PPHMMDB']}_hhm.ffindex",
                     "PPHMMDB Contruction: rebuild hhsite db, remove existing db")
         shell(f"ffindex_build -s {fname}_msa.ffdata {fname}_msa.index {self.fnames['ClustersDir']}")
@@ -569,7 +623,8 @@ class PPHMMDBConstruction:
             '''Make a PPHMM using HMMER hmmbuild'''
             AlnClusterFile = f"{self.fnames['ClustersDir']}/Cluster_{PPHMM_i}.fasta"
             HMMER_PPHMMFile = f"{self.fnames['HMMER_PPHMMDir']}/PPHMM_{PPHMM_i}.hmm"
-            shell(f"hmmbuild {HMMER_PPHMMFile} {AlnClusterFile}", "PPHMMDB Construction: make HMMER PPHMMDB, hmmbuild")
+            out = shell(f"hmmbuild --amino {HMMER_PPHMMFile} {AlnClusterFile}", ret_output=True)
+            error_handler_hmmbuild(out, "hmmbuild (PPHMMDB Construction: Make_HMMER_PPHMM_DB)")
 
             '''Modify the DESC line in the HMM file to ClusterDesc|ClusterTaxo'''
             with open(HMMER_PPHMMFile, "r+") as HMMER_PPHMM_txt:
@@ -579,12 +634,11 @@ class PPHMMDBConstruction:
                 HMMER_PPHMM_txt.seek(0)
                 HMMER_PPHMM_txt.write(contents)
                 HMMER_PPHMM_txt.truncate()
-        clean_stdout()
+
 
         '''Make a HMMER HMM DB with hmmpress'''
         shell(f"find {self.fnames['HMMER_PPHMMDir']} -name '*.hmm' -exec cat {{}} \; > {PphmmDb}", "PPHMMDB Construction: make HMMER PPHMMDB, find db")
         shell(f"hmmpress -f {PphmmDb}", "PPHMMDB Construction: make HMMER PPHMMDB, HMMPress")
-
         '''Make a PPHMMDBSummary file'''
         ClusterIDList = [
             f"Cluster_{Cluster_i}" for Cluster_i in range(N_PPHMMs)]
