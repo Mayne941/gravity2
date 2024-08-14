@@ -33,7 +33,7 @@ class Pipeline_I:
         except: raise_gravity_error(f"I couldn't find your Pipeline I VMR-like document.\n"
                                     f"This usually happens when you've copied settings from a previous run. Try deleting your .gb fine and start again.")
 
-    @timing
+    #@timing
     def read_genome_desc_table(self, refresh_genbank):
         '''I: Fire Read Genom Desc Table'''
         [print(log_text) for log_text in self.logs[0]]
@@ -47,7 +47,7 @@ class Pipeline_I:
         rgdt.entrypoint()
         self.pphmmdb_construction()
 
-    @timing
+    #@timing
     def pphmmdb_construction(self):
         '''II: Fire PPHMDB Constructor'''
         [print(log_text) for log_text in self.logs[1]]
@@ -59,7 +59,7 @@ class Pipeline_I:
         pph.main()
         self.ref_virus_annotator()
 
-    @timing
+    #@timing
     def ref_virus_annotator(self):
         '''III: Fire Reference Virus Annotator'''
         [print(log_text) for log_text in self.logs[2]]
@@ -71,7 +71,7 @@ class Pipeline_I:
         rva.main()
         self.make_graphs()
 
-    @timing
+    #@timing
     def make_graphs(self):
         '''IV: Fire Heatmap and Dendrogram Constructors'''
         [print(log_text) for log_text in self.logs[3]]
@@ -82,7 +82,7 @@ class Pipeline_I:
         ghm.main() # RM < TODO DISABLED FOR TEST
         # self.mutual_info_calculator()
 
-    @timing
+    #@timing
     def mutual_info_calculator(self):
         '''V: Fire Mutal Info Calculator'''
         [print(log_text) for log_text in self.logs[4]]

@@ -9,7 +9,7 @@ from app.utils.error_handlers import raise_gravity_warning, raise_gravity_error,
 
 def blastp_analysis(ProtList, fnames, payload):
     '''6/10: Perform ALL-VERSUS-ALL BLASTp analysis'''
-    raise_gravity_warning("No similar matches were found using Mash. Entering failover with a less sensitive search method (BLASTp)...")
+    raise_gravity_warning("Performing all-vs-all BLASTp analysis. If you didn't select this as an option, it's because there were no Mash hits (you might need to refine your settings).")
     progress_msg("Performing ALL-VERSUS-ALL BLASTp analysis")
     with open(fnames['MashSubjectFile'], "w") as BLASTSubject_txt:
         SeqIO.write(ProtList, BLASTSubject_txt, "fasta")

@@ -145,19 +145,19 @@ def run_end_to_end(payload):
     if not payload["SkipFirstPass"]:
         run_pipeline_i_full(payload_fp_pl1)
         # run_pipeline_ii_full(payload_fp_pl2)
-    run_pipeline_i_full(payload_sp_pl1, refresh_genbank=True) ############
+    run_pipeline_i_full(payload_sp_pl1, refresh_genbank=True)
     # run_pipeline_ii_full(payload_sp_pl2, refresh_genbank=True)
 
-    ## RM < TODO BENCHMARKING FOR PAPE
-    with open(f'{payload_sp_pl2["ExpDir_Pl1"]}/output/ref_seqs.fasta', "r") as f: refs = f.readlines()
-    with open(f'{payload_sp_pl2["ExpDir_Pl1"].replace("pipeline_1","pipeline_2")}/output/ref_seqs.fasta', "r") as f: ucfs = f.readlines()
-    seqs = refs + ucfs
-    seqlen = np.mean([len(i) for i in seqs if not i[0] == ">"])
+    ## RM < BENCHMARKING FOR PAPER
+    # with open(f'{payload_sp_pl2["ExpDir_Pl1"]}/output/ref_seqs.fasta', "r") as f: refs = f.readlines()
+    # with open(f'{payload_sp_pl2["ExpDir_Pl1"].replace("pipeline_1","pipeline_2")}/output/ref_seqs.fasta', "r") as f: ucfs = f.readlines()
+    # seqs = refs + ucfs
+    # seqlen = np.mean([len(i) for i in seqs if not i[0] == ">"])
 
-    with open(f'{payload_sp_pl2["ExpDir_Pl1"].replace("pipeline_1", "pipeline_2")}/BENCHMARKING.txt', "w") as f:
-        f.write(f"Time for end-to-end: {time.time() - st}")
-        f.write(f"Mean seq len: {seqlen}")
-    print(f"Time for end-to-end: {time.time() - st}")
+    # with open(f'{payload_sp_pl2["ExpDir_Pl1"].replace("pipeline_1", "pipeline_2")}/BENCHMARKING.txt', "w") as f:
+    #     f.write(f"Time for end-to-end: {time.time() - st}")
+    #     f.write(f"Mean seq len: {seqlen}")
+    # print(f"Time for end-to-end: {time.time() - st}")
     ##
 
 
@@ -173,6 +173,7 @@ async def pipeline_i_full(payload: Pipeline_i_data, background_tasks: Background
 def run_pipeline_i_full(payload, refresh_genbank=False):
     pl = Pipeline_I(payload)
     pl.read_genome_desc_table(refresh_genbank)
+    progress_msg(f"GRAViTy-V2 pipeline complete!")
 
 @app.post("/pipeline_i_from_pphmmdb_construction/", tags=["Custom pipelines"])
 async def pipeline_i__from_pphmmdb_construction(payload: Pipeline_i_data, background_tasks: BackgroundTasks):
@@ -283,6 +284,15 @@ def run_pipeline_i_from_mutual_info_calculator(payload):
 async def run_dep_test():
     clf = DepTest()
     clf.main()
+    return "See terminal window for details."
+
+@app.get("/example_run/", tags=["Utilities"])
+async def run_example_run():
+    import json
+    with open(f"data/eval/example_runfile.json") as f:
+        payload = process_json(json.load(f))
+        run_pipeline_i_full(payload)
+    print(f"GRAViTy-V2 test complete. Check ./output/GRAViTyV2_example_run/ for output! Full output descriptions may be found on the GitHub readme.")
     return "See terminal window for details."
 
 @app.post("/scrape_vmr/", tags=["Utilities"])
