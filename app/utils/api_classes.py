@@ -85,7 +85,7 @@ class Data_pl2_unique_params(BaseModel):
 class Data_common_pipeline_params(BaseModel):
     AnnotateIncompleteGenomes: bool = Query(False,
                                             description="Annotate all unclassified viruses using reference PPHMM database(s) if True, otherwise only complete genomes.")
-    TaxoGrouping_Header: Literal["Taxonomic grouping", "Family", "Genus"] = Query('Taxonomic grouping',
+    TaxoGrouping_Header: Literal["Taxonomic grouping", "Family", "Genus"] = Query('Genus',
                                                                          description="The header of the Taxonomic grouping column.")
     genbank_email: str = Query('name@provider.com',
                                description="A valid email address is required to download genbank files.")
