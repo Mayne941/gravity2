@@ -25,30 +25,40 @@ We assume for the purposes of this readme that the user will interact with GRAVi
 
 GRAViTy comprises two distinct pipelines. Pipeline 1 (PL1) is for analysing and creating "databases" of information pertaining to these analyses, on "reference" viruses, i.e. genomes for which we have previously generated taxonomic data. Pipeline 2 (PL2) is for identifying and classifying "unclassified" viruses, by doing comparisons with the genomes in databases generated during PL1. Both pipelines generate additional statistics and visualisations, such as heatmaps. Users will please refer to our documentation (./docs) and publications for further details.
 
-```mermaid
-flowchart TD
-   A[Read Reference Genomes]-->B[Construct PPHMMs]
-   B[Construct PPHMMs]-->C[Annotate Reference Viruses]
-   C[Annotate Reference Viruses]-->D[Generate Graphs]
-   D[Generate Graphs]-->E[Evaluate/MI Score]
-   F[Read Unclassified Genomes]-->G[Construct PPHMMs]
-   C[Annotate Reference Viruses]-.->G[Construct PPHMMs]
-   G[Construct PPHMMs]-->H[Annotate Unclassified Viruses]
-   H[Annotate Unclassified Viruses]-->I[Virus Classification]
-```
+![GRAViTy-V2 Process Flow](docs/gravity_flow_v2.png "GRAViTy-V2 Process Flow")
 
 ## Installation instructions:
-This guide is tested on Windows Subsystems Linux 22.04, Ubuntu 22.04 LTS and Ubuntu Server 22.04 LTS. We anticipate that variations in operating system and system architecture (in particular, servers) will necessitate amendments to the process outlined below, hence this guide is advisory only. Always check the terminal output. This guide is not a substite for computing expertise and users who don't understand the installation instructions should defer to their system administrator's guidance.
+This guide is tested on Windows Subsystems Linux 22.04, Ubuntu 22.04 LTS and Ubuntu Server 22.04 LTS. We anticipate that variations in operating system and system architecture (in particular, servers) will necessitate amendments to the process outlined below, hence this guide is advisory only. Always check the terminal output. This guide is not a substite for computing expertise, consequently users who don't understand the installation instructions should defer to their system administrator's guidance.
 
-1. Ensure you have Conda installed:
+1. Ensure you have Conda installed: https://conda.io/projects/conda/en/latest/user-guide/install/index.html
 1. Create a new Conda environment called `gravity` with python 3.10: ```conda create -n gravity python=3.10```
 1. Activate your Conda environment: ```conda activate gravity```
 1. Navigate to directory: ```cd {path-to-dir}```
 1. Install command line tool requirements: ```bash install-reqs-local.sh```
 1. Install Python libraries with pip: ```pip install -r requirements.txt```
+1. (Bash only) ```$ echo "alias gravity='conda activate castanet && uvicorn app.api:app --reload --port 8000'" >> ~/.bashrc```, then refresh your terminal with ```$ source ~/.bashrc```.
+1. Check that installation of libraries and third party tools was successful. Activate your GRAViTy-V2 Conda environment with ```$ conda activate gravity```, then call the dependency test with ```$ python3 -m app.test.dep_test```. Check the terminal output for success/error messages.
+1. Trigger an example run using the dataset included in the repository (in ./data/eval/). ```$ python3 -m app.test.example_run```. Check the terminal output for success/error messages. Output will be saved to ./output/GRAViTyV2_example_run.
 
 ## Quick-start: GUI
-xxxxxxxxxxxxx
+This guide section covers use of the three GRAViTy-V2 premade pipelines, using the graphical user interface (GUI). These pipelines are adapted for common use cases --- datasets comprising similar viruses, divergent viruses and viruses with long, single ORFs --- and require a minimum of user input to run. This guide specifically examines using the `similar_viruses` pipeline, but the other two premade pipelines function in exactly the same manner.
+
+1. Navigate to your GRAViTy-V2 directory with ```$ cd```
+1. Start the GRAViTy-V2 server with ```$ gravity``` (or, if not using a Bash shell/not followed the final step of installation instructions, activate your Conda environment with ```$ conda activate gravity``` then start the server with ```$ uvicorn app.api:app --reload --port 8000```)
+1. Visit the graphical user interface in your browser at ```http://127.0.0.1:8000/docs```
+1. Trigger an example run using the dataset included in the repository. Expand the `similar_viruses` box, then hit the "try it now" button to make the dialogue box editable.
+1. Input the following three fields, which are described below. N.b. you must preserve the formatting of the dialogue! This means that double quote marks, colons, commas, brackets etc. must not be deleted or moved. If you want to run this on your own data, edit the field in double quote marks AFTER the colon.
+   * GenomeDescTableFile: This is your VMR-like document, which must be in CSV format and contain at least the columns: [Realm,Order,Family,Genus,Species,Exemplar or additional isolate,Virus name(s),Virus name abbreviation(s),Virus isolate designation,Virus GENBANK accession,Virus REFSEQ accession,Genome coverage,Genome composition,Host source,Baltimore Group,Genetic code table]. Refer to the ICTV VMR (https://ictv.global/vmr) and example file referenced below for format.
+   * ExpDir: This is the directory to save your experiment output. If it doesn't already exist, GRAViTy-V2 will create it.
+   * GenomeSeqFile: This is the location of your GenBank file, containing all of the sequence data for the viruses you are analysing. If it doesn't already exist, GRAViTy-V2 will attempt to download all of the sequence data according to accesion numbers in your VMR-like document (GenomeDescTableFile), then save it to this file name.
+```
+{
+  "GenomeDescTableFile": "./data/eval/example_vmr.csv",
+  "ExpDir": "./output/quick_start_example",
+  "GenomeSeqFile": "./output/quick_start_example.gb"
+}
+```
+1. Observe the output in the terminal and check for errors. When the analysis has finished, examine the output in your ./output/quick_start_example directory.
 
 ## Quick-start: CLI
 xxxxxxxxxxxxx
