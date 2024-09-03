@@ -139,20 +139,38 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             VirusDendrogram = Phylo.read(self.fnames['Heatmap_DendrogramFile'], "newick")
         '''Determine virus order'''
         _ = VirusDendrogram.ladderize(reverse=True)
+
+        '''Remove clade support values that are < Heatmap_DendrogramSupport_Cutoff'''
+        N_InternalNodes = len(VirusDendrogram.get_nonterminals())
+        for InternalNode_i in range(N_InternalNodes):
+            try:
+                if np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
+                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = None
+
+                if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff']:
+                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = None
+
+                else:
+                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
+                        VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
+            except:
+                print("something exploded")
+                continue
+
+
+
         TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
                                               FamilyList=self.genomes["FamilyList"],
                                               GenusList=self.genomes["GenusList"],
                                               VirusNameList=self.genomes["VirusNameList"]
                                               )
 
-        ######## RM TODO TEST BOOSTER ISSUES WITH VirusDendrogram.get_terminals()[Virus_i].confidence
         for Virus_i in range(N_Viruses):
             Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
             if not "Query" in str(Taxolabel):
                 VirusDendrogram.get_terminals()[Virus_i].color = "blue"
             else:
                 VirusDendrogram.get_terminals()[Virus_i].color = "red"
-        ############
 
         OrderedTaxoLabelList = [
             Clade.name for Clade in VirusDendrogram.get_terminals()]
@@ -162,17 +180,22 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         '''Re-order the distance matrix'''
         OrderedDistMat = DistMat[VirusOrder][:, VirusOrder]
 
-        '''Remove clade support values that are < Heatmap_DendrogramSupport_Cutoff'''
-        N_InternalNodes = len(VirusDendrogram.get_nonterminals())
-        for InternalNode_i in range(N_InternalNodes):
-            try:
-                if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff'] or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
-                    continue
-                else:
-                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
-                        VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
-            except:
-                continue
+
+        # N_InternalNodes = len(VirusDendrogram.get_nonterminals())
+        # for InternalNode_i in range(N_InternalNodes):
+        #     try:
+        #         if np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
+        #             VirusDendrogram.get_nonterminals()[InternalNode_i].confidence == None
+        #             continue
+
+        #         if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff']:
+        #             VirusDendrogram.get_nonterminals()[InternalNode_i].confidence == 99
+        #             continue
+        #         else:
+        #             VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
+        #                 VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
+        #     except:
+        #         continue
 
         '''Labels, label positions, and ticks'''
         ClassDendrogram_grp = VirusDendrogram
@@ -181,7 +204,6 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                 self.fnames['BootstrappedDendrogramFile'], "newick")
         else:
             ClassDendrogram_label = Phylo.read(self.fnames['Heatmap_DendrogramFile'], "newick")
-
 
         '''Construct taxo labels in ordered list for heatmap axis labels'''
         _, LineList_major = make_labels(ClassDendrogram_grp, zip(

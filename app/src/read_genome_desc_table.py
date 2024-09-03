@@ -115,7 +115,7 @@ class ReadGenomeDescTable:
                 th = ", ".join()
             th = ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}|SRR[0-9]{7}", row["Virus GENBANK accession"]))
             if th == "":
-                raise
+                raise # RM < TODO Specify exception
             return ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}|SRR[0-9]{7}", row["Virus GENBANK accession"]))
         except:
             self.no_acc_cnt += 1
