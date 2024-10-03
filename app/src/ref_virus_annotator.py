@@ -48,35 +48,15 @@ class RefVirusAnnotator:
         '''Remove singleton PPHMMs from the PPHMM databases'''
         progress_msg(f"- Determining and removing PPHMMs shared by less than {self.payload['N_VirusesOfTheClassToIgnore']} genomes")
 
-        # TODO < RM BETTER SINGLETON INDEX FINDER
         sig_table = pd.DataFrame(self.PPHMMSignatureTable)
-        sig_table_bin = sig_table.applymap(lambda x: 1 if x > 0 else 0)
+        sig_table_bin = sig_table.applymap(lambda x: 1 if x > 0 else 0) # TODO < Applymap might get deprecated soon.
         pphmm_usage_counts = sig_table_bin.apply(lambda x: sum(x)).tolist()
         SingletonPPHMM_IndexList = []
         for idx, pphmm_count in enumerate(pphmm_usage_counts):
             if pphmm_count == 0 or pphmm_count < self.payload['N_VirusesOfTheClassToIgnore']:
                 SingletonPPHMM_IndexList.append(idx)
-        #
 
         '''Identify and remove non informative singleton PPHMMs from the database'''
-        # N_VirusesPerClass = Counter(self.genomes["TaxoGroupingList"])
-        # CandSingletonPPHMM_IndexList = np.where(
-        #     np.sum(self.PPHMMSignatureTable > 0, axis=0) <= 1)[0]
-        # InfoSingletonPPHMM_IndexList = [PPHMM_i for PresentPPHMM_IndexList in [np.where(PPHMMSignature > 0)[0] for PPHMMSignature in self.PPHMMSignatureTable] if set(
-        #     PresentPPHMM_IndexList).issubset(CandSingletonPPHMM_IndexList) for PPHMM_i in PresentPPHMM_IndexList]
-        # CandSingletonPPHMM_IndexList = [
-        #     PPHMM_i for PPHMM_i in CandSingletonPPHMM_IndexList if PPHMM_i not in InfoSingletonPPHMM_IndexList]
-        # SingletonPPHMM_IndexList = []
-        # for PPHMM_i in CandSingletonPPHMM_IndexList:
-        #     VirusWithTheSingletonPPHMM_i = np.where(
-        #         self.PPHMMSignatureTable[:, PPHMM_i] != 0)[0]
-        #     if len(VirusWithTheSingletonPPHMM_i) == 0:
-        #         '''If zero hits''' # TODO Why would there be zero hits?
-        #         SingletonPPHMM_IndexList.append(PPHMM_i)
-        #     else:
-        #         if N_VirusesPerClass[self.genomes["TaxoGroupingList"][VirusWithTheSingletonPPHMM_i[0]]] > self.payload['N_VirusesOfTheClassToIgnore']:
-        #             SingletonPPHMM_IndexList.append(PPHMM_i)
-
         SelectedPPHMM_IndexList = np.array(
             list(range(self.PPHMMSignatureTable.shape[1])))
         SelectedPPHMM_IndexList = np.delete(
@@ -131,9 +111,9 @@ class RefVirusAnnotator:
             for Line in HMMER_PPHMMDbSummary_txt:
                 Line = Line.split("\t")
                 if int(Line[0].split("_")[-1]) in SelectedPPHMM_IndexList:
-                    Line[0] = "Cluster_%s" % PPHMM_i
+                    Line[0] = f"Cluster_{PPHMM_i}"
                     Contents.append("\t".join(Line))
-                    PPHMM_i = PPHMM_i + 1
+                    PPHMM_i += 1
 
         Contents = "".join(Contents)
         with open(HMMER_PPHMMDbSummaryFile, "w") as HMMER_PPHMMDbSummary_txt:
@@ -144,7 +124,7 @@ class RefVirusAnnotator:
             arr=self.PPHMMSignatureTable, obj=SingletonPPHMM_IndexList, axis=1)
         self.PPHMMLocationTable = np.delete(
             arr=self.PPHMMLocationTable, obj=SingletonPPHMM_IndexList, axis=1)
-        self.NaivePPHMMLocationTable = np.delete( # RM < TODO Fix 30/04/24
+        self.NaivePPHMMLocationTable = np.delete(
             arr=self.NaivePPHMMLocationTable, obj=SingletonPPHMM_IndexList, axis=1)
         '''Reorganise the cluster meta data from PPHMMDBConstruction output'''
         parameters = retrieve_pickle(self.fnames['PphmmdbPickle'])
@@ -232,7 +212,6 @@ class RefVirusAnnotator:
         for PPHMM_i in alive_it(range(0, N_PPHMMs)):
             HHsuite_PPHMMFile = f"{self.fnames['HHsuite_PPHMMDir']}/PPHMM_{PPHMM_i}.hhm"
             shell(f"hhsearch -maxmem 9.0 -i {HHsuite_PPHMMFile} -d {fname} -o {hhsearchOutFile} -e {self.payload['HHsuite_evalue_Cutoff']} -E {self.payload['HHsuite_evalue_Cutoff']} -cov {self.payload['HHsuite_SubjectCoverage_Cutoff']} -z 1 -b 1 -id 100 -global -v 0 -cpu {self.payload['N_CPUs']}")
-            # breakpoint()
 
             '''Open output from hhsearch'''
             with open(hhsearchOutFile, 'r') as hhsearchOut_txt:

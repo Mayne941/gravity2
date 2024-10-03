@@ -31,6 +31,12 @@ def error_handler_hmmbuild(out, msg):
 
 def error_handle_mafft(out, msg):
     out = decode_stdout(out)
+    if "dependency test" in msg:
+        if not "mafft --maxiterate 1000" in out:
+            '''For dependency test - empty return'''
+            raise_gravity_error(f"Mafft call didn't return appropriate output. Please check it's installed")
+        return
+
     if "killed" in out or not "done" in out:
         raise_gravity_error(f"{main_error_msg(msg)}."
                             f"Ensure mafft is installed and active in your environment."

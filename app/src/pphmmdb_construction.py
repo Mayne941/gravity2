@@ -264,7 +264,6 @@ class PPHMMDBConstruction:
                     [UnAlnClusterTXT.write(f">{i.name} {i.description}\n{str(i.seq).replace('X','')}\n") for i in HitList]
                 temp_aln_fname = f"{self.fnames['ClustersDir']}/temp.fasta"
 
-
                 if len(HitList) > 1:
                     '''Align cluster using Mafft'''
                     if self.payload["ClustAlnScheme"] == "global":
@@ -274,11 +273,12 @@ class PPHMMDBConstruction:
                     else:
                         option = "--auto"
 
-                    out = shell(f"mafft --thread {self.payload['N_CPUs']} --anysymbol {option} {AlnClusterFile} > {temp_aln_fname}", # TODO Fast version
+                    out = shell(f"mafft --thread {self.payload['N_CPUs']} --anysymbol {option} {AlnClusterFile} > {temp_aln_fname}",
                         ret_output=True)
                     error_handle_mafft(out, "mafft (PPHMMDB Construction: make_alignments)")
 
                 else:
+                    '''If only 1 thing in cluster'''
                     shell(f"cp {AlnClusterFile} {temp_aln_fname}")
 
                 '''Cluster annotations'''
@@ -289,7 +289,7 @@ class PPHMMDBConstruction:
                                                 }
 
                 shell(f"rm {AlnClusterFile} && mv {temp_aln_fname} {AlnClusterFile}",
-                      "PPHMMDB COnstruction: move temp mafft file")
+                      "PPHMMDB Construction: move temp mafft file")
                 Cluster_i += 1
 
         clean_stdout()
@@ -320,7 +320,6 @@ class PPHMMDBConstruction:
 
         '''Merge protein alignments'''
         while True:
-            # if self.payload['HMMER_PPHMMDb_ForEachRoundOfPPHMMMerging'] == True:
             progress_msg(
                 f"\t\t - Rebuilding HMMER PPHMM DB...")
             _ = self.Make_HMMER_PPHMM_DB(PphmmDb=f"{self.fnames['HMMER_PPHMMDbDir']}/HMMER_PPHMMDb_{AlignmentMerging_i_round}",
@@ -614,7 +613,7 @@ class PPHMMDBConstruction:
             ClusterDescCount = sorted(
                 list(Counter(DescList).items()), key=operator.itemgetter(1), reverse=True)
             for ClusterDesc in ClusterDescCount:
-                ClusterDesc = ClusterDesc[0] # RM < TODO check in clustedesc.lower() after changing name of hypothetical clusters
+                ClusterDesc = ClusterDesc[0]
                 if (("Hypothetical" not in ClusterDesc) and ("hypothetical" not in ClusterDesc) and ("~" not in ClusterDesc)):
                     break
 

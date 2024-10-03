@@ -58,8 +58,9 @@ def mkdir_virus_classifier(fnames):
     if not os.path.exists(fnames['HMMER_PPHMMDB_UcfVirus']):
         raise ValueError(
             "Can't find HMMER PPHMM database of unclassified viruses")
-    if os.path.isfile(fnames['VirusDendrogramDistFile']):
-        os.remove(fnames['VirusDendrogramDistFile'])
+
+    # if os.path.isfile(fnames['VirusDendrogramDistFile']):
+    #     os.remove(fnames['VirusDendrogramDistFile'])
 
     '''Define path to bootstrapped dendrogram file'''
     if os.path.isfile(fnames['BootstrappedDendrogramFile']):

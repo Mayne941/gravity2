@@ -43,8 +43,7 @@ def PPHMMSignatureTable_Constructor(
     NaiveLocationTable = np.empty((0, N_PPHMMs))
 
     clf = Pphmm_Sig_Gen(payload, Records_dict, HMMER_PPHMMDB, N_PPHMMs, HMMER_hmmscanDir)
-    pool = Pool(os.cpu_count()) ############ TODO TEST
-    # pool = Pool(4) ############ TODO TEST
+    pool = Pool(os.cpu_count()) ############ TODO Check this is n-1
 
     progress_msg(f"-  Spinning up {os.cpu_count()-1} workers to generate PPHMM signatures. This may take a while...")
     with pool as p, tqdm(total=genomes["SeqIDLists"].shape[0]) as pbar:

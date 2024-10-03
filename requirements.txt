@@ -14,3 +14,6 @@ dendropy==4.6.1
 alive-progress==3.1.4
 pyarrow==16.1.0
 pyparsing==3.1.2
+termcolor==2.3.0
+tqdm==4.65.0
+plotly==5.15.0

@@ -113,7 +113,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                         BootstrappedVirusDendrogram+"\n")
 
             if os.path.isfile(self.fnames['BootstrappedDendrogramFile']):
-                '''Bootstrap gets really upset if trying to overwrite'''
+                '''Bootstrap gets upset if trying to overwrite existing file'''
                 os.remove(self.fnames['BootstrappedDendrogramFile'])
 
             '''Create bootstrapped dendrogram. N.b. No error handler as successful output goes to stderr'''
@@ -145,6 +145,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         for InternalNode_i in range(N_InternalNodes):
             try:
                 if np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
+                    '''Some bootstrap programs output NaN instead of zero, which breaks the parser.'''
                     VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = None
 
                 if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff']:
@@ -154,10 +155,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                     VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
                         VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
             except:
-                print("something exploded")
                 continue
-
-
 
         TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
                                               FamilyList=self.genomes["FamilyList"],
@@ -179,23 +177,6 @@ class GRAViTyDendrogramAndHeatmapConstruction:
 
         '''Re-order the distance matrix'''
         OrderedDistMat = DistMat[VirusOrder][:, VirusOrder]
-
-
-        # N_InternalNodes = len(VirusDendrogram.get_nonterminals())
-        # for InternalNode_i in range(N_InternalNodes):
-        #     try:
-        #         if np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
-        #             VirusDendrogram.get_nonterminals()[InternalNode_i].confidence == None
-        #             continue
-
-        #         if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff']:
-        #             VirusDendrogram.get_nonterminals()[InternalNode_i].confidence == 99
-        #             continue
-        #         else:
-        #             VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
-        #                 VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
-        #     except:
-        #         continue
 
         '''Labels, label positions, and ticks'''
         ClassDendrogram_grp = VirusDendrogram
@@ -219,7 +200,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         try:
             Phylo.draw(VirusDendrogram, label_func=lambda x: "",
                     do_show=False,  axes=ax_Dendrogram)
-            plt.rcParams['lines.linewidth'] = 1.0 ##########################
+            plt.rcParams['lines.linewidth'] = 1.0
         except Exception as ex:
             raise raise_gravity_error(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try disabling this feature and trying again.")
 

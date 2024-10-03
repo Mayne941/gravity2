@@ -72,7 +72,6 @@ def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, call_locs 
             StopCodonList.append(CodonList[i])
 
     SeqLength, ORF_i = len(GenBankSeq), 0
-    best_frame_finder = {}
     for _, nuc in [(+1, GenBankSeq), (-1, GenBankSeq.reverse_complement())]:
         '''Split into multiple of 3, get in-frame nucleotide seq, split sequence into codons'''
         raw_nas[seq_id].append(str(GenBankSeq.translate()))
@@ -145,37 +144,4 @@ def find_orfs(seq_id, GenBankSeq, TranslTable, protein_length_cutoff, call_locs 
                                 f"{seq_id}|ORF{ORF_i}.0")
                     ORF_i += 1
 
-                    # if call_locs:
-                    #     ProtIDList.append(
-                    #         f"{seq_id}|ORF{ORF_i}|START{loc_list[idx]}|DOOBLY{frame}")
-                    # else:
-                    #     ProtIDList.append(
-                    #         f"{seq_id}|ORF{ORF_i}|DOOBLY{frame}")
-                    # ORF_i += 1
-
-                    # RM TODO 1704 delete non-dominant frame orfs
-    #                 if not frame in best_frame_finder.keys():
-    #                     best_frame_finder[frame] = []
-    #                 best_frame_finder[frame].append([ORF_i, len(ProtSeq)])
-    #     if len(best_frame_finder.keys()) > 1:
-    #         frame_totals = {}
-    #         for frame in best_frame_finder.keys():
-    #             total_orfs_len = 0
-    #             for orf in best_frame_finder[frame]:
-    #                 total_orfs_len += orf[1]
-    #             frame_totals[frame] = total_orfs_len
-    #         best_frame = max(frame_totals)
-
-    #         del_idxs = []
-    #         for idx, prot in enumerate(ProtIDList):
-    #             if f"DOOBLY{best_frame}" not in prot:
-    #                 del_idxs.append(idx)
-
-    #         for idx in sorted(del_idxs, reverse=True):
-    #             del ProtList[idx]
-    #             del ProtIDList[idx]
-
-    # for idx, name in enumerate(ProtIDList):
-    #     ProtIDList[idx] = re.sub(r"\|DOOBLY[0-9]{1}","",name)
-    # if seq_id == "MW423802": breakpoint()
     return ProtList, ProtIDList, raw_nas

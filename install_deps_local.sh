@@ -20,6 +20,9 @@ conda install -y -c bioconda mash=2.3
 # hhsuite installation
 conda install -y -c bioconda hhsuite=3.3.0
 
+# mafft installation
+conda install -y -c bioconda mafft=7.526
+
 # booster installation
 wget https://github.com/evolbioinfo/booster/releases/download/v0.1.2/booster_linux64
 chmod 777 booster_linux64
