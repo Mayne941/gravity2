@@ -18,7 +18,6 @@
     "HMMER_HitScore_Cutoff": 25,
     "p": 1,
     "Dendrogram_LinkageMethod": "average",
-    "Bootstrap": true,
     "N_Bootstrap": 10,
     "Bootstrap_method": "sumtrees",
     "VirusGrouping": true,
@@ -35,5 +34,6 @@
     "SampleSizePerGroup": 10,
     "UseBlast": false,
     "NThreads": "auto",
-    "ClustAlnScheme": "global"
+    "ClustAlnScheme": "global",
+    "MutualInformationScorer": false
   }

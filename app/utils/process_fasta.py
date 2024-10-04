@@ -23,13 +23,14 @@ def fasta_to_genbank(payload):
 
     for i in range(len(sequences)):
         '''Annotate each sequence and create VMR entries'''
+        # RM < TODO Remove accession IDs from names?
         sequences[i].annotations['molecule_type'] = 'DNA'
         if not sequences[i].id in seq_codes:
             '''Don't process duplicate Acc IDs - omit all but first'''
-            sequences[i].id = sequences[i].id.split(".")[0] # Get rid of ".x" in acc ids
+            sequences[i].id = sequences[i].name = sequences[i].description = f"Query_{i+1}_{sequences[i].id.split('.')[0]}" # Get rid of ".x" in acc ids
             output_seqs.append(sequences[i])
             seq_codes.append(sequences[i].id)
-            seq_names.append(f"Query_{i+1}_{sequences[i].id}")
+            seq_names.append(sequences[i].id)
             seq_description.append(re.sub(" +", " ", sequences[i].description.replace(sequences[i].id, "").replace(",","").strip()))
         else:
             print(f"WARNING: I detected an entry in your FASTA file that has a duplicate accession ID: {sequences[id].id}\n GRAViTy has only kept the first entry!")

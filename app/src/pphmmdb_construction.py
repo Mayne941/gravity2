@@ -44,18 +44,60 @@ class PPHMMDBConstruction:
     def get_genbank(self):
         '''3/10: Check if GenBank files exist; dl if needed. Index & transform.'''
         if not os.path.isfile(self.GenomeSeqFile):
-            progress_msg("Download GenBank file\n GenomeSeqFile doesn't exist. GRAViTy is downloading the GenBank file(s).")
+            '''If no gb file provided, attempt to pull seqs'''
+            progress_msg("You didn't specify an input genbank filename that exists. Downloading sequences from Genbank")
             DownloadGenBankFile(self.GenomeSeqFile, # RM < TODO We should give users option to provide their own gb file if not on genbank
                                 self.genomes["SeqIDLists"], self.payload["genbank_email"])
 
-        progress_msg("Reading GenBank file")
+        '''Parse gb file'''
         GenBankDict = SeqIO.index(self.GenomeSeqFile, "genbank")
-        CleanGenbankDict = {} # TODO remove redundancy with sig table constructor
+        CleanGenbankDict = {}
         for i in GenBankDict.items():
-            ### RM < TODO TEST: BACK TRANSCRIBE IF RNA SEQS USED
             if "u" in str(i[1].seq).lower():
                 i[1].seq = i[1].seq.back_transcribe()
             CleanGenbankDict[i[0].split(".")[0]] = i[1]
+
+        '''Check if gb file is missing any seqs from the VMR'''
+        gb_missing_seqs = []
+        for vmr_seq_id in self.genomes["SeqIDLists"]:
+            match = False
+            for gb_seq_id in CleanGenbankDict.keys():
+                if vmr_seq_id[0].upper() == gb_seq_id.upper():
+                    match = True
+                    break
+            if not match:
+                gb_missing_seqs.append(vmr_seq_id[0].upper())
+
+        if len(gb_missing_seqs) > 0:
+            '''If missing seqs in gb file, attempt to get them from genbank'''
+            progress_msg(f"GRAViTy detected a mismatch in sequence numbers between input genbank and VMR files. Attempting to fix with a genbank pull...")
+            shell("rm data/temp.gb")
+            DownloadGenBankFile("data/temp.gb", [[i] for i in gb_missing_seqs], self.payload["genbank_email"])
+            SecondGenBankDict = SeqIO.index("data/temp.gb", "genbank")
+            CleanSecondGenbankDict = {}
+            for i in SecondGenBankDict.items():
+                CleanSecondGenbankDict[i[0].split(".")[0]] = i[1]
+
+            '''Check if seqs are still missing'''
+            still_missing_seqs = []
+            for missing_seq in gb_missing_seqs:
+                match = False
+                for second_gb_seq_id in CleanSecondGenbankDict.keys():
+                    if second_gb_seq_id == missing_seq:
+                        match = True
+                        CleanGenbankDict[missing_seq] = CleanSecondGenbankDict[missing_seq]
+                        break
+                if not match:
+                    still_missing_seqs.append(second_gb_seq_id)
+            if len(still_missing_seqs) > 0:
+                '''If still missing seqs, warn user'''
+                raise_gravity_error(f"There was a mismatch between the number of sequences in your VMR and the sequences you provided."
+                                    f"GRAViTy-V2 attempted to pull the additional sequences from GenBank, but didn't find them"
+                                    f"This means that some of your sequences are not on GenBank: please manually make a GenBank file containing all of your sequences and point GRAViTy-V2 to its path with the 'GenomeSeqFile' parameter.")
+            else:
+                '''If missing seqs found, concat the new genome seq file and tidy'''
+                shell(f"cat data/temp.gb >> {self.GenomeSeqFile}")
+                shell(f"rm data/temp.gb")
         return {k.split(".")[0]: v for k, v in CleanGenbankDict.items()}
 
     def sequence_extraction(self, GenBankDict):

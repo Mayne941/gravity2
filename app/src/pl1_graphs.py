@@ -15,6 +15,7 @@ from app.utils.heatmap_params import get_hmap_params, construct_hmap_lines
 from app.utils.error_handlers import raise_gravity_error
 from app.utils.shared_pphmm_graphs import supplementary_pphmm_heatmaps, shared_norm_pphmm_ratio, shared_pphmm_ratio, pphmm_loc_distances, pphmm_loc_diffs_pairwise
 
+import re
 import os
 import numpy as np
 import pandas as pd
@@ -220,7 +221,6 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                           hmap_params, ClassLabelList_x, ClassLabelList_y,
                                           TickLocList = np.arange(0, len(ClassLabelList_y)))
 
-        import re
         [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
          if bool(re.search(r"Query", i.get_text().replace(" ","")))]
         [i.set_color("red") for i in ax_Heatmap.get_yticklabels()

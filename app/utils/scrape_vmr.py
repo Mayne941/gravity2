@@ -144,7 +144,7 @@ def first_pass_baltimore_filter(payload) -> str:
 @timing
 def first_pass_taxon_filter(payload) -> str:
     try:
-        df = pd.read_csv(f"{payload['save_path']}/{payload['vmr_name']}")
+        df = pd.read_csv(f"{payload['vmr_name']}")
         df = df[df[payload['filter_level']] == payload["filter_name"]]
         df["Taxonomic grouping"] = df.apply(
             lambda x: construct_first_pass_set(x, df, payload["filter_threshold"]), axis=1)

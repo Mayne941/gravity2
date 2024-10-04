@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, FilePath, DirectoryPath
 '''PRIMITIVES'''
 '''Utility fns'''
 class Data_vmr_name(BaseModel):
-    vmr_name: str = Query('latest_vmr.csv',
+    vmr_name: str = Query('data/latest_vmr.csv',
                           description="Filename for new VMR.")
 
 class Data_save_path(BaseModel):
@@ -26,7 +26,7 @@ class Data_vmr_filter_threshold(BaseModel):
                                   description="If filter = true, how many members should be in each taxo grouping? If < threshold members in family, resolve at genus level, and likewise for species.")
 
 class Data_fasta_fns(BaseModel):
-    fasta_fname: str = Query('my_fasta',
+    fasta_fname: str = Query('my_fasta.fasta',
                              description="Filename for fasta file to convert.")
     genbank_fname: str = Query('data/my_genbank.gb',
                                description="Filename for output genbank. ")
@@ -58,13 +58,14 @@ class Data_pl1_unique_params(BaseModel):
                                description="Sort PPHMMs if True.")
     PPHMMClustering_MCLInflation_ForPPHMMSorting: int = Field(2, gt=0,
                                                               description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
+    MutualInformationScorer: bool = Field(False,
+                                          description="If true, calculate mutual information score to quantify feature importance for each PPHMM. Useful, but will increase run time.")
     N_Sampling: int = Field(10, gt=0,
-                            description="The number of mutual information scores sample size.")
+                            description="If MutualInformationScorer = true, number of mutual information scores sample size.")
     SamplingStrategy: Literal[None, "balance_without_repeat", "balance_with_repeat"] = Query('balance_with_repeat',
-                                                                                             description="Virus sampling scheme.")
+                                                                                             description="If MutualInformationScorer = true, virus sampling scheme.")
     SampleSizePerGroup: int = Field(10, gt=0,
                                     description="If 'SamplingStrategy' != None, this option specifies the number of viruses to be sampled per taxonomic group")
-
 
 '''PL2'''
 class Data_pl2_unique_params(BaseModel):
@@ -121,9 +122,7 @@ class Data_common_pipeline_params(BaseModel):
                      description="Distance transformation P coefficient, 0 <= P. D = 1 - S**P. If P = 1, no distance transformation is applied. If P > 1, shallow branches will be stretched out so shallow splits can be seen more clearly. If p < 1, deep branches are stretch out so that deep splits can be seen more clearly. If p = 0, the entire dendrogram will be reduced to a single branch (root), with all taxa forming a polytomy clade at the tip of the dendrogram. If p = Inf, the resultant dendrogram will be star-like, with all taxa forming a polytomy clade at the root.")
     Dendrogram_LinkageMethod: Literal["single", "complete", "average", "weighted", "centroid", "median", "ward"] = Query('average',
                                                                                                                          description="LINKAGE for dendrogram construction. If LINKAGE = 'single', the nearest point algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'complete', the farthest point algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'average', the UPGMA algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'weighted', the WPGMA algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'centroid', the UPGMC algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'median', the WPGMC algorithm is used to cluster viruses and compute cluster distances. If LINKAGE = 'ward', the incremental algorithm is used to cluster viruses and compute cluster distances.")
-    Bootstrap: bool = Query(True,
-                            description="Perform bootstrapping if True.")
-    N_Bootstrap: int = Field(10, gt=0,
+    N_Bootstrap: int = Field(10, ge=0,
                              description="The number of pseudoreplicate datasets by resampling.")
     Bootstrap_method: Literal["booster", "sumtrees"] = Query('sumtrees',
                                                              description="Two METHODs for tree summary construction are implemented in GRAViTy. If METHOD = 'sumtrees', SumTrees (Sukumaran, J & MT Holder, 2010, Bioinformatics; https://dendropy.org/programs/sumtrees.html) will be used to summarize non-parameteric bootstrap support for splits on the best estimated dendrogram. The calculation is based on the standard Felsenstein bootstrap method. If METHOD = 'booster', BOOSTER (Lemoine et al., 2018, Nature; https://booster.pasteur.fr/) will be used. With large trees and moderate phylogenetic signal, BOOSTER tends to be more informative than the standard Felsenstein bootstrap method.")

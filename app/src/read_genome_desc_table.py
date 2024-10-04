@@ -134,8 +134,8 @@ class ReadGenomeDescTable:
             return th
         except:
             self.no_acc_cnt += 1
-            raise_gravity_error(f"No accession number for {row['Virus name(s)']}: this might cause GRAViTy to error later on if you're not providing your own GenBank file!")
-            # return f'{row["Virus GENBANK accession"]}' if not row["Virus GENBANK accession"] == "" else f'No_data_{self.no_acc_cnt - 1}'
+            raise_gravity_warning(f"No accession number for {row['Virus name(s)']}: this might cause GRAViTy to error later on if you're not providing your own GenBank file!")
+            return f'{row["Virus GENBANK accession"]}' if not row["Virus GENBANK accession"] == "" else f'No_data_{self.no_acc_cnt - 1}'
 
     def update_desc_table(self) -> dict:
         '''Create dictionary in GRAViTy structure for saving to persistent storage'''

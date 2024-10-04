@@ -80,8 +80,8 @@ class Pipeline_I:
             ExpDir=self.options['ExpDir'],
         )
         ghm.main()
-        # RM < TODO PARAMETERISE CALL TO MI
-        self.mutual_info_calculator()
+        if self.options["MutualInformationScorer"]:
+            self.mutual_info_calculator()
 
     #@timing
     def mutual_info_calculator(self):

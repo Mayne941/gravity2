@@ -8,6 +8,7 @@ EXPOSE 80
 COPY ./app /workspace/app
 COPY ./cli /workspace/cli
 COPY ./data/eval /workspace/data/eval
+COPY ./dev/premade_pl_files /workspace/dev/premade_pl_files
 COPY ./install_deps_local.sh /workspace/
 COPY ./requirements.txt /workspace/
 
