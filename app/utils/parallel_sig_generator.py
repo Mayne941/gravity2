@@ -31,7 +31,7 @@ def PPHMMSignatureTable_Constructor(
     GenBankDict = SeqIO.index(GenomeSeqFile, "fasta" if os.path.splitext(GenomeSeqFile)[1] in [".fas", ".fst", ".fasta"] else "gb")
     Records_dict = {}
     for i in GenBankDict.items():
-        ### RM < TODO: TEST BACK TRANSCRIBE IF RNA SEQS USED
+        ### RM < TODO: EITHER HARMONISE FUNTION CALL WITH PPHMMDB OR LOAD GB FILE
         if "u" in str(i[1].seq).lower():
             i[1].seq = i[1].seq.back_transcribe()
         Records_dict[i[0].split(".")[0]] = i[1]
@@ -43,10 +43,9 @@ def PPHMMSignatureTable_Constructor(
     NaiveLocationTable = np.empty((0, N_PPHMMs))
 
     clf = Pphmm_Sig_Gen(payload, Records_dict, HMMER_PPHMMDB, N_PPHMMs, HMMER_hmmscanDir)
-    pool = Pool(os.cpu_count()) ############ TODO TEST
-    # pool = Pool(4) ############ TODO TEST
+    pool = Pool(payload["N_CPUs"])
 
-    progress_msg(f"-  Spinning up {os.cpu_count()-1} workers to generate PPHMM signatures. This may take a while...")
+    progress_msg(f"-  Spinning up {payload['N_CPUs']} workers to generate PPHMM signatures. This may take a while...")
     with pool as p, tqdm(total=genomes["SeqIDLists"].shape[0]) as pbar:
         res = [p.apply_async( # can specify specific inputs with args in a set!
             clf.generate_sigs_for_genome, args=(i,), callback=lambda _: pbar.update(1)) for i in genomes["SeqIDLists"]]

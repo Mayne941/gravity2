@@ -82,21 +82,36 @@ class ReadGenomeDescTable:
         self.TranslTableList = df["Genetic code table"].tolist()
 
     def get_names(self, row):
+        # try: # RM < TODO Incorporate commented code for curtailing long names?
+        #     if not self.is_secondpass:
+        #         if not row["Virus name(s)"]:
+        #             row["Virus name(s)"] == ""
+        #         return re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(
+        #             r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
+        #     else:
+        #         '''If PL2, append virus description to accession ID'''
+        #         part1 = re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
+        #         if len(row["Virus isolate designation"]) == 0:
+        #             part2 = ""
+        #         part2 = re.sub(r"[^\w\s]", "", row["Virus isolate designation"][0:39]).replace(" ", "_")
+        #         if len(row["Virus isolate designation"]) > 40:
+        #             part2 += "..."
+        #         return f'{part1}_{part2}'
         try:
-            if not self.is_secondpass:
+            if self.is_secondpass:
+                if not row["Virus name(s)"]:
+                    row["Virus name(s)"] == ""
+                virus_name = re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"])))).replace(" ","_")
+                accession = ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}|SRR[0-9]{7,8}", row["Virus GENBANK accession"]))
+                if len(accession.split(",")) > 1:
+                    accession = accession.split(",")[0]
+                return f'{accession}_{row["Family"]}_{row["Genus"]}_{virus_name}'
+            else:
                 if not row["Virus name(s)"]:
                     row["Virus name(s)"] == ""
                 return re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(
                     r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
-            else:
-                '''If PL2, append virus description to accession ID'''
-                part1 = re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
-                if len(row["Virus isolate designation"]) == 0:
-                    part2 = ""
-                part2 = re.sub(r"[^\w\s]", "", row["Virus isolate designation"][0:39]).replace(" ", "_")
-                if len(row["Virus isolate designation"]) > 40:
-                    part2 += "..."
-                return f'{part1}_{part2}'
+
         except Exception as ex:
 
             raise_gravity_error(f"At least one line in your input CSV (genome desc table) has empty fields (or fields causing another error): {ex}")
@@ -111,10 +126,12 @@ class ReadGenomeDescTable:
 
     def get_accession(self, row):
         try:
-            th = ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", row["Virus GENBANK accession"]))
+            # if "SRR" in row["Virus GENBANK accession"]:
+            #     th = ", ".join()
+            th = ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}|SRR[0-9]{7,8}", row["Virus GENBANK accession"]))
             if th == "":
                 raise
-            return ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}", row["Virus GENBANK accession"]))
+            return th
         except:
             self.no_acc_cnt += 1
             raise_gravity_warning(f"No accession number for {row['Virus name(s)']}: this might cause GRAViTy to error later on if you're not providing your own GenBank file!")

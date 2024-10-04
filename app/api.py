@@ -11,30 +11,33 @@ from app.utils.scrape_vmr import scrape, first_pass_taxon_filter, second_pass
 from app.utils.process_fasta import fasta_to_genbank, combine_segments
 from app.utils.stdout_utils import progress_msg
 from app.utils.end_to_end_entrypoint import split_payloads_for_e2e
-from app.test.dep_test import DepTest
+from cli.dep_test import DepTest
+from app.utils.join_data import join_input
 from app.utils.api_classes import (Pipeline_i_data, Pipeline_ii_data, Endp_data_scrape_data,
                                    Endp_data_first_pass_taxon_filter, Endp_data_second_pass_filter,
-                                   Endp_data_fasta_to_gb, CombineGenomeSegs, E2e_data, Premade_data)
+                                   Endp_data_fasta_to_gb, CombineGenomeSegs, E2e_data, Premade_data,
+                                   JoinVmrs)
 
 print_banner()
 progress_msg("Access the GRAViTy-V2 UI in your browser here (or control-click link):\n\thttp://127.0.0.1:8000/docs")
 description = """
-    Genome Relationships Applied to Virus Taxonomy is a software framework for identifying and classifying viruses, based on analysis of entire genomes. Developed by Simmonds Group, Peter Medawar Building for Pathogen Research, Nuffield Department of Medicine, University of Oxford.
+    Genome Relationships Applied to Virus Taxonomy is a software framework for identifying and classifying viruses, based on analysis of entire genomes.
+    Lead developer: Rich Mayne, Peter Medawar Building for Pathogen Research, Nuffield Department of Medicine, University of Oxford.
 """
 
 tags_metadata = [
     {
-        "name": "Premade pipelines",
-        "description": "Premade all-in-one pipelines for a variety of use cases.",
+        "name": "Premade Pipelines (New Classification)",
+        "description": "Create a new classification using preconfigured parameters.",
     },
     {
-        "name": "Custom pipelines",
-        "description": "Users can fully specify their parameters and run pipeline from any stage.",
+        "name": "New Classification",
+        "description": "Create a new classification with full control over GRAViTy-V2 parameters.",
     },
-    # {
-    #     "name": "Pipeline II",
-    #     "description": "PL2 description & user info.",
-    # },
+    {
+        "name": "Update Classification",
+        "description": "Append virus genomes to an existing classification.",
+    },
     {
         "name": "Utilities",
         "description": "Utility functions to support main GRAViTy-V2 pipeline."
@@ -61,21 +64,21 @@ app = FastAPI(
     openapi_tags=tags_metadata
 )
 
-'''Premade pipelines'''
+'''Premade Pipelines (New Classification)'''
 
-@app.post("/similar_viruses/", tags=["Premade pipelines"])
+@app.post("/similar_viruses/", tags=["Premade Pipelines (New Classification)"])
 async def similar_viruses(payload: Premade_data):
     payload = process_json(jsonable_encoder(payload) | load_premade("dev/premade_pl_files/similar_viruses"))
     run_pipeline_i_full(payload, refresh_genbank=False)
 
-@app.post("/divergent_viruses/", tags=["Premade pipelines"])
-async def similar_viruses(payload: Premade_data):
+@app.post("/divergent_viruses/", tags=["Premade Pipelines (New Classification)"])
+async def divergent_viruses(payload: Premade_data):
     payload = process_json(jsonable_encoder(payload) | load_premade("dev/premade_pl_files/divergent_viruses"))
     run_pipeline_i_full(payload, refresh_genbank=False)
 
-@app.post("/long_single_orf_viruses/", tags=["Premade pipelines"])
-async def similar_viruses(payload: Premade_data):
-    payload = process_json(jsonable_encoder(payload) | load_premade("dev/premade_pl_files/similar_viruses"))
+@app.post("/long_single_orf_viruses/", tags=["Premade Pipelines (New Classification)"])
+async def long_single_orf_viruses(payload: Premade_data):
+    payload = process_json(jsonable_encoder(payload) | load_premade("dev/premade_pl_files/long_single_orf_viruses"))
     run_pipeline_i_full(payload, refresh_genbank=False)
 
 '''Dev Endpoints/fns'''
@@ -87,17 +90,24 @@ async def read_root():
 def process_json(payload):
     payload = jsonable_encoder(payload)
 
+    if "N_Bootstrap" in payload.keys():
+        if payload["N_Bootstrap"] > 0:
+            # RM < TODO deprecate need for this
+            payload["Bootstrap"] = True
+        else:
+            payload["Bootstrap"] = False
+
     try:
         if type(payload["NThreads"]) == str:
             if payload["NThreads"] == "auto":
-                payload["N_CPUs"] = os.cpu_count() - 1
+                payload["N_CPUs"] = int(np.ceil(os.cpu_count() / 2))
             elif payload["NThreads"] == "hpc":
-                payload["N_CPUs"] = 1
+                payload["N_CPUs"] = 1 # RM < TODO should be unnecessary, test
             else:
                 raise Exception("Didn't recognise NThreads argument, defaulting to n-1")
         elif type(payload["NThreads"]) == int:
             if payload["NThreads"] > os.cpu_count():
-                raise Exception("You specified to use more CPUs than your computer has. Defauling to n-1")
+                raise Exception("You specified to use more CPUs (NThreads parameter) than your computer has. Defaulting to n-1")
             payload["N_CPUs"] = payload["NThreads"]
         else:
             raise Exception("Didn't recognise NThreads argument, defaulting to n-1")
@@ -163,7 +173,7 @@ def run_end_to_end(payload):
 
 '''PL1 Entrypoints'''
 
-@app.post("/pipeline_i_full/", tags=["Custom pipelines"])
+@app.post("/new_classification_full/", tags=["New Classification"])
 async def pipeline_i_full(payload: Pipeline_i_data, background_tasks: BackgroundTasks):
     payload = process_json(payload)
     background_tasks.add_task(run_pipeline_i_full, payload)
@@ -175,7 +185,7 @@ def run_pipeline_i_full(payload, refresh_genbank=False):
     pl.read_genome_desc_table(refresh_genbank)
     progress_msg(f"GRAViTy-V2 pipeline complete!")
 
-@app.post("/pipeline_i_from_pphmmdb_construction/", tags=["Custom pipelines"])
+@app.post("/new_classification_from_pphmmdb_construction/", tags=["New Classification"])
 async def pipeline_i__from_pphmmdb_construction(payload: Pipeline_i_data, background_tasks: BackgroundTasks):
     payload = process_json(payload)
     background_tasks.add_task(
@@ -188,7 +198,7 @@ def run_pipeline_i_from_pphmmdb_construction(payload):
     pl.pphmmdb_construction()
 
 
-@app.post("/pipeline_i_from_ref_virus_annotator/", tags=["Custom pipelines"])
+@app.post("/new_classification_from_ref_virus_annotator/", tags=["New Classification"])
 async def pipeline_i__from_ref_virus_annotator(payload: Pipeline_i_data, background_tasks: BackgroundTasks):
     payload = process_json(payload)
     background_tasks.add_task(run_pipeline_i_from_ref_virus_annotator, payload)
@@ -200,7 +210,7 @@ def run_pipeline_i_from_ref_virus_annotator(payload):
     pl.ref_virus_annotator()
 
 
-@app.post("/pipeline_i_from_graph_generator/", tags=["Custom pipelines"])
+@app.post("/new_classification_from_graph_generator/", tags=["New Classification"])
 async def pipeline_i__from_graph_generator(payload: Pipeline_i_data, background_tasks: BackgroundTasks):
     payload = process_json(payload)
     background_tasks.add_task(run_pipeline_i_from_graph_generator, payload)
@@ -212,7 +222,7 @@ def run_pipeline_i_from_graph_generator(payload):
     pl.make_graphs()
 
 
-@app.post("/pipeline_i_from_mutual_info_calculator/", tags=["Custom pipelines"])
+@app.post("/new_classification_from_mutual_info_calculator/", tags=["New Classification"])
 async def pipeline_i_from_mutual_info_calculator(payload: Pipeline_i_data, background_tasks: BackgroundTasks):
     payload = process_json(payload)
     background_tasks.add_task(
@@ -228,55 +238,55 @@ def run_pipeline_i_from_mutual_info_calculator(payload):
 '''PL2 entrypoints'''
 
 
-# @app.post("/pipeline_ii_full/", tags=["Pipeline II"])
-# async def pipeline_ii_full(payload: Pipeline_ii_data, background_tasks: BackgroundTasks):
-#     payload = process_json(payload)
-#     background_tasks.add_task(run_pipeline_ii_full, payload)
-#     return "Task fired successfully, running in background"
+@app.post("/update_classification_full/", tags=["Update Classification"])
+async def pipeline_ii_full(payload: Pipeline_ii_data, background_tasks: BackgroundTasks):
+    payload = process_json(payload)
+    background_tasks.add_task(run_pipeline_ii_full, payload)
+    return "Task fired successfully, running in background"
 
 
-# def run_pipeline_ii_full(payload, refresh_genbank=False):
-#     pl = Pipeline_II(payload)
-#     pl.read_genome_desc_table(refresh_genbank)
+def run_pipeline_ii_full(payload, refresh_genbank=False):
+    pl = Pipeline_II(payload)
+    pl.read_genome_desc_table(refresh_genbank)
 
 
-# @app.post("/pipeline_ii_from_pphmmdb_construction/", tags=["Pipeline II"])
-# async def pipeline_ii_from_pphmmdb_construction(payload: Pipeline_ii_data, background_tasks: BackgroundTasks):
-#     payload = process_json(payload)
-#     background_tasks.add_task(
-#         run_pipeline_ii_from_pphmmdb_construction, payload)
-#     return "Task fired successfully, running in background"
+@app.post("/update_classification_from_pphmmdb_construction/", tags=["Update Classification"])
+async def pipeline_ii_from_pphmmdb_construction(payload: Pipeline_ii_data, background_tasks: BackgroundTasks):
+    payload = process_json(payload)
+    background_tasks.add_task(
+        run_pipeline_ii_from_pphmmdb_construction, payload)
+    return "Task fired successfully, running in background"
 
 
-# def run_pipeline_ii_from_pphmmdb_construction(payload):
-#     pl = Pipeline_II(payload)
-#     pl.pphmmdb_construction()
+def run_pipeline_ii_from_pphmmdb_construction(payload):
+    pl = Pipeline_II(payload)
+    pl.pphmmdb_construction()
 
 
-# @app.post("/pipeline_ii_from_ucf_virus_annotator/", tags=["Pipeline II"])
-# async def pipeline_ii_from_ucf_virus_annotator(payload: Pipeline_ii_data, background_tasks: BackgroundTasks):
-#     payload = process_json(payload)
-#     background_tasks.add_task(
-#         run_pipeline_ii_from_ucf_virus_annotator, payload)
-#     return "Task fired successfully, running in background"
+@app.post("/update_classification_from_ucf_virus_annotator/", tags=["Update Classification"])
+async def pipeline_ii_from_ucf_virus_annotator(payload: Pipeline_ii_data, background_tasks: BackgroundTasks):
+    payload = process_json(payload)
+    background_tasks.add_task(
+        run_pipeline_ii_from_ucf_virus_annotator, payload)
+    return "Task fired successfully, running in background"
 
 
-# def run_pipeline_ii_from_ucf_virus_annotator(payload):
-#     pl = Pipeline_II(payload)
-#     pl.ucf_virus_annotator()
+def run_pipeline_ii_from_ucf_virus_annotator(payload):
+    pl = Pipeline_II(payload)
+    pl.ucf_virus_annotator()
 
 
-# @app.post("/pipeline_ii_from_virus_classification/", tags=["Pipeline II"])
-# async def pipeline_ii_from_virus_classification(payload: Pipeline_ii_data, background_tasks: BackgroundTasks):
-#     payload = process_json(payload)
-#     background_tasks.add_task(
-#         run_pipeline_ii_from_virus_classification, payload)
-#     return "Task fired successfully, running in background"
+@app.post("/update_classification_from_virus_classification/", tags=["Update Classification"])
+async def pipeline_ii_from_virus_classification(payload: Pipeline_ii_data, background_tasks: BackgroundTasks):
+    payload = process_json(payload)
+    background_tasks.add_task(
+        run_pipeline_ii_from_virus_classification, payload)
+    return "Task fired successfully, running in background"
 
 
-# def run_pipeline_ii_from_virus_classification(payload):
-#     pl = Pipeline_II(payload)
-#     pl.virus_classification()
+def run_pipeline_ii_from_virus_classification(payload):
+    pl = Pipeline_II(payload)
+    pl.virus_classification()
 
 
 '''Utility entrypoints'''
@@ -300,12 +310,17 @@ async def run_vmr_scrape(trigger: Endp_data_scrape_data):
     payload = process_json(trigger)
     return scrape(payload)
 
-@app.post("/construct_first_pass_vmr_taxon_filter/", tags=["Utilities"])
+@app.post("/join_vmrs/", tags=["Utilities"])
+async def run_vmr_join(trigger: JoinVmrs):
+    payload = process_json(trigger)
+    return join_input(payload)
+
+@app.post("/filter_vmr_first_pass/", tags=["Utilities"])
 async def vmr_first_pass_taxon_filter(trigger: Endp_data_first_pass_taxon_filter):
     payload = process_json(trigger)
     return first_pass_taxon_filter(payload)
 
-@app.post("/construct_second_pass_vmr/", tags=["Utilities"])
+@app.post("/filter_vmr_second_pass/", tags=["Utilities"])
 async def vmr_second_pass(trigger: Endp_data_second_pass_filter):
     payload = process_json(trigger)
     return second_pass(payload)

@@ -1,6 +1,6 @@
 from app.utils.shell_cmds import shell
 from app.utils.stdout_utils import progress_msg
-from app.utils.error_handlers import error_handler_hmmbuild, error_handler_mash_dist, error_handler_blast, error_handler_mcl
+from app.utils.error_handlers import error_handle_mafft, error_handler_hmmbuild, error_handler_mash_dist, error_handler_blast, error_handler_mcl
 
 def test_imports():
     try:
@@ -44,6 +44,11 @@ class DepTest:
         error_handler_mcl(out, "Mcl (dependency test)")
         progress_msg("... Mcl call successful")
 
+    def test_mafft(self):
+        out = shell("mafft --help", ret_output=True)
+        error_handle_mafft(out, "Mafft (dependency test)")
+        progress_msg("... Mafft call successful")
+
     def test_hmmer(self):
         out = shell("hmmpress", ret_output=True)
         error_handler_hmmbuild(out, "Hmmer (dependency test)")
@@ -58,6 +63,7 @@ class DepTest:
         progress_msg(f"Starting dependency tests...")
         test_imports()
         self.test_mash()
+        self.test_mafft()
         self.test_blast()
         self.test_mcl()
         self.test_hmmer()

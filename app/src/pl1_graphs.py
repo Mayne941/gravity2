@@ -15,6 +15,7 @@ from app.utils.heatmap_params import get_hmap_params, construct_hmap_lines
 from app.utils.error_handlers import raise_gravity_error
 from app.utils.shared_pphmm_graphs import supplementary_pphmm_heatmaps, shared_norm_pphmm_ratio, shared_pphmm_ratio, pphmm_loc_distances, pphmm_loc_diffs_pairwise
 
+import re
 import os
 import numpy as np
 import pandas as pd
@@ -113,7 +114,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                         BootstrappedVirusDendrogram+"\n")
 
             if os.path.isfile(self.fnames['BootstrappedDendrogramFile']):
-                '''Bootstrap gets really upset if trying to overwrite'''
+                '''Bootstrap gets upset if trying to overwrite existing file'''
                 os.remove(self.fnames['BootstrappedDendrogramFile'])
 
             '''Create bootstrapped dendrogram. N.b. No error handler as successful output goes to stderr'''
@@ -139,20 +140,36 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             VirusDendrogram = Phylo.read(self.fnames['Heatmap_DendrogramFile'], "newick")
         '''Determine virus order'''
         _ = VirusDendrogram.ladderize(reverse=True)
+
+        '''Remove clade support values that are < Heatmap_DendrogramSupport_Cutoff'''
+        N_InternalNodes = len(VirusDendrogram.get_nonterminals())
+        for InternalNode_i in range(N_InternalNodes):
+            try:
+                if np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
+                    '''Some bootstrap programs output NaN instead of zero, which breaks the parser.'''
+                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = None
+
+                if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff']:
+                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = None
+
+                else:
+                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
+                        VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
+            except:
+                continue
+
         TaxoLabelList = TaxoLabel_Constructor(SeqIDLists=self.genomes["SeqIDLists"],
                                               FamilyList=self.genomes["FamilyList"],
                                               GenusList=self.genomes["GenusList"],
                                               VirusNameList=self.genomes["VirusNameList"]
                                               )
 
-        ######## RM TODO TEST BOOSTER ISSUES WITH VirusDendrogram.get_terminals()[Virus_i].confidence
         for Virus_i in range(N_Viruses):
             Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
             if not "Query" in str(Taxolabel):
                 VirusDendrogram.get_terminals()[Virus_i].color = "blue"
             else:
                 VirusDendrogram.get_terminals()[Virus_i].color = "red"
-        ############
 
         OrderedTaxoLabelList = [
             Clade.name for Clade in VirusDendrogram.get_terminals()]
@@ -162,18 +179,6 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         '''Re-order the distance matrix'''
         OrderedDistMat = DistMat[VirusOrder][:, VirusOrder]
 
-        '''Remove clade support values that are < Heatmap_DendrogramSupport_Cutoff'''
-        N_InternalNodes = len(VirusDendrogram.get_nonterminals())
-        for InternalNode_i in range(N_InternalNodes):
-            try:
-                if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff'] or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
-                    continue
-                else:
-                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
-                        VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
-            except:
-                continue
-
         '''Labels, label positions, and ticks'''
         ClassDendrogram_grp = VirusDendrogram
         if self.payload["Bootstrap"]:
@@ -181,7 +186,6 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                 self.fnames['BootstrappedDendrogramFile'], "newick")
         else:
             ClassDendrogram_label = Phylo.read(self.fnames['Heatmap_DendrogramFile'], "newick")
-
 
         '''Construct taxo labels in ordered list for heatmap axis labels'''
         _, LineList_major = make_labels(ClassDendrogram_grp, zip(
@@ -197,7 +201,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         try:
             Phylo.draw(VirusDendrogram, label_func=lambda x: "",
                     do_show=False,  axes=ax_Dendrogram)
-            plt.rcParams['lines.linewidth'] = 1.0 ##########################
+            plt.rcParams['lines.linewidth'] = 1.0
         except Exception as ex:
             raise raise_gravity_error(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try disabling this feature and trying again.")
 
@@ -217,7 +221,6 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                                           hmap_params, ClassLabelList_x, ClassLabelList_y,
                                           TickLocList = np.arange(0, len(ClassLabelList_y)))
 
-        import re
         [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
          if bool(re.search(r"Query", i.get_text().replace(" ","")))]
         [i.set_color("red") for i in ax_Heatmap.get_yticklabels()

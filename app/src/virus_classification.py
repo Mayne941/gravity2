@@ -96,7 +96,6 @@ class VirusClassificationAndEvaluation:
                     HMMER_PPHMMDB=self.fnames['HMMER_PPHMMDB_UcfVirus'],
                     Pl2=True
                 )
-
             pl1_ref_annotations["PPHMMSignatureTable"] = np.hstack(
                 (pl1_ref_annotations["PPHMMSignatureTable"], PPHMMSignatureTable_UcfVirusVSUcfDB))
             pl1_ref_annotations["PPHMMLocationTable"] = np.hstack(
@@ -377,6 +376,23 @@ class VirusClassificationAndEvaluation:
 
         VirusDendrogram = Phylo.read(VirusDendrogramFile, "newick")
 
+        '''Remove clade support values that are < Heatmap_DendrogramSupport_Cutoff'''
+        N_InternalNodes = len(VirusDendrogram.get_nonterminals())
+        for InternalNode_i in range(N_InternalNodes):
+            try:
+                if np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
+                    '''Some bootstrap programs output NaN instead of zero, which breaks the parser.'''
+                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = None
+
+                if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff']:
+                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = None
+
+                else:
+                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
+                        VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
+            except:
+                continue
+
         '''Determine virus order'''
         _ = VirusDendrogram.ladderize(reverse=True)
         OrderedTaxoLabelList = [
@@ -387,28 +403,15 @@ class VirusClassificationAndEvaluation:
         '''Re-order the distance matrix for heatmap squares'''
         OrderedDistMat = DistMat[VirusOrder][:, VirusOrder]
 
-        '''Remove clade support values that are < Heatmap_DendrogramSupport_Cutoff'''
-        N_InternalNodes = len(VirusDendrogram.get_nonterminals())
-        for InternalNode_i in range(N_InternalNodes):
-            try:
-                '''Here we want to ensure there are no labels on the dendrogram where bootstrap confidence < cutoff (or not present if BS = False)'''
-                if VirusDendrogram.get_nonterminals()[InternalNode_i].confidence < self.payload['Heatmap_DendrogramSupport_Cutoff'] or np.isnan(VirusDendrogram.get_nonterminals()[InternalNode_i].confidence):
-                    continue
-                else:
-                    VirusDendrogram.get_nonterminals()[InternalNode_i].confidence = round(
-                        VirusDendrogram.get_nonterminals()[InternalNode_i].confidence, 2)
-            except:
-                '''Exception as first entry will always be None'''
-                continue
-
         '''Colour terminal branches: reference virus's branch is blue, unclassified virus's branch is red'''
         N_Viruses = N_RefViruses + self.N_UcfViruses
-        for Virus_i in range(N_Viruses):
-            Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
-            if Taxolabel in TaxoLabelList_RefVirus:
-                VirusDendrogram.get_terminals()[Virus_i].color = "blue"
-            elif Taxolabel in self.TaxoLabelList_UcfVirus:
-                VirusDendrogram.get_terminals()[Virus_i].color = "red"
+        # TODO < RM DISABLED FOR FLAVI PAPER
+        # for Virus_i in range(N_Viruses):
+        #     Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
+        #     if Taxolabel in TaxoLabelList_RefVirus:
+        #         VirusDendrogram.get_terminals()[Virus_i].color = "blue"
+        #     elif Taxolabel in self.TaxoLabelList_UcfVirus:
+        #         VirusDendrogram.get_terminals()[Virus_i].color = "red"
 
         '''Labels, label positions, and ticks'''
         ClassDendrogram = copy(VirusDendrogram)
@@ -444,9 +447,12 @@ class VirusClassificationAndEvaluation:
             ~IndicatorMat_CrossGroup, OrderedDistMat)
 
         '''Colour map construction'''
-        MyBlues = get_blue_cmap()
-        MyReds = get_red_cmap()
-        MyPurples = get_purple_cmap()
+        # RM < TODO DISABLE FOR FLAVI PAPER
+        # MyBlues = get_blue_cmap()
+        # MyReds = get_red_cmap()
+        # MyPurples = get_purple_cmap()
+        MyBlues = MyReds = MyPurples ='magma'
+
 
         '''Plot configuration'''
         hmap_params, fig, ax_Dendrogram, ax_Heatmap = get_hmap_params(len(ClassLabelList_x))
@@ -484,32 +490,35 @@ class VirusClassificationAndEvaluation:
         [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
          if bool(re.match(r"Query", i.get_text()))]
 
-        '''Reference virus colour bar'''
-        ax_CBar_RefVirus = fig.add_axes(
-            [hmap_params['ax_CBar_L'], hmap_params['ax_CBar_B'] + 2*hmap_params['ax_CBar_H']/3, hmap_params['ax_CBar_W'], hmap_params['ax_CBar_H']/3], frame_on=True, facecolor="white")
-        ax_CBar_RefVirus	.imshow(np.linspace(0, 1, 1025).reshape(
-            1, -1), cmap=MyBlues, aspect='auto', vmin=0, vmax=1, interpolation='none')
-        ax_CBar_RefVirus	.set_yticks([0.0])
-        ax_CBar_RefVirus	.set_yticklabels(
-            ["Ref viruses"], rotation=0, size=hmap_params['FontSize'] + 2)
-        ax_CBar_RefVirus	.tick_params(top=False,
-                                      bottom=False,
-                                      left=False,
-                                      right=True,
-                                      labeltop=False,
-                                      labelbottom=False,
-                                      labelleft=False,
-                                      labelright=True,
-                                      direction='out')
+        # RM < TODO DISABLE FOR FLAVI PAPER
+        # '''Reference virus colour bar'''
+        # ax_CBar_RefVirus = fig.add_axes(
+        #     [hmap_params['ax_CBar_L'], hmap_params['ax_CBar_B'] + 2*hmap_params['ax_CBar_H']/3, hmap_params['ax_CBar_W'], hmap_params['ax_CBar_H']/3], frame_on=True, facecolor="white")
+        # ax_CBar_RefVirus	.imshow(np.linspace(0, 1, 1025).reshape(
+        #     1, -1), cmap=MyBlues, aspect='auto', vmin=0, vmax=1, interpolation='none')
+        # ax_CBar_RefVirus	.set_yticks([0.0])
+        # ax_CBar_RefVirus	.set_yticklabels(
+        #     ["Ref viruses"], rotation=0, size=hmap_params['FontSize'] + 2)
+        # ax_CBar_RefVirus	.tick_params(top=False,
+        #                               bottom=False,
+        #                               left=False,
+        #                               right=True,
+        #                               labeltop=False,
+        #                               labelbottom=False,
+        #                               labelleft=False,
+        #                               labelright=True,
+        #                               direction='out')
 
-        '''Unclassified virus colour bar'''
+        # '''Unclassified virus colour bar'''
         ax_CBar_UcfVirus = fig.add_axes(
             [hmap_params['ax_CBar_L'], hmap_params['ax_CBar_B'] + 1*hmap_params['ax_CBar_H']/3, hmap_params['ax_CBar_W'], hmap_params['ax_CBar_H']/3], frame_on=True, facecolor="white")
         ax_CBar_UcfVirus	.imshow(np.linspace(0, 1, 1025).reshape(
             1, -1), cmap=MyReds, aspect='auto', vmin=0, vmax=1, interpolation='none')
         ax_CBar_UcfVirus	.set_yticks([0.0])
+        # ax_CBar_UcfVirus	.set_yticklabels(
+        #     ["Ucf viruses"], rotation=0, size=hmap_params['FontSize'] + 2)
         ax_CBar_UcfVirus	.set_yticklabels(
-            ["Ucf viruses"], rotation=0, size=hmap_params['FontSize'] + 2)
+            ["GCJ Distance"], rotation=0, size=hmap_params['FontSize'] + 2)
         ax_CBar_UcfVirus	.tick_params(top=False,
                                       bottom=False,
                                       left=False,
@@ -520,29 +529,31 @@ class VirusClassificationAndEvaluation:
                                       labelright=True,
                                       direction='out')
 
-        '''Ref/Ucf merge colour bar'''
-        ax_CBar_CrossGroup = fig.add_axes(
-            [hmap_params['ax_CBar_L'], hmap_params['ax_CBar_B'] + 0*hmap_params['ax_CBar_H']/3, hmap_params['ax_CBar_W'], hmap_params['ax_CBar_H']/3], frame_on=True, facecolor="white")
-        ax_CBar_CrossGroup	.imshow(np.linspace(0, 1, 1025).reshape(
-            1, -1), cmap=MyPurples, aspect='auto', vmin=0, vmax=1, interpolation='none')
-        ax_CBar_CrossGroup	.set_yticks([0.0])
-        ax_CBar_CrossGroup	.set_yticklabels(
-            ["Ref VS Ucf viruses"], rotation=0, size=hmap_params['FontSize'] + 2)
-        ax_CBar_CrossGroup	.set_xticks(
-            np.array([0, 0.25, 0.50, 0.75, 1])*(1025)-0.5)
-        ax_CBar_CrossGroup	.set_xticklabels(
-            ['0', '0.25', '0.50', '0.75', '1'], rotation=0, size=hmap_params['FontSize'])
-        ax_CBar_CrossGroup	.set_xlabel(
-            "Distance", rotation=0, size=hmap_params['FontSize'] + 2)
-        ax_CBar_CrossGroup	.tick_params(top=False,
-                                        bottom=True,
-                                        left=False,
-                                        right=True,
-                                        labeltop=False,
-                                        labelbottom=True,
-                                        labelleft=False,
-                                        labelright=True,
-                                        direction='out')
+        # '''Ref/Ucf merge colour bar'''
+        # ax_CBar_CrossGroup = fig.add_axes(
+        #     [hmap_params['ax_CBar_L'], hmap_params['ax_CBar_B'] + 0*hmap_params['ax_CBar_H']/3, hmap_params['ax_CBar_W'], hmap_params['ax_CBar_H']/3], frame_on=True, facecolor="white")
+        # ax_CBar_CrossGroup	.imshow(np.linspace(0, 1, 1025).reshape(
+        #     1, -1), cmap=MyPurples, aspect='auto', vmin=0, vmax=1, interpolation='none')
+        # ax_CBar_CrossGroup	.set_yticks([0.0])
+        # ax_CBar_CrossGroup	.set_yticklabels(
+        #     ["Ref VS Ucf viruses"], rotation=0, size=hmap_params['FontSize'] + 2)
+        # ax_CBar_CrossGroup	.set_yticklabels(
+        #     ["GCJ Distance"], rotation=0, size=hmap_params['FontSize'] + 2)
+        # ax_CBar_CrossGroup	.set_xticks(
+        #     np.array([0, 0.25, 0.50, 0.75, 1])*(1025)-0.5)
+        # ax_CBar_CrossGroup	.set_xticklabels(
+        #     ['0', '0.25', '0.50', '0.75', '1'], rotation=0, size=hmap_params['FontSize'])
+        # ax_CBar_CrossGroup	.set_xlabel(
+        #     "Distance", rotation=0, size=hmap_params['FontSize'] + 2)
+        # ax_CBar_CrossGroup	.tick_params(top=False,
+        #                                 bottom=True,
+        #                                 left=False,
+        #                                 right=True,
+        #                                 labeltop=False,
+        #                                 labelbottom=True,
+        #                                 labelleft=False,
+        #                                 labelright=True,
+        #                                 direction='out')
         plt.savefig(self.fnames['HeatmapWithDendrogramFile'], format="pdf", bbox_inches = "tight", dpi=hmap_params['dpi'])
         plt.clf()
         plt.cla()
