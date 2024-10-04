@@ -12,9 +12,11 @@ from app.utils.process_fasta import fasta_to_genbank, combine_segments
 from app.utils.stdout_utils import progress_msg
 from app.utils.end_to_end_entrypoint import split_payloads_for_e2e
 from cli.dep_test import DepTest
+from app.utils.join_data import join_input
 from app.utils.api_classes import (Pipeline_i_data, Pipeline_ii_data, Endp_data_scrape_data,
                                    Endp_data_first_pass_taxon_filter, Endp_data_second_pass_filter,
-                                   Endp_data_fasta_to_gb, CombineGenomeSegs, E2e_data, Premade_data)
+                                   Endp_data_fasta_to_gb, CombineGenomeSegs, E2e_data, Premade_data,
+                                   JoinVmrs)
 
 print_banner()
 progress_msg("Access the GRAViTy-V2 UI in your browser here (or control-click link):\n\thttp://127.0.0.1:8000/docs")
@@ -307,6 +309,11 @@ async def run_example_run():
 async def run_vmr_scrape(trigger: Endp_data_scrape_data):
     payload = process_json(trigger)
     return scrape(payload)
+
+@app.post("/join_vmrs/", tags=["Utilities"])
+async def run_vmr_join(trigger: JoinVmrs):
+    payload = process_json(trigger)
+    return join_input(payload)
 
 @app.post("/filter_vmr_first_pass/", tags=["Utilities"])
 async def vmr_first_pass_taxon_filter(trigger: Endp_data_first_pass_taxon_filter):

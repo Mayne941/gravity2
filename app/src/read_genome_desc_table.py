@@ -82,7 +82,7 @@ class ReadGenomeDescTable:
         self.TranslTableList = df["Genetic code table"].tolist()
 
     def get_names(self, row):
-        # try:
+        # try: # RM < TODO Incorporate commented code for curtailing long names?
         #     if not self.is_secondpass:
         #         if not row["Virus name(s)"]:
         #             row["Virus name(s)"] == ""

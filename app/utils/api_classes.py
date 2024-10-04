@@ -151,6 +151,13 @@ class DataInputMinimal(BaseModel):
     GenomeSeqFile: str = Query('./output/ref_sequences.gb',
                                description="Full path to the genome sequence GenBank file. If the file doesn't exist, GRAViTy will download the sequences from the NCBI database using accession numbers specified in the VMR file, 'Virus GENBANK accession' column")
 
+class Data_VmrJoin(BaseModel):
+    vmr_1: FilePath = Query('./data/first_vmr_to_join.csv',
+                            description="File path to one of your two vmr-like documents to join")
+    vmr_2: FilePath = Query('./data/second_vmr_to_join.csv',
+                            description="File path to one of your two vmr-like documents to join")
+    vmr_joined: str = Query('./data/joined_vmr.csv',
+                            description="File path to save joined VMR")
 
 
 '''ENDPOINT MODEL COLLECTIONS'''
@@ -170,6 +177,8 @@ class Endp_data_fasta_to_gb(Data_fasta_fns):
 class CombineGenomeSegs(Data_fasta_fns, Data_genome_segment_fpath):
     pass
 
+class JoinVmrs(Data_VmrJoin):
+    pass
 
 '''Pipelines'''
 class E2e_data(Data_common_pipeline_params, Data_pl1_unique_params, Data_pl2_unique_params, Data_e2e_unique_fns):
