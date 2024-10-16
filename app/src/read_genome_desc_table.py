@@ -117,12 +117,16 @@ class ReadGenomeDescTable:
             raise_gravity_error(f"At least one line in your input CSV (genome desc table) has empty fields (or fields causing another error): {ex}")
 
     def transl_table_check(self, row):
-        if row["Genetic code table"] != 1:
-            if not "complete" in str(row["Genome coverage"]).lower():
-                self.transl_table_errors.append(row["Virus name(s)"])
-            return int(1)
-        else:
-            return int(row["Genetic code table"])
+        try:
+            if row["Genetic code table"] != 1:
+                if not "complete" in str(row["Genome coverage"]).lower():
+                    self.transl_table_errors.append(row["Virus name(s)"])
+                return int(1)
+            else:
+                return int(row["Genetic code table"])
+        except:
+            raise_gravity_warning(f"No 'Genetic code table' column found or invalid value therein for {row['Virus name(s)']}, so setting as default translation table")
+            return 1
 
     def get_accession(self, row):
         try:

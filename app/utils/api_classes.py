@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, FilePath, DirectoryPath
 '''PRIMITIVES'''
 '''Utility fns'''
 class Data_vmr_name(BaseModel):
-    vmr_name: str = Query('data/latest_vmr.csv',
+    vmr_name: str = Query('latest_vmr.csv',
                           description="Filename for new VMR.")
 
 class Data_save_path(BaseModel):
