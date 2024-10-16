@@ -5,7 +5,7 @@ import pandas as pd
 from bs4 import BeautifulSoup as bs
 
 from app.utils.timer import timing
-
+from app.utils.error_handlers import raise_gravity_error
 
 class Scraper:
     '''Get latest VMR from ICTV, structure to work with GRAViTy'''
@@ -35,12 +35,14 @@ class Scraper:
     def scrape(self) -> pd.DataFrame:
         '''Scrape URL, extract links table, get latest link, parse as excel table'''
         soup = bs(requests.get(self.url).text, "html.parser")
-        table_tags = soup.find("table", {"id": "edit-table"})
         url_rows = [re.search(r"<a\shref=.*\">", str(row))[0].replace('<a href=\"', '').replace(
-            '">', '') for row in table_tags.findAll("tr") if re.search(r"<a\shref=.*</a>", str(row))]
-        #url_rows[1] = '/filebrowser/download/472' # Uncomment to grab a non-latest VMR
-        latest_url = f"{self.url_stem}{url_rows[1]}"
-        return pd.read_excel(latest_url)
+            '">', '') for row in soup.findAll("tr") if re.search(r"<a\shref=.*</a>", str(row))]
+        latest_url = f"{self.url_stem}{url_rows[0]}"
+        df = pd.read_excel(latest_url)
+        if not "Genus" in df.columns:
+            '''Some VMRs have additional sheets and inconsistent sheet names :('''
+            df = pd.read_excel(latest_url,sheet_name=1)
+        return df
 
     def get_baltimore_and_code_table(self, row) -> pd.Series:
         '''Make new column for roman numeral notation Baltimore classification and genome coverage indicator.'''
@@ -76,7 +78,7 @@ class Scraper:
 
         '''Find, print list of and remove duplicates or entries with no Acc ID'''
         df[df["Virus GENBANK accession"].isin(df["Virus GENBANK accession"][df["Virus GENBANK accession"].duplicated(
-        )])]["Virus GENBANK accession"].to_csv(f"{self.save_dir}/bad_accession.csv")
+        )])]["Virus GENBANK accession"].to_csv(f"{self.save_dir}/vmr_bad_accessions.csv")
         df = df.drop_duplicates(subset="Virus GENBANK accession", keep=False)
 
         '''Exclude partial & segmented genomes'''
@@ -85,7 +87,7 @@ class Scraper:
         return df
 
     def save_csv(self, df) -> None:
-        df.to_csv(f"{self.save_dir}/{self.fname}")
+        df.to_csv(f"{self.fname}")
 
     def main(self) -> str:
         '''Entrypoint'''
@@ -114,7 +116,7 @@ def scrape(payload) -> str:
         dir = s.main()
         return f"Success! VMR saved to {dir}"
     except Exception as ex:
-        print(f"Whoops: {ex}")
+        raise_gravity_error(f"Error scraping latest vmr, error message: {ex}")
         return f"Scrape unsuccessful: possibly the VMR format and/or URL has changed.\n Please check url and table formatting in app/utils/scrape_vmr.py, or contact your administrator."
 
 
