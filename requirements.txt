@@ -9,7 +9,6 @@ uvicorn==0.30.3
 pandas==2.2.2
 beautifulsoup4==4.11.1
 requests==2.32.3
-openpyxl==3.0.10
 dendropy==4.6.1
 alive-progress==3.1.4
 pyarrow==16.1.0
@@ -18,3 +17,4 @@ termcolor==2.3.0
 tqdm==4.66.3
 plotly==5.15.0
 argparse==1.4.0
+openpyxl==3.1.5
