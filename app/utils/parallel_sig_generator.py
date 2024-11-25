@@ -97,7 +97,7 @@ class Pphmm_Sig_Gen:
         ProtIDList += prot_id
 
         if len(ProtList) < 1:
-            raise_gravity_error(f"GRAViTy couldn't detect any reading frames in your input sequence(s) ({ProtIDList}). Check that your sequences are labelled properly.")
+            raise_gravity_error(f"GRAViTy couldn't detect any reading frames in your input sequence(s) (Protein IDs {ProtIDList}; Accessions {SeqIDList}). Check that your sequences are labelled properly; some viroids can break this process if they have no detectable ORFs.")
 
         # BEFORE TODO
         with open(PPHMMQueryFile, "w") as f:
