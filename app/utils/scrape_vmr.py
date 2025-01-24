@@ -47,11 +47,9 @@ class Scraper:
     def get_baltimore_and_code_table(self, row) -> pd.Series:
         '''Make new column for roman numeral notation Baltimore classification and genome coverage indicator.'''
         try:
-            baltimore = self.baltimore_map[row["Genome composition"]]
+            baltimore = self.baltimore_map[row["Genome"]]
         except KeyError:
-            print(
-                f"VMR row with unknown genome composition detected ({row['Genome composition']}). Skipping row...")
-            baltimore = ""
+           baltimore = ""
 
         if "complete" in str(row["Genome coverage"]).lower():
             code_table = 1
