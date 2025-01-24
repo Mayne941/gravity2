@@ -32,7 +32,7 @@ def get_purple_cmap():
                 1024
     )
 
-def get_hmap_params(n_viruses, n_pphmms=99, is_square=True):
+def get_hmap_params(n_viruses, n_pphmms=99, is_square=True,virus_dendrogram=None):
     hmap_params = {}
     '''General'''
     hmap_params['Outer_margin'] = 0.5
@@ -136,16 +136,34 @@ def get_hmap_params(n_viruses, n_pphmms=99, is_square=True):
     '''Dendrogram scale bar'''
     ax_ScaleBar = fig.add_axes(
         [hmap_params['ax_ScaleBar_L'], hmap_params['ax_ScaleBar_B'], hmap_params['ax_ScaleBar_W'], hmap_params['ax_ScaleBar_H']], frame_on=False, facecolor="white")
-    ax_ScaleBar		.plot([0, 1], [0, 0], 'k-')
-    ScaleBarTicks = [0, 0.25, 0.5, 0.75, 1]
-    for Tick in ScaleBarTicks:
-        ax_ScaleBar.plot([Tick, Tick], [-0.05, 0.05], 'k-')
 
-    ax_ScaleBar		.set_xlim([1, 0])
+
+    DO_LOGSCALE = False # RM < TODO parameterise
+    if DO_LOGSCALE:
+
+        ScaleBarTicks = [10**0, 10**0.25, 10**0.50, 10**0.70, 10**0.9, 10**1]
+        ScaleBarTickLabels = [0, 0.25, 0.50, 0.70, 0.9, 1.0]
+
+        ax_ScaleBar		.plot([10**0, 10**1], [0, 0], 'k-')
+        for Tick in ScaleBarTicks:
+            ax_ScaleBar.plot([Tick, Tick], [-0.05, 0.05], 'k-')
+
+        ax_ScaleBar		.set_xlim([10**1, 10**0])
+        ax_ScaleBar		.set_xlabel('10^Distance', rotation=0, size=hmap_params['FontSize']+2)
+
+    else:
+        ScaleBarTickLabels = ScaleBarTicks = [0, 0.25, 0.5, 0.75, 1]
+        ax_ScaleBar		.plot([0,1], [0, 0], 'k-')
+        for Tick in ScaleBarTicks:
+            ax_ScaleBar.plot([Tick, Tick], [-0.05, 0.05], 'k-')
+
+        ax_ScaleBar		.set_xlim([1, 0])
+        ax_ScaleBar		.set_xlabel('Distance', rotation=0, size=hmap_params['FontSize']+2)
+
     ax_ScaleBar		.set_xticks(ScaleBarTicks)
     ax_ScaleBar		.set_xticklabels(
-        list(map(str, ScaleBarTicks)), rotation=0, size=hmap_params['FontSize'])
-    ax_ScaleBar		.set_xlabel('Distance', rotation=0, size=hmap_params['FontSize']+2)
+        list(map(str, ScaleBarTickLabels)), rotation=0, size=hmap_params['FontSize'])
+
     ax_ScaleBar		.xaxis.set_label_position('bottom')
     ax_ScaleBar		.tick_params(top=False,
                                 bottom=False,

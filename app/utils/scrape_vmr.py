@@ -42,6 +42,7 @@ class Scraper:
         if not "Genus" in df.columns:
             '''Some VMRs have additional sheets and inconsistent sheet names :('''
             df = pd.read_excel(latest_url,sheet_name=1)
+        df = df.rename(columns={"Genome": "Genome composition"}) # Renamed in VMR 2024 04
         return df
 
     def get_baltimore_and_code_table(self, row) -> pd.Series:
@@ -49,9 +50,7 @@ class Scraper:
         try:
             baltimore = self.baltimore_map[row["Genome composition"]]
         except KeyError:
-            print(
-                f"VMR row with unknown genome composition detected ({row['Genome composition']}). Skipping row...")
-            baltimore = ""
+           baltimore = ""
 
         if "complete" in str(row["Genome coverage"]).lower():
             code_table = 1
