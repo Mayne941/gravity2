@@ -13,7 +13,7 @@ GRAViTy-V2 is a viral taxonomy application developed by Richard Mayne, Pakorn Ai
 
 Please cite:
 
-Mayne, R., Aiewsakun, P., Turner, D. et al. (2024) GRAViTy-V2: a grounded viral taxonomy application. Preprint. https://www.biorxiv.org/content/10.1101/2024.07.26.605250v1
+<div class="csl-entry">Mayne, R., Aiewsakun, P., Turner, D., Adriaenssens, E. M., &#38; Simmonds, P. (2024). GRAViTy-V2: a grounded viral taxonomy application. <i>NAR Genomics and Bioinformatics</i>, <i>6</i>(4). <a href=https://doi.org/10.1093/nargab/lqae183>https://doi.org/10.1093/nargab/lqae183</></div>
 
 # New with version 2
 * New expanded readme on our Wiki
