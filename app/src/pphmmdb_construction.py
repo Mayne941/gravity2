@@ -46,7 +46,7 @@ class PPHMMDBConstruction:
         if not os.path.isfile(self.GenomeSeqFile):
             '''If no gb file provided, attempt to pull seqs'''
             progress_msg("You didn't specify an input genbank filename that exists. Downloading sequences from Genbank")
-            DownloadGenBankFile(self.GenomeSeqFile, # RM < TODO We should give users option to provide their own gb file if not on genbank
+            DownloadGenBankFile(self.GenomeSeqFile,
                                 self.genomes["SeqIDLists"], self.payload["genbank_email"])
 
         '''Parse gb file'''
@@ -98,7 +98,19 @@ class PPHMMDBConstruction:
                 '''If missing seqs found, concat the new genome seq file and tidy'''
                 shell(f"cat data/temp.gb >> {self.GenomeSeqFile}")
                 shell(f"rm data/temp.gb")
-        return {k.split(".")[0]: v for k, v in CleanGenbankDict.items()}
+
+        '''If provirus is defined as segment of a bigger virus, trim the record here'''
+        sequences = {k.split(".")[0]: v for k, v in CleanGenbankDict.items()}
+
+        print("Searching for proviruses as components of genbank sequences (i.e. Accession-ID (coord_x.coord_y))")
+        for idx, sequence in enumerate(self.genomes["SeqIDLists"]):
+            if len(self.genomes["SeqIDLists"][0]) == 1:
+                coords = [int(i) for i in self.genomes["ProvirusCoords"][idx].split(",")]
+            if coords != [0,0]:
+                print(f"Provirus  found in sequence {sequence}. Splitting on indices {coords[0]}-{coords[1]}")
+                sequences[sequence[0]].seq = sequences[sequence[0]].seq[coords[0]:coords[1]]
+
+        return sequences
 
     def sequence_extraction(self, GenBankDict):
         '''4/10: Extract protein sequences from VMR using GenBank data; manually annotate ORFs if needed'''
