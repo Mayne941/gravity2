@@ -60,13 +60,14 @@ class PPHMMDBConstruction:
         '''Check if gb file is missing any seqs from the VMR'''
         gb_missing_seqs = []
         for vmr_seq_id in self.genomes["SeqIDLists"]:
-            match = False
-            for gb_seq_id in CleanGenbankDict.keys():
-                if vmr_seq_id[0].upper() == gb_seq_id.upper():
-                    match = True
-                    break
-            if not match:
-                gb_missing_seqs.append(vmr_seq_id[0].upper())
+            for vmr_seq in vmr_seq_id:
+                match = False
+                for gb_seq_id in CleanGenbankDict.keys():
+                    if vmr_seq.upper() == gb_seq_id.upper():
+                        match = True
+                        break
+                if not match:
+                    gb_missing_seqs.append(vmr_seq.upper())
 
         if len(gb_missing_seqs) > 0:
             '''If missing seqs in gb file, attempt to get them from genbank'''
