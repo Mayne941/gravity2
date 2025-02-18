@@ -103,14 +103,6 @@ class PPHMMDBConstruction:
         sequences = {k.split(".")[0]: v for k, v in CleanGenbankDict.items()}
 
         print("Searching for proviruses as components of genbank sequences (i.e. Accession-ID (coord_x.coord_y))")
-        # for idx, sequence in enumerate(sequences.keys()):
-        #     try:
-        #         coords = [int(i) for i in self.genomes["ProvirusCoords"][idx].split(",")]
-        #     except: breakpoint()
-        #     if coords != [0,0]:
-        #         print(f"Provirus definition found in sequence {sequence}. Splitting on indices {coords[0]}-{coords[1]}")
-        #         sequences[sequence].seq = sequences[sequence].seq[coords[0]:coords[1]]
-
         for idx, sequence in enumerate(self.genomes["SeqIDLists"]):
             if len(self.genomes["SeqIDLists"][0]) == 1:
                 coords = [int(i) for i in self.genomes["ProvirusCoords"][idx].split(",")]
