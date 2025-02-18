@@ -24,6 +24,7 @@ class ReadGenomeDescTable:
         self.payload = payload
         self.GenomeDescTableFile = GenomeDescTableFile
         self.fnames = generate_file_names(payload,ExpDir)
+        self.accessions_regex = re.compile(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{2}_[0-9]{6}|SRR[0-9]{7,8}|[a-zA-Z]{4,6}[0-9]{6,9}")
         self.GenomeSeqFile = GenomeSeqFile
         if not os.path.exists(self.fnames["OutputDir"]):
             os.makedirs(self.fnames["OutputDir"])
@@ -34,8 +35,8 @@ class ReadGenomeDescTable:
             self.SubFamList, self.GenusList, self.VirusNameList, \
             self.SeqIDLists, self.SeqStatusList, self.TaxoGroupingList, \
             self.TranslTableList, self.DatabaseList, self.VirusIndexList,\
-            self.transl_table_errors = [], [], [], [],\
-                [], [], [], [], [], [], [], [], []
+            self.transl_table_errors, self.ProvirusCoords = [], [], [], [],\
+                [], [], [], [], [], [], [], [], [], []
 
     def open_table(self) -> None:
         '''Open VMR file and read in relevant data to volatile'''
@@ -52,6 +53,7 @@ class ReadGenomeDescTable:
         try:
             df["Virus name(s)"] = df.apply(lambda x: self.get_names(x), axis=1)
             df["Genetic code table"] = df.apply(lambda x: self.transl_table_check(x), axis=1)
+            df["Provirus_coords"] = df.apply(lambda x: self.get_proviruses(x), axis=1)
             df["Virus GENBANK accession"] = df.apply(lambda x: self.get_accession(x), axis=1)
         except KeyError as e:
             raise_gravity_error(f"Your input VMR-like document isn't structured appropriately, see documentation for instructions.\nException: {e}")
@@ -80,29 +82,16 @@ class ReadGenomeDescTable:
             self.SeqStatusList = [1 for i in df["Virus GENBANK accession"].tolist()]
         self.SeqIDLists = [i.split(", ") for i in df["Virus GENBANK accession"].tolist()]
         self.TranslTableList = df["Genetic code table"].tolist()
+        self.ProvirusCoords = df["Provirus_coords"].tolist()
 
     def get_names(self, row):
-        # try: # RM < TODO Incorporate commented code for curtailing long names?
-        #     if not self.is_secondpass:
-        #         if not row["Virus name(s)"]:
-        #             row["Virus name(s)"] == ""
-        #         return re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(
-        #             r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
-        #     else:
-        #         '''If PL2, append virus description to accession ID'''
-        #         part1 = re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
-        #         if len(row["Virus isolate designation"]) == 0:
-        #             part2 = ""
-        #         part2 = re.sub(r"[^\w\s]", "", row["Virus isolate designation"][0:39]).replace(" ", "_")
-        #         if len(row["Virus isolate designation"]) > 40:
-        #             part2 += "..."
-        #         return f'{part1}_{part2}'
+        '''Get common/colloquial virus names (WILL FORM MAIN PART OF VIRUS LABEL)'''
         try:
             if self.is_secondpass:
                 if not row["Virus name(s)"]:
                     row["Virus name(s)"] == ""
                 virus_name = re.sub(r"^\/|\/$", "", re.sub(r"[\/ ]{2,}", "/", re.sub(r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"])))).replace(" ","_")
-                accession = ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}|SRR[0-9]{7,8}", row["Virus GENBANK accession"]))
+                accession = ", ".join(re.findall(self.accessions_regex, row["Virus GENBANK accession"]))
                 if len(accession.split(",")) > 1:
                     accession = accession.split(",")[0]
                 return f'{accession}_{row["Family"]}_{row["Genus"]}_{virus_name}'
@@ -129,17 +118,24 @@ class ReadGenomeDescTable:
             return 1
 
     def get_accession(self, row):
+        '''Use regular expression to extract all accession numbers and join in "X1,X2,..." format.'''
         try:
-            # if "SRR" in row["Virus GENBANK accession"]:
-            #     th = ", ".join()
-            th = ", ".join(re.findall(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{4}[0-9]{6,8}|[A-Z]{2}_[0-9]{6}|SRR[0-9]{7,8}", row["Virus GENBANK accession"]))
-            if th == "":
+            accs = ", ".join(re.findall(self.accessions_regex, row["Virus GENBANK accession"]))
+            if accs == "":
                 raise
-            return th
+            return accs
         except:
             self.no_acc_cnt += 1
             raise_gravity_warning(f"No accession number for {row['Virus name(s)']}: this might cause GRAViTy to error later on if you're not providing your own GenBank file!")
             return f'{row["Virus GENBANK accession"]}' if not row["Virus GENBANK accession"] == "" else f'No_data_{self.no_acc_cnt - 1}'
+
+    def get_proviruses(self, row):
+        '''Use regular expression to find provirus coordinates and append to new column'''
+        proviruses = re.findall(r"\([0-9]{1,15}.[0-9]{1,15}\)", row["Virus GENBANK accession"])
+        provirus_coords = "0,0"
+        if len(proviruses) == 1:
+            provirus_coords = ",".join(proviruses[0].split(".")).replace("(", "").replace(")","")
+        return provirus_coords
 
     def update_desc_table(self) -> dict:
         '''Create dictionary in GRAViTy structure for saving to persistent storage'''
@@ -151,7 +147,7 @@ class ReadGenomeDescTable:
         else:
             '''Else only take coding complete seqs'''
             IncludedGenomes_IndexList = [SeqStatus_i for SeqStatus_i, _ in enumerate(
-                self.SeqStatusList)]# if "Complete" in SeqStatus] # RM < TODO Removed as this can break a user workflow - guidance on using CCS is probably preferable
+                self.SeqStatusList)]
 
         '''Create master data. Arrays are LINKED.'''
         self.BaltimoreList = master_data["BaltimoreList"] = self.BaltimoreList[IncludedGenomes_IndexList]
@@ -165,6 +161,7 @@ class ReadGenomeDescTable:
         self.TranslTableList = master_data["TranslTableList"] = self.TranslTableList[IncludedGenomes_IndexList]
         self.TaxoGroupingList = master_data["TaxoGroupingList"] = self.TaxoGroupingList[IncludedGenomes_IndexList]
         self.DatabaseList = master_data["DatabaseList"] = self.DatabaseList
+        self.ProvirusCoords =  master_data["ProvirusCoords"] = self.ProvirusCoords
         return master_data
 
     def save_desc_table(self, table):
