@@ -197,7 +197,7 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         ClassLabelList_x, ClassLabelList_y = split_labels(OrderedTaxoLabelList)
 
         '''Plot configuration'''
-        hmap_params, fig, ax_Dendrogram, ax_Heatmap = get_hmap_params(len(ClassLabelList_x),virus_dendrogram=VirusDendrogram)
+        hmap_params, fig, ax_Dendrogram, ax_Heatmap = get_hmap_params(len(ClassLabelList_x),virus_dendrogram=VirusDendrogram, do_logscale=self.payload["LogscaleDendrogram"])
 
         try:
             Phylo.draw(VirusDendrogram, label_func=lambda x: "",
@@ -205,11 +205,21 @@ class GRAViTyDendrogramAndHeatmapConstruction:
             plt.rcParams['lines.linewidth'] = 1.0
         except Exception as ex:
             raise raise_gravity_error(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try disabling this feature and trying again.")
-
-        # DO_LOGSCALE = False # RM < TODO Parameterise
-        DO_LOGSCALE = self.payload["LogscaleDendrogram"]
         dendro_x_min = 1
-        if DO_LOGSCALE:
+
+        ## ??
+        # VirusDendrogramDepth = max(
+        #         [v for k, v in VirusDendrogram.depths().items()])
+        # if self.payload["LogscaleDendrogram"]:
+        #     VirusDendrogramDepth = np.log10(VirusDendrogramDepth)
+        #     dendro_x_min = 10**dendro_x_min
+        # ax_Dendrogram		.set_xlim(
+        #     [(VirusDendrogramDepth - dendro_x_min), VirusDendrogramDepth])
+        # ax_Dendrogram		.set_ylim([N_Viruses+0.5, 0.5])
+        # ax_Dendrogram		.set_axis_off()
+        ## ??
+
+        if self.payload["LogscaleDendrogram"]:
             dendro_x_min = 10**dendro_x_min
         VirusDendrogramDepth = max(
             [v for k, v in VirusDendrogram.depths().items()])
