@@ -65,7 +65,8 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         '''Make dendrogram'''
         VirusDendrogram = DistMat2Tree(DistMat=DistMat,
                                        LeafList=TaxoLabelList,
-                                       Dendrogram_LinkageMethod=self.payload['Dendrogram_LinkageMethod']
+                                       Dendrogram_LinkageMethod=self.payload['Dendrogram_LinkageMethod'],
+                                       do_logscale=self.payload["LogscaleDendrogram"]
                                        )
         with open(self.fnames['Heatmap_DendrogramFile'], "w") as VirusDendrogram_txt:
             VirusDendrogram_txt.write(VirusDendrogram)
@@ -107,7 +108,8 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                 '''Generate bs dist matrix tree'''
                 BootstrappedVirusDendrogram = DistMat2Tree(DistMat=BootstrappedDistMat,
                                                            LeafList=TaxoLabelList,
-                                                           Dendrogram_LinkageMethod=self.payload['Dendrogram_LinkageMethod']
+                                                           Dendrogram_LinkageMethod=self.payload['Dendrogram_LinkageMethod'],
+                                                           do_logscale=self.payload["LogscaleDendrogram"]
                                                            )
                 with open(self.fnames['VirusDendrogramDistFile'], "a") as VirusDendrogramDist_txt:
                     VirusDendrogramDist_txt.write(
@@ -204,18 +206,8 @@ class GRAViTyDendrogramAndHeatmapConstruction:
         except Exception as ex:
             raise raise_gravity_error(f"ERROR: {ex}\nThis will usually occur when there's been an error with bootstrapping. Try disabling this feature and trying again.")
 
-        # breakpoint()
-        # VirusDendrogramDepth = max(
-        #         [v for k, v in VirusDendrogram.depths().items()])
-        # if DO_LOGSCALE:
-        #     VirusDendrogramDepth = np.log10(VirusDendrogramDepth)
-        #     dendro_x_min = 10**dendro_x_min
-        # ax_Dendrogram		.set_xlim(
-        #     [(VirusDendrogramDepth - dendro_x_min), VirusDendrogramDepth])
-        # ax_Dendrogram		.set_ylim([N_Viruses+0.5, 0.5])
-        # ax_Dendrogram		.set_axis_off()
-
-        DO_LOGSCALE = False # RM < Parameterise
+        # DO_LOGSCALE = False # RM < TODO Parameterise
+        DO_LOGSCALE = self.payload["LogscaleDendrogram"]
         dendro_x_min = 1
         if DO_LOGSCALE:
             dendro_x_min = 10**dendro_x_min
