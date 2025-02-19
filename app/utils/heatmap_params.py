@@ -32,7 +32,7 @@ def get_purple_cmap():
                 1024
     )
 
-def get_hmap_params(n_viruses, n_pphmms=99, is_square=True,virus_dendrogram=None):
+def get_hmap_params(n_viruses, n_pphmms=99, is_square=True,virus_dendrogram=None,do_logscale=False):
     hmap_params = {}
     '''General'''
     hmap_params['Outer_margin'] = 0.5
@@ -138,9 +138,7 @@ def get_hmap_params(n_viruses, n_pphmms=99, is_square=True,virus_dendrogram=None
         [hmap_params['ax_ScaleBar_L'], hmap_params['ax_ScaleBar_B'], hmap_params['ax_ScaleBar_W'], hmap_params['ax_ScaleBar_H']], frame_on=False, facecolor="white")
 
 
-    DO_LOGSCALE = False # RM < TODO parameterise
-    if DO_LOGSCALE:
-
+    if do_logscale:
         ScaleBarTicks = [10**0, 10**0.25, 10**0.50, 10**0.70, 10**0.9, 10**1]
         ScaleBarTickLabels = [0, 0.25, 0.50, 0.70, 0.9, 1.0]
 

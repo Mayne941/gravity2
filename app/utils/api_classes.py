@@ -142,6 +142,8 @@ class Data_common_pipeline_params(BaseModel):
                                       description="Specify the number of threads for multi-core processing. Options: integer == this many threads; 'auto' == let GRAViTy choose number of threads; 'hpc' == select when running on a compute cluster (hard codes to 1).")
     ClustAlnScheme: Literal["local", "global", "auto"] = Query("local",
                                                                description="After extracting and clustering ORFs, choose Mafft scheme to align them. 'local' = FFT-NS-i scheme (recommended); 'global' = G-INS-i scheme (use to enhance sensitivity for distantly-related genomes); 'auto': let Mafft decide best scheme.")
+    LogscaleDendrogram: bool = Field(False,
+                                     description="If true, dendrogram scale will be logscaled. Useful for comparing very closely related viruses and/or a mixture of closely and non-closely related.")
 
 class DataInputMinimal(BaseModel):
     GenomeDescTableFile: FilePath = Query('./data/latest_vmr.csv',

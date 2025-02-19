@@ -217,43 +217,43 @@ class PPHMMDBConstruction:
             '''Do Mash'''
             out = shell(f"mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashSubjectFile']}", ret_output=True) # TODO PARAMETERISE MASH CALL
             error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), initial sketch)")
-        # Create a combined FASTA file for all sequences
-        with open(self.fnames['MashQueryFile'], "w") as MashQuery_txt:
-            for ProtSeq in ProtList:
-                MashQuery_txt.write(f">{ProtSeq.name} {ProtSeq.description}\n{str(ProtSeq.seq)}\n")
-        # Sketch the combined FASTA file
-        out = shell(f"mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashQueryFile']}", ret_output=True)
-        error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), combined sketch)")
-        # Run mash dist on the combined file
-        mash_fname = f"{'/'.join(self.fnames['MashOutputFile'].split('/')[:-1])}/mashup_scores.tab"
-        out = shell(f"mash dist -p {self.payload['N_CPUs']} -v {self.payload['Mash_p_val_cutoff']} -d {self.payload['Mash_sim_score_cutoff']} -i {self.fnames['MashQueryFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}",
-            ret_output=True)
-        error_handler_mash_dist(out, "Mash (PPHMMDB Construction, mash_analysis(), combined dist)")
-        # Read the mash output
-        try:
-            mash_df = pd.read_csv(mash_fname, sep="\t", header=None, names=["orf", "query", "dist", "p", "hashes"], engine="pyarrow")
-        except:
-            raise_gravity_warning(f"Mash output is empty. This usually happens when an ORF hasn't been translated properly.")
-        if mash_df.shape[0] == 0:
-            raise_gravity_error(f"Output from Mash (PPHMMDB Construction, mash_analysis()) was empty. Check Mash is installed, active in your environment and your input fastas are valid. Check pandas and pyarrow are installed (used in reading Mash output).")
-        else:
-            mash_df["p"] = mash_df["p"].astype(float)
-            mash_df["mash_sim"] = np.abs(1 - mash_df["dist"])
+            # Create a combined FASTA file for all sequences
+            with open(self.fnames['MashQueryFile'], "w") as MashQuery_txt:
+                for ProtSeq in ProtList:
+                    MashQuery_txt.write(f">{ProtSeq.name} {ProtSeq.description}\n{str(ProtSeq.seq)}\n")
+            # Sketch the combined FASTA file
+            out = shell(f"mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashQueryFile']}", ret_output=True)
+            error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), combined sketch)")
+            # Run mash dist on the combined file
+            mash_fname = f"{'/'.join(self.fnames['MashOutputFile'].split('/')[:-1])}/mashup_scores.tab"
+            out = shell(f"mash dist -p {self.payload['N_CPUs']} -v {self.payload['Mash_p_val_cutoff']} -d {self.payload['Mash_sim_score_cutoff']} -i {self.fnames['MashQueryFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}",
+                ret_output=True)
+            error_handler_mash_dist(out, "Mash (PPHMMDB Construction, mash_analysis(), combined dist)")
+            # Read the mash output
+            try:
+                mash_df = pd.read_csv(mash_fname, sep="\t", header=None, names=["orf", "query", "dist", "p", "hashes"], engine="pyarrow")
+            except:
+                raise_gravity_warning(f"Mash output is empty. This usually happens when an ORF hasn't been translated properly.")
+            if mash_df.shape[0] == 0:
+                raise_gravity_error(f"Output from Mash (PPHMMDB Construction, mash_analysis()) was empty. Check Mash is installed, active in your environment and your input fastas are valid. Check pandas and pyarrow are installed (used in reading Mash output).")
+            else:
+                mash_df["p"] = mash_df["p"].astype(float)
+                mash_df["mash_sim"] = np.abs(1 - mash_df["dist"])
 
-            mash_iter = mash_df.to_dict(orient="records")
-            for i in mash_iter:
-                '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
-                pair = ", ".join(sorted([i["query"], i["orf"]]))
-                if pair in SeenPair:
-                    '''If the pair has already been seen...'''
-                    if i["mash_sim"] > MashMatrix[SeenPair[pair]][2]:
-                        '''...and if the new mash_sim is higher'''
-                        MashMatrix[SeenPair[pair]][2] = i["mash_sim"]
-                else:
-                    SeenPair[pair] = SeenPair_i
-                    MashMatrix.append(
-                        [pair.split(", ")[0], pair.split(", ")[1], i["mash_sim"]])
-                    SeenPair_i += 1
+                mash_iter = mash_df.to_dict(orient="records")
+                for i in mash_iter:
+                    '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
+                    pair = ", ".join(sorted([i["query"], i["orf"]]))
+                    if pair in SeenPair:
+                        '''If the pair has already been seen...'''
+                        if i["mash_sim"] > MashMatrix[SeenPair[pair]][2]:
+                            '''...and if the new mash_sim is higher'''
+                            MashMatrix[SeenPair[pair]][2] = i["mash_sim"]
+                    else:
+                        SeenPair[pair] = SeenPair_i
+                        MashMatrix.append(
+                            [pair.split(", ")[0], pair.split(", ")[1], i["mash_sim"]])
+                        SeenPair_i += 1
 
             MashMatrix = np.array(MashMatrix)
 

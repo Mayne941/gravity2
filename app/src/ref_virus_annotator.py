@@ -161,7 +161,8 @@ class RefVirusAnnotator:
         SimMat_traits = np.array(SimMat_traits)
         TreeNewick_traits = DistMat2Tree(DistMat=1 - SimMat_traits,
                                          LeafList=TaxoLabelList,
-                                         Dendrogram_LinkageMethod="average")
+                                         Dendrogram_LinkageMethod="average",
+                                         do_logscale=self.payload["LogscaleDendrogram"])
 
         TreeNewick_traits = Phylo.read(StringIO(TreeNewick_traits), "newick")
         TreeNewick_traits.ladderize(reverse=True)
