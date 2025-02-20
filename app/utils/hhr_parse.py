@@ -1,5 +1,6 @@
 from io import StringIO
 import pandas as pd
+'''DEPRECATED AS OF VERSION 2.0'''
 
 def get_template():
     return \
@@ -7,6 +8,7 @@ def get_template():
     ---|-------------------------------|----|-------|-------|------|-----|----|---------|--------------|
     No Hit                           Prob E-value P-value  Score    SS Cols Query HMM  Template HMM
     """
+
 def hhparse(hhresult_file):
 	'''Convert HHpred's text-based output table in to a pandas dataframe'''
 	pattern = StringIO(get_template()).readlines()[1]
