@@ -24,7 +24,7 @@ Please cite:
 * Bug fixes
    * When a partially complete genbank file is provided, all sequences of segmented viruses are now pulled
    * Significant compute time reduction on Mash call (thanks to contributor @xvazquezc)
-* Continued development on test suite
+* Continued development on unit test suite (app.utils now has >80% test coverage)
 
 # [Documentation](https://github.com/Mayne941/gravity2/wiki)
 GRAViTy-V2 documentation is hosted on our [GitHub Wiki Page](https://github.com/Mayne941/gravity2/wiki)

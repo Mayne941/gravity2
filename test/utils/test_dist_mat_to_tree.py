@@ -14,6 +14,6 @@ def test_DistMat2Tree():
 
     result = DistMat2Tree(DistMat, LeafList, Dendrogram_LinkageMethod, do_logscale)
 
-    expected_result = "((A:0.200000,B:0.200000),C:0.400000);"
+    expected_result = "((B:0.200000,A:0.200000):0.200000,C:0.400000);"
 
     assert result == expected_result
