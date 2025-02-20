@@ -22,7 +22,7 @@ def eval_blast_query(i, SeenPair, SeenPair_i, BitScoreMat):
 
     return BitScoreMat, SeenPair, SeenPair_i
 
-def blastp_analysis(ProtList, fnames, payload):
+def blastp_analysis(ProtList, fnames, payload, is_test=False):
     '''6/10: Perform ALL-VERSUS-ALL BLASTp analysis'''
     raise_gravity_warning("Performing all-vs-all BLASTp analysis. If you didn't select this as an option, it's because there were no Mash hits (you might need to refine your settings).")
     progress_msg("Performing ALL-VERSUS-ALL BLASTp analysis")
@@ -41,7 +41,8 @@ def blastp_analysis(ProtList, fnames, payload):
         outfmat = '"6 qseqid sseqid pident qcovs qlen slen evalue bitscore"'
         out = shell(f'blastp -query {fnames["MashQueryFile"]} -db {fnames["MashSubjectFile"]} -out {mash_fname} -evalue 1E-6 -outfmt {outfmat} -num_alignments 1000000 -num_threads {payload["N_CPUs"]}',
                 ret_output=True)
-        error_handler_blast(out, "BLASTp, PPHMMDB construction")
+        if not is_test:
+            error_handler_blast(out, "BLASTp, PPHMMDB construction")
 
         try:
             blast_df = pd.read_csv(mash_fname, sep="\t", names=["qseqid", "sseqid", "pident", "qcovs", "qlen", "slen", "evalue", "bitscore"])
