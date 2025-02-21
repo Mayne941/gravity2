@@ -35,5 +35,6 @@
     "UseBlast": false,
     "NThreads": "auto",
     "ClustAlnScheme": "global",
-    "MutualInformationScorer": false
+    "MutualInformationScorer": false,
+    "LogscaleDendrogram": false
   }
