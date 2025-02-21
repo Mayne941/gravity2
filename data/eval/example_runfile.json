@@ -38,5 +38,6 @@
   "N_CPUs": 16,
   "UseBlast": true,
   "ClustAlnScheme": "local",
-  "MutualInformationScorer": false
+  "MutualInformationScorer": false,
+  "LogscaleDendrogram": false
 }
