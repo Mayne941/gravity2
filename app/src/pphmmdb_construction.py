@@ -46,7 +46,7 @@ class PPHMMDBConstruction:
         if not os.path.isfile(self.GenomeSeqFile):
             '''If no gb file provided, attempt to pull seqs'''
             progress_msg("You didn't specify an input genbank filename that exists. Downloading sequences from Genbank")
-            DownloadGenBankFile(self.GenomeSeqFile, # RM < TODO We should give users option to provide their own gb file if not on genbank
+            DownloadGenBankFile(self.GenomeSeqFile,
                                 self.genomes["SeqIDLists"], self.payload["genbank_email"])
 
         '''Parse gb file'''
@@ -60,13 +60,14 @@ class PPHMMDBConstruction:
         '''Check if gb file is missing any seqs from the VMR'''
         gb_missing_seqs = []
         for vmr_seq_id in self.genomes["SeqIDLists"]:
-            match = False
-            for gb_seq_id in CleanGenbankDict.keys():
-                if vmr_seq_id[0].upper() == gb_seq_id.upper():
-                    match = True
-                    break
-            if not match:
-                gb_missing_seqs.append(vmr_seq_id[0].upper())
+            for vmr_seq in vmr_seq_id:
+                match = False
+                for gb_seq_id in CleanGenbankDict.keys():
+                    if vmr_seq.upper() == gb_seq_id.upper():
+                        match = True
+                        break
+                if not match:
+                    gb_missing_seqs.append(vmr_seq.upper())
 
         if len(gb_missing_seqs) > 0:
             '''If missing seqs in gb file, attempt to get them from genbank'''
@@ -98,7 +99,19 @@ class PPHMMDBConstruction:
                 '''If missing seqs found, concat the new genome seq file and tidy'''
                 shell(f"cat data/temp.gb >> {self.GenomeSeqFile}")
                 shell(f"rm data/temp.gb")
-        return {k.split(".")[0]: v for k, v in CleanGenbankDict.items()}
+
+        '''If provirus is defined as segment of a bigger virus, trim the record here'''
+        sequences = {k.split(".")[0]: v for k, v in CleanGenbankDict.items()}
+
+        print("Searching for proviruses as components of genbank sequences (i.e. Accession-ID (coord_x.coord_y))")
+        for idx, sequence in enumerate(self.genomes["SeqIDLists"]):
+            if len(self.genomes["SeqIDLists"][0]) == 1:
+                coords = [int(i) for i in self.genomes["ProvirusCoords"][idx].split(",")]
+            if coords != [0,0]:
+                print(f"Provirus  found in sequence {sequence}. Splitting on indices {coords[0]}-{coords[1]}")
+                sequences[sequence[0]].seq = sequences[sequence[0]].seq[coords[0]:coords[1]]
+
+        return sequences
 
     def sequence_extraction(self, GenBankDict):
         '''4/10: Extract protein sequences from VMR using GenBank data; manually annotate ORFs if needed'''
@@ -204,50 +217,43 @@ class PPHMMDBConstruction:
             '''Do Mash'''
             out = shell(f"mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashSubjectFile']}", ret_output=True) # TODO PARAMETERISE MASH CALL
             error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), initial sketch)")
-            for ProtSeq_i in alive_it(range(N_ProtSeqs)):
-                '''Mash query fasta file'''
-                MashQuery = ProtList[ProtSeq_i]
-                with open(self.fnames['MashQueryFile'], "w") as MashQuery_txt:
-                    MashQuery_txt.write(f">{MashQuery.name} {MashQuery.description}\n{str(MashQuery.seq)}")
+            # Create a combined FASTA file for all sequences
+            with open(self.fnames['MashQueryFile'], "w") as MashQuery_txt:
+                for ProtSeq in ProtList:
+                    MashQuery_txt.write(f">{ProtSeq.name} {ProtSeq.description}\n{str(ProtSeq.seq)}\n")
+            # Sketch the combined FASTA file
+            out = shell(f"mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashQueryFile']}", ret_output=True)
+            error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), combined sketch)")
+            # Run mash dist on the combined file
+            mash_fname = f"{'/'.join(self.fnames['MashOutputFile'].split('/')[:-1])}/mashup_scores.tab"
+            out = shell(f"mash dist -p {self.payload['N_CPUs']} -v {self.payload['Mash_p_val_cutoff']} -d {self.payload['Mash_sim_score_cutoff']} -i {self.fnames['MashQueryFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}",
+                ret_output=True)
+            error_handler_mash_dist(out, "Mash (PPHMMDB Construction, mash_analysis(), combined dist)")
+            # Read the mash output
+            try:
+                mash_df = pd.read_csv(mash_fname, sep="\t", header=None, names=["orf", "query", "dist", "p", "hashes"], engine="pyarrow")
+            except:
+                raise_gravity_warning(f"Mash output is empty. This usually happens when an ORF hasn't been translated properly.")
+            if mash_df.shape[0] == 0:
+                raise_gravity_error(f"Output from Mash (PPHMMDB Construction, mash_analysis()) was empty. Check Mash is installed, active in your environment and your input fastas are valid. Check pandas and pyarrow are installed (used in reading Mash output).")
+            else:
+                mash_df["p"] = mash_df["p"].astype(float)
+                mash_df["mash_sim"] = np.abs(1 - mash_df["dist"])
 
-                mash_fname = f'{"/".join(self.fnames["MashOutputFile"].split("/")[:-1])}/mashup_scores.tab'
-                out = shell(f"mash sketch -p {self.payload['N_CPUs']} -a -i {self.fnames['MashQueryFile']}", ret_output=True)
-                error_handler_mash_sketch(out, "Mash (PPHMMDB Construction, mash_analysis(), iterative sketch)")
-                out = shell(f"mash dist -p {self.payload['N_CPUs']} -v {self.payload['Mash_p_val_cutoff']} -d {self.payload['Mash_sim_score_cutoff']} -i {self.fnames['MashSubjectFile']}.msh {self.fnames['MashQueryFile']}.msh > {mash_fname}",
-                            ret_output=True)
-                error_handler_mash_dist(out, "Mash (PPHMMDB Construction, mash_analysis(), dist)")
-
-                try:
-                    mash_df = pd.read_csv(mash_fname, sep="\t", header=None, names=["orf", "query", "dist", "p", "hashes"], engine="pyarrow")
-                except:
-                    raise_gravity_warning(f"Mash output for protein sequence {ProtSeq_i} is empty. This usually happens when an ORF hasn't been translated properly.")
-                    continue
-
-                if mash_df.shape[0] == 0:
-                    raise_gravity_error(f"Output from Mash (PPHMMDB Construction, mash_analysis()) was empty. Check Mash is installed, active in your environment and your input fastas are valid. Check pandas and pyarrow are installed (used in reading Mash output).")
-                elif mash_df.shape[0] == 1:
-                    '''If 1 return, this is self vs self and can be ignored'''
-                    continue
-                else:
-                    mash_df["query"] = ProtList[ProtSeq_i].id
-                    mash_df = mash_df[mash_df["orf"] != mash_df["query"]]
-                    mash_df["p"] = mash_df["p"].astype(float)
-                    mash_df["mash_sim"] = np.abs(1 - mash_df["dist"])
-
-                    mash_iter = mash_df.to_dict(orient="records")
-                    for i in mash_iter:
-                        '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
-                        pair = ", ".join(sorted([ProtList[ProtSeq_i].id, i["orf"]]))
-                        if pair in SeenPair:
-                            '''If the pair has already been seen...'''
-                            if i["mash_sim"] > MashMatrix[SeenPair[pair]][2]:
-                                '''...and if the new mash_sim is higher'''
-                                MashMatrix[SeenPair[pair]][2] = i["mash_sim"]
-                        else:
-                            SeenPair[pair] = SeenPair_i
-                            MashMatrix.append(
-                                [pair.split(", ")[0], pair.split(", ")[1], i["mash_sim"]])
-                            SeenPair_i += 1
+                mash_iter = mash_df.to_dict(orient="records")
+                for i in mash_iter:
+                    '''Query must: not match subject, have identity > thresh, have query coverage > thresh and query coverage normalised to subject length > thresh'''
+                    pair = ", ".join(sorted([i["query"], i["orf"]]))
+                    if pair in SeenPair:
+                        '''If the pair has already been seen...'''
+                        if i["mash_sim"] > MashMatrix[SeenPair[pair]][2]:
+                            '''...and if the new mash_sim is higher'''
+                            MashMatrix[SeenPair[pair]][2] = i["mash_sim"]
+                    else:
+                        SeenPair[pair] = SeenPair_i
+                        MashMatrix.append(
+                            [pair.split(", ")[0], pair.split(", ")[1], i["mash_sim"]])
+                        SeenPair_i += 1
 
             MashMatrix = np.array(MashMatrix)
 

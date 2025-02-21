@@ -24,6 +24,6 @@ def print_banner():
  \____/\_| \_\_| |_/\___/|_| \_/\__, |  \___/ \_____/
                                  __/ |
                                 |___/
-Mayne, R., Aiewsakun, P., Turner, D., Adriaenssens, E.
-and Simmonds, P. (2024)
+Mayne, R., Aiewsakun, P., Turner, D., Adriaenssens, E. and
+Simmonds, P. (2024) https://doi.org/10.1093/nargab/lqae183
             """)
