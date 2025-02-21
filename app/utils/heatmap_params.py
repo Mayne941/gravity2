@@ -181,7 +181,7 @@ def get_hmap_params(n_viruses, n_pphmms=99, is_square=True,virus_dendrogram=None
 
 def construct_hmap_lines(ax_Heatmap, len_x, LineList_major, LineList_minor, hmap_params, ClassLabelList_x, ClassLabelList_y, TickLocList):
     '''Draw grouping major & minor lines on heatmap'''
-    if len_x < 200: ## TODO TEST
+    if len_x < 200:
         for l in LineList_major:
             ax_Heatmap.axvline(l, color='k', lw=hmap_params['linewidth_major'])
             ax_Heatmap.axhline(l, color='k', lw=hmap_params['linewidth_major'])
@@ -226,12 +226,7 @@ def construct_wide_hmap_lines(ax_Heatmap, len_x, LineList_major, LineList_minor,
         ax_Heatmap			.set_xticklabels(
             ClassLabelList_x, rotation=90, size=hmap_params['FontSize'])
     else:
-        # profile_xlables = np.round(np.nanmean(data, axis=0), 2)
-        # profile_xlables.sort()
-        # ax_Heatmap			.set_xticks(TickLocList_x)
-        # ax_Heatmap			.set_xticklabels(
-        #     profile_xlables, rotation=90, size=hmap_params['FontSize'])
-        ...
+        ... # RM < TODO don't seem to need custom rules for different sizes?
 
     ax_Heatmap			.set_yticks(TickLocList_y)
     ax_Heatmap			.set_yticklabels(

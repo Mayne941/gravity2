@@ -1,4 +1,6 @@
 [![DOI](https://zenodo.org/badge/509048997.svg)](https://doi.org/10.5281/zenodo.13911725)
+
+<a href="https://hub.docker.com/r/mayne941/gravityv2"><img src="docs/docker-mark-blue.png" alt="drawing" width="25" /> Try GRAViTy-V2 with Docker @ DockerHub</a>
 ```
    _____ _____       __      ___ _______     __      _____
   / ____|  __ \     /\ \    / (_)__   __|    \ \    / /__ \
@@ -13,13 +15,16 @@ GRAViTy-V2 is a viral taxonomy application developed by Richard Mayne, Pakorn Ai
 
 Please cite:
 
-<div class="csl-entry">Mayne, R., Aiewsakun, P., Turner, D., Adriaenssens, E. M., &#38; Simmonds, P. (2024). GRAViTy-V2: a grounded viral taxonomy application. <i>NAR Genomics and Bioinformatics</i>, <i>6</i>(4). <a href=https://doi.org/10.1093/nargab/lqae183>https://doi.org/10.1093/nargab/lqae183</></div>
+<div class="csl-entry">Mayne, R., Aiewsakun, P., Turner, D., Adriaenssens, E. M., &#38; Simmonds, P. (2024). GRAViTy-V2: a grounded viral taxonomy application. <i>NAR Genomics and Bioinformatics</i>, <i>6</i>(4). <a href=https://doi.org/10.1093/nargab/lqae183>https://doi.org/10.1093/nargab/lqae183</a></div>
 
-# New with version 2
-* New expanded readme on our Wiki
-* Enhanced stand-alone CLI (see [Quick start](https://github.com/Mayne941/gravity2/wiki/Quick-start))
-* <a href="https://hub.docker.com/r/mayne941/gravityv2"><img src="docs/docker-mark-blue.png" alt="drawing" width="25" /> Try our new Docker container with DockerHub</a> (see [Advanced usage options](https://github.com/Mayne941/gravity2/wiki/Advanced) for guidance)
-* PyTest suite
+# New with version 2.1
+* Features
+   * Logscale dendrograms
+   * Support for pulling sequences with accession numbers in bacteriophage and provirus styles (e.g. JAEILC010000038 / AE006468 (2844298.2877981))
+* Bug fixes
+   * When a partially complete genbank file is provided, all sequences of segmented viruses are now pulled
+   * Significant compute time reduction on Mash call (thanks to contributor @xvazquezc)
+* Continued development on unit test suite (app.utils now has >80% test coverage)
 
 # [Documentation](https://github.com/Mayne941/gravity2/wiki)
 GRAViTy-V2 documentation is hosted on our [GitHub Wiki Page](https://github.com/Mayne941/gravity2/wiki)
@@ -40,6 +45,14 @@ The software as provided may either be run from the shell/other command line, or
 In spite of best efforts to simplify the user experience, GRAViTy-V2 is a complex piece of software: please read the [**user guide**](https://github.com/Mayne941/gravity2/wiki) and journal article before use, as this will likely help you to achieve optimal results and reduce software run time.
 
 ![GRAViTy-V2 Process Flow](docs/gravity_flow_v2.png "GRAViTy-V2 Process Flow")
+
+# Update History
+## V2.0
+* New expanded readme on our Wiki
+* Enhanced stand-alone CLI (see [Quick start](https://github.com/Mayne941/gravity2/wiki/Quick-start))
+* <a href="https://hub.docker.com/r/mayne941/gravityv2"><img src="docs/docker-mark-blue.png" alt="drawing" width="25" /> Try our new Docker container with DockerHub</a> (see [Advanced usage options](https://github.com/Mayne941/gravity2/wiki/Advanced) for guidance)
+* PyTest suite
+
 
 ## Disclaimer
 The material embodied in this software is provided to you "as-is", “with all faults”, and without warranty of any kind, express, implied or otherwise, including without limitation, any warranty of fitness for a particular purpose, warranty of non-infringement, or warranties of any kind concerning the safety, suitability, lack of viruses, inaccuracies, or other harmful components of this software. There are inherent dangers in the use of any software, and you are solely responsible for determining whether this software is compatible with your equipment and other software installed on your equipment. You are convert_fasta_to_genbankalso solely responsible for the protection of your equipment and backup of your data, and the developers/providers will not be liable for any damages you may suffer in connection with using, modifying, or distributing this software. Without limiting the foregoing, the developers/providers make no warranty that: the software will meet your requirements; the software will be uninterrupted, timely, secure, or error-free; the results that may be obtained from the use of the software will be effective, accurate, or reliable; the quality of the software will meet your expectations; any errors in the software will be identified or corrected.

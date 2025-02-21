@@ -40,7 +40,6 @@ def GOMSignatureTable_Constructor(PPHMMLocationTable, GOMDB, GOMIDList, bootstra
 
     progress_msg(f"-  Spinning up {os.cpu_count()-1} workers to generate GOM signatures. This may take a while...")
     pool = Pool(os.cpu_count()-1)
-    # pool = Pool(4) ###############################
     with pool as p, tqdm(total=len(GOMIDList)) as pbar:
         res = [p.apply_async(
             generate_gom_sigs, args=(i,PPHMMLocationTable, GOMDB), callback=lambda _: pbar.update(1)) for i in GOMIDList]
