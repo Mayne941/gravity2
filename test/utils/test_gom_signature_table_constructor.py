@@ -34,7 +34,7 @@ def test_GOMSignatureTable_Constructor(mock_progress_msg, mock_tqdm, mock_pool):
     ]
     mock_tqdm.return_value.__enter__.return_value = MagicMock()
 
-    result = GOMSignatureTable_Constructor(PPHMMLocationTable, GOMDB, GOMIDList, bootstrap)
+    result = GOMSignatureTable_Constructor(PPHMMLocationTable, GOMDB, GOMIDList, bootstrap, 1)
 
     expected_result = np.array([
         [0.5, 0.2],

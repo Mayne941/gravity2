@@ -7,15 +7,15 @@ from alive_progress import alive_it
 from app.utils.dcor import dcor
 from app.utils.stdout_utils import progress_msg
 
-def GOMSignatureTable_Constructor(PPHMMLocationTable, GOMDB, GOMIDList, bootstrap=0):
+def GOMSignatureTable_Constructor(PPHMMLocationTable, GOMDB, GOMIDList, payload, bootstrap=0):
     '''Generate organisational model signature table, for annotations, graphing and description functions'''
     if bootstrap != 0:
         print(f"- (Re-)Constructing GOM Signature Table, bootstrap iteration: {bootstrap+1}")
     N_Viruses = len(PPHMMLocationTable)
     GOMSignatureTable = np.empty((N_Viruses, 0))
 
-    progress_msg(f"-  Spinning up {os.cpu_count()-1} workers to generate GOM signatures. This may take a while...")
-    pool = Pool(os.cpu_count()-1)
+    progress_msg(f"-  Spinning up {payload['N_CPUs']} workers to generate GOM signatures. This may take a while...")
+    pool = Pool(payload["N_CPUs"])
     with pool as p, tqdm(total=len(GOMIDList)) as pbar:
         res = [p.apply_async(
             generate_gom_sigs, args=(i,PPHMMLocationTable, GOMDB), callback=lambda _: pbar.update(1)) for i in GOMIDList]
