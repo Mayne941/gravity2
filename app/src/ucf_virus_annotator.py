@@ -46,7 +46,8 @@ class UcfVirusAnnotator:
 
         GOMSignatureTable = GOMSignatureTable_Constructor(PPHMMLocationTable=PPHMMLocationTable,
                                                             GOMDB=pl1_ref_annotations["GOMDB"],
-                                                            GOMIDList=pl1_ref_annotations["GOMIDList"])
+                                                            GOMIDList=pl1_ref_annotations["GOMIDList"],
+                                                            payload=self.payload)
 
         '''Construct out dict, dump to pickle'''
         all_ucf_genomes = {}

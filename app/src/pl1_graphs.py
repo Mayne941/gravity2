@@ -2,7 +2,7 @@ from app.utils.make_heatmap_labels import make_labels, split_labels
 from app.utils.shell_cmds import shell
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.gomdb_constructor import GOMDB_Constructor
-from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
+from app.utils.parallel_gom_sig_generator import GOMSignatureTable_Constructor
 from app.utils.taxo_label_constructor import TaxoLabel_Constructor
 from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
 from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
@@ -95,7 +95,8 @@ class GRAViTyDendrogramAndHeatmapConstruction:
                     BootstrappedGOMSignatureTable = GOMSignatureTable_Constructor(PPHMMLocationTable=BootstrappedPPHMMLocationTable,
                                                                                   GOMDB=BootstrappedGOMDB,
                                                                                   GOMIDList=self.ref_annotations["GOMIDList"],
-                                                                                  bootstrap=Bootstrap_i
+                                                                                  bootstrap=Bootstrap_i,
+                                                                                  payload=self.payload
                                                                                   )
 
                 '''Construct a dendrogram from the bootstrapped data'''

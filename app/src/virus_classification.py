@@ -107,11 +107,11 @@ class VirusClassificationAndEvaluation:
                 pl1_ref_annotations["TaxoGroupingList"], pl1_ref_annotations["PPHMMLocationTable"], pl1_ref_annotations["GOMIDList"])
 
             pl1_ref_annotations["GOMSignatureTable"] = GOMSignatureTable_Constructor(
-                pl1_ref_annotations["PPHMMLocationTable"], UpdatedGOMDB_RefVirus, pl1_ref_annotations["GOMIDList"])
+                pl1_ref_annotations["PPHMMLocationTable"], UpdatedGOMDB_RefVirus, pl1_ref_annotations["GOMIDList"], self.payload)
 
             '''Update unclassified viruses' GOMSignatureTable'''
             self.ucf_annots["GOMSignatureTable_Dict"] = GOMSignatureTable_Constructor(
-                self.ucf_annots["PPHMMLocationTable_Dict"], UpdatedGOMDB_RefVirus, pl1_ref_annotations["GOMIDList"])
+                self.ucf_annots["PPHMMLocationTable_Dict"], UpdatedGOMDB_RefVirus, pl1_ref_annotations["GOMIDList"], self.payload)
 
         '''Build the dendrogram, including all sequences'''
         '''Generate TaxoLabelList of reference viruses'''
@@ -305,7 +305,7 @@ class VirusClassificationAndEvaluation:
                 BootstrappedGOMDB = GOMDB_Constructor(
                     pl1_ref_annotations["TaxoGroupingList"], BootstrappedPPHMMLocationTable[:N_RefViruses], pl1_ref_annotations["GOMIDList"])
                 BootstrappedGOMSignatureTable = GOMSignatureTable_Constructor(
-                    BootstrappedPPHMMLocationTable, BootstrappedGOMDB, pl1_ref_annotations["GOMIDList"])
+                    BootstrappedPPHMMLocationTable, BootstrappedGOMDB, pl1_ref_annotations["GOMIDList"], self.payload)
 
             '''Construct a dendrogram from the bootstrapped data'''
             BootstrappedSimMat = SimilarityMat_Constructor(
