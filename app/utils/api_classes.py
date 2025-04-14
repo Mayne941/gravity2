@@ -132,7 +132,7 @@ class Data_common_pipeline_params(BaseModel):
                                                                             description="Virus similarity measurement SCHEMEs. If SCHEME = 'P', an overall similarity between two viruses is their GJ_P. If SCHEME = 'L', an overall similarity between two viruses is their GJ_L. If SCHEME = 'G', an overall similarity between two viruses is their GJ_G. If SCHEME = 'PG', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_G. If SCHEME = 'PL', an overall similarity between two viruses is a geometric mean - or a 'composite generalised Jaccard score' (CGJ) - of their GJ_P and GJ_L. If SCHEME = 'R', compile on shared normalized shared PPHMM ratio (less sensitive to input data quality; possibly better for very large datasets).")
     Heatmap_DendrogramSupport_Cutoff: float = Field(0.75, ge=0, le=1,
                                                     description="Threshold for the BOOTSTRAP SUPPORT to be shown on the dendrogram on the heatmap.")
-    PphmmNeighbourhoodWeight: float = Field(0.0125, ge=0, le=1,
+    PphmmNeighbourhoodWeight: float = Field(0.0, ge=0, le=1,
                                             description="Apply weighting to protein profile scores where multiple, adjacent (i.e. very similar) profiles exist. This can help to resolve minor violations at the sub-family level: sensible range is 0-0.05.")
     PphmmSigScoreThreshold: int = Field(0,
                                         description="Disregard profiles where signature scores are less than this threshold. This can help to resolve minor violations at the sub-family level: sensible range is 0-300.")
