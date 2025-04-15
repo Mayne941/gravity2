@@ -17,14 +17,13 @@ Please cite:
 
 <div class="csl-entry">Mayne, R., Aiewsakun, P., Turner, D., Adriaenssens, E. M., &#38; Simmonds, P. (2024). GRAViTy-V2: a grounded viral taxonomy application. <i>NAR Genomics and Bioinformatics</i>, <i>6</i>(4). <a href=https://doi.org/10.1093/nargab/lqae183>https://doi.org/10.1093/nargab/lqae183</a></div>
 
-# New with version 2.1
+# New with version 2.2
 * Features
-   * Logscale dendrograms
-   * Support for pulling sequences with accession numbers in bacteriophage and provirus styles (e.g. JAEILC010000038 / AE006468 (2844298.2877981))
-* Bug fixes
-   * When a partially complete genbank file is provided, all sequences of segmented viruses are now pulled
-   * Significant compute time reduction on Mash call (thanks to contributor @xvazquezc)
-* Continued development on unit test suite (app.utils now has >80% test coverage)
+   * Genbank accessions now automatically extracted from fasta file headers on fasta > VMR/Genbank conversion functions.
+* Fixes
+   * Parallelisation now functions as per user instructions on "update classification" pipelines.
+   * Unnamed index columns are no longer created by VMR filtering functions.
+   * Matplotlib backend pinned
 
 # [Documentation](https://github.com/Mayne941/gravity2/wiki)
 GRAViTy-V2 documentation is hosted on our [GitHub Wiki Page](https://github.com/Mayne941/gravity2/wiki)
@@ -47,6 +46,15 @@ In spite of best efforts to simplify the user experience, GRAViTy-V2 is a comple
 ![GRAViTy-V2 Process Flow](docs/gravity_flow_v2.png "GRAViTy-V2 Process Flow")
 
 # Update History
+## V2.1
+* Features
+   * Logscale dendrograms
+   * Support for pulling sequences with accession numbers in bacteriophage and provirus styles (e.g. JAEILC010000038 / AE006468 (2844298.2877981))
+* Bug fixes
+   * When a partially complete genbank file is provided, all sequences of segmented viruses are now pulled
+   * Significant compute time reduction on Mash call (thanks to contributor @xvazquezc)
+* Continued development on unit test suite (app.utils now has >80% test coverage)
+
 ## V2.0
 * New expanded readme on our Wiki
 * Enhanced stand-alone CLI (see [Quick start](https://github.com/Mayne941/gravity2/wiki/Quick-start))
