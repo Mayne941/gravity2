@@ -1,6 +1,17 @@
+from app.utils.parse_accession import get_accession_regex
 from Bio import SeqIO
 import pandas as pd
 import re
+
+def get_accession(row):
+    '''Attempt to parse an accession'''
+    accessions_re = get_accession_regex()
+    matches = re.findall(accessions_re, row["Virus GENBANK accession"])
+    if len(matches) == 0:
+        print(f"Warning: No accession found in {row['Virus GENBANK accession']}")
+        return row["Virus GENBANK accession"]
+    else:
+        return matches[0]
 
 def get_vmr_cols():
     return ["Unnamed: 0", "Sort", "Realm", "Subrealm", "Kingdom", "Subkingdom",
@@ -23,7 +34,6 @@ def fasta_to_genbank(payload):
 
     for i in range(len(sequences)):
         '''Annotate each sequence and create VMR entries'''
-        # RM < TODO Remove accession IDs from names?
         sequences[i].annotations['molecule_type'] = 'DNA'
         if not sequences[i].id in seq_codes:
             '''Don't process duplicate Acc IDs - omit all but first'''
@@ -43,6 +53,7 @@ def fasta_to_genbank(payload):
     '''Build VMR-like csv'''
     df = pd.DataFrame(columns=get_vmr_cols())
     df["Virus GENBANK accession"] = seq_codes
+    df["Virus GENBANK accession"] = df.apply(lambda x: get_accession(x), axis=1)
     df["Virus name(s)"] = seq_names
     df["Genetic code table"] = 1
     df["Virus isolate designation"] = seq_description
