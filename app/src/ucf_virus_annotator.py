@@ -4,8 +4,8 @@ import random
 import pickle
 from scipy.sparse import coo_matrix
 
-from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
-from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
+from app.utils.parallel_sig_generator import PPHMMSignatureTable_Constructor
+from app.utils.parallel_gom_sig_generator import GOMSignatureTable_Constructor
 from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
 from app.utils.generate_fnames import generate_file_names

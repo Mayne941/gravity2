@@ -15,9 +15,9 @@ import re
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
 from app.utils.taxo_label_constructor import TaxoLabel_Constructor
-from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
+from app.utils.parallel_sig_generator import PPHMMSignatureTable_Constructor
 from app.utils.gomdb_constructor import GOMDB_Constructor
-from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
+from app.utils.parallel_gom_sig_generator import GOMSignatureTable_Constructor
 from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
 from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
@@ -161,7 +161,7 @@ class VirusClassificationAndEvaluation:
 
         '''Generate dendrogram'''
         VirusDendrogram = DistMat2Tree(
-            DistMat, TaxoLabelList_AllVirus, self.payload['Dendrogram_LinkageMethod'])
+            DistMat, TaxoLabelList_AllVirus, self.payload['Dendrogram_LinkageMethod'], do_logscale=False)
 
         with open(self.fnames['VirusDendrogramFile'], "w") as VirusDendrogram_txt:
             VirusDendrogram_txt.write(VirusDendrogram)
@@ -314,7 +314,7 @@ class VirusClassificationAndEvaluation:
             BootstrappedDistMat = 1 - BootstrappedSimMat
             BootstrappedDistMat[BootstrappedDistMat < 0] = 0
             BootstrappedVirusDendrogram = DistMat2Tree(
-                BootstrappedDistMat, TaxoLabelList_AllVirus, self.payload['Dendrogram_LinkageMethod'])
+                BootstrappedDistMat, TaxoLabelList_AllVirus, self.payload['Dendrogram_LinkageMethod'], do_logscale=False)
 
             with open(self.fnames['VirusDendrogramDistFile'], "a") as VirusDendrogramDist_txt:
                 VirusDendrogramDist_txt.write(BootstrappedVirusDendrogram+"\n")

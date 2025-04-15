@@ -86,7 +86,7 @@ class Scraper:
         return df
 
     def save_csv(self, df) -> None:
-        df.to_csv(f"{self.fname}")
+        df.to_csv(f"{self.fname}", index=False)
 
     def main(self) -> str:
         '''Entrypoint'''
@@ -136,7 +136,7 @@ def first_pass_baltimore_filter(payload) -> str:
         elif payload["baltimore_filter"] == "ssDNA":
             df = df[df["Baltimore Group"].str.contains("II")]
 
-        df.to_csv(f"{payload['save_path']}/{payload['save_name']}")
+        df.to_csv(f"{payload['save_path']}/{payload['save_name']}", index=False)
         return f"Success! VMR saved to ./{payload['save_path']}"
     except Exception as e:
         print(f"Error processing VMR, error: {e}")
@@ -150,7 +150,7 @@ def first_pass_taxon_filter(payload) -> str:
         df["Taxonomic grouping"] = df.apply(
             lambda x: construct_first_pass_set(x, df, payload["filter_threshold"]), axis=1)
         df = df.drop_duplicates(subset="Taxonomic grouping", keep="first")
-        df.to_csv(f"{payload['save_path']}/{payload['save_name']}")
+        df.to_csv(f"{payload['save_path']}/{payload['save_name']}", index=False)
         return f"Success! VMR saved to ./{payload['save_path']}"
     except Exception as e:
         print(f"Error processing VMR, error: {e}")
@@ -162,7 +162,7 @@ def second_pass(payload) -> str:
     try:
         df = pd.read_csv(f"{payload['save_path']}/{payload['vmr_name']}")
         df = df[df[payload['filter_level']] == payload["filter_name"]]
-        df.to_csv(f"{payload['save_path']}/{payload['save_name']}")
+        df.to_csv(f"{payload['save_path']}/{payload['save_name']}", index=False)
         return f"Success! VMR saved to ./{payload['save_path']}"
     except Exception as e:
         print(f"Error processing VMR, error: {e}")
