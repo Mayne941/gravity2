@@ -136,7 +136,7 @@ class Data_common_pipeline_params(BaseModel):
                                             description="Apply weighting to protein profile scores where multiple, adjacent (i.e. very similar) profiles exist. This can help to resolve minor violations at the sub-family level: sensible range is 0-0.05.")
     PphmmSigScoreThreshold: int = Field(0,
                                         description="Disregard profiles where signature scores are less than this threshold. This can help to resolve minor violations at the sub-family level: sensible range is 0-300.")
-    UseBlast: bool = Field(False,
+    UseBlast: bool = Field(True,
                            description="If 'false', use MASH for initial ORF grouping, if 'true' use BLASTp. Mash is quicker and will more easily discriminate between similar sequences.")
     NThreads: Union[int, str] = Query('auto',
                                       description="Specify the number of threads for multi-core processing. Options: integer == this many threads; 'auto' == let GRAViTy choose number of threads; 'hpc' == select when running on a compute cluster (hard codes to 1).")

@@ -8,7 +8,8 @@ def get_accession(row):
     accessions_re = get_accession_regex()
     matches = re.findall(accessions_re, row["Virus GENBANK accession"])
     if len(matches) == 0:
-        print(f"Warning: No accession found in {row['Virus GENBANK accession']}")
+        print(f" - Warning: No accession found in the 'Virus GENBANK accession' column for sample {row['Virus GENBANK accession']}. "
+              f"Ensure the GenBank file this function creates is input to your GRAViTy pipeline ('GenomeSeqFile'), as it won't be able to pull this sequence frm GenBank.")
         return row["Virus GENBANK accession"]
     else:
         return matches[0]

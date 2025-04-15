@@ -9,7 +9,6 @@ from collections import Counter
 import os
 import re
 import pickle
-import csv
 
 
 class ReadGenomeDescTable:
