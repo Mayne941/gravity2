@@ -24,6 +24,7 @@ Please cite:
    * Parallelisation now functions as per user instructions on "update classification" pipelines.
    * Unnamed index columns are no longer created by VMR filtering functions.
    * Matplotlib backend pinned
+   * First pass filter function now subsets to expected fraction
 
 # [Documentation](https://github.com/Mayne941/gravity2/wiki)
 GRAViTy-V2 documentation is hosted on our [GitHub Wiki Page](https://github.com/Mayne941/gravity2/wiki)
