@@ -149,7 +149,9 @@ def first_pass_taxon_filter(payload) -> str:
         df = df[df[payload['filter_level']] == payload["filter_name"]]
         df["Taxonomic grouping"] = df.apply(
             lambda x: construct_first_pass_set(x, df, payload["filter_threshold"]), axis=1)
-        df = df.drop_duplicates(subset="Taxonomic grouping", keep="first")
+        if payload["filter_threshold"] > df.shape[0] or payload["filter_threshold"] == 0:
+            payload["filter_threshold"] = df.shape[0]
+        df = df.sample(n=payload["filter_threshold"]).reset_index(drop=True)
         df.to_csv(f"{payload['save_path']}/{payload['save_name']}", index=False)
         return f"Success! VMR saved to ./{payload['save_path']}"
     except Exception as e:

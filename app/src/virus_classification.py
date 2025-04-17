@@ -364,6 +364,7 @@ class VirusClassificationAndEvaluation:
 
     def heatmap_with_dendrogram(self, pl1_ref_annotations, TaxoLabelList_AllVirus, DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList):
         '''Construct GRAViTy heat map with dendrogram'''
+        # RM < TODO Refactor, merge with PL1 equivalent
         progress_msg("Constructing GRAViTy Heatmap and Dendrogram")
         '''Load the tree'''
         if self.payload['Bootstrap']:
@@ -405,13 +406,12 @@ class VirusClassificationAndEvaluation:
 
         '''Colour terminal branches: reference virus's branch is blue, unclassified virus's branch is red'''
         N_Viruses = N_RefViruses + self.N_UcfViruses
-        # TODO < RM DISABLED FOR FLAVI PAPER
-        # for Virus_i in range(N_Viruses):
-        #     Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
-        #     if Taxolabel in TaxoLabelList_RefVirus:
-        #         VirusDendrogram.get_terminals()[Virus_i].color = "blue"
-        #     elif Taxolabel in self.TaxoLabelList_UcfVirus:
-        #         VirusDendrogram.get_terminals()[Virus_i].color = "red"
+        for Virus_i in range(N_Viruses):
+            Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
+            if Taxolabel in TaxoLabelList_RefVirus:
+                VirusDendrogram.get_terminals()[Virus_i].color = "blue"
+            elif Taxolabel in self.TaxoLabelList_UcfVirus:
+                VirusDendrogram.get_terminals()[Virus_i].color = "red"
 
         '''Labels, label positions, and ticks'''
         ClassDendrogram = copy(VirusDendrogram)
@@ -447,7 +447,7 @@ class VirusClassificationAndEvaluation:
             ~IndicatorMat_CrossGroup, OrderedDistMat)
 
         '''Colour map construction'''
-        # RM < TODO DISABLE FOR FLAVI PAPER
+        # RM < TODO Disabled on user preference
         # MyBlues = get_blue_cmap()
         # MyReds = get_red_cmap()
         # MyPurples = get_purple_cmap()
@@ -486,11 +486,11 @@ class VirusClassificationAndEvaluation:
 
         '''Selectively colour tick labels red if a UCF sample'''
         [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
-         if bool(re.match(r"Query", i.get_text()))]
+         if bool(re.search(r"Query", i.get_text().replace(" ","")))]
         [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
-         if bool(re.match(r"Query", i.get_text()))]
+         if bool(re.search(r"Query", i.get_text()))]
 
-        # RM < TODO DISABLE FOR FLAVI PAPER
+        # RM < TODO Disabled on user preference
         # '''Reference virus colour bar'''
         # ax_CBar_RefVirus = fig.add_axes(
         #     [hmap_params['ax_CBar_L'], hmap_params['ax_CBar_B'] + 2*hmap_params['ax_CBar_H']/3, hmap_params['ax_CBar_W'], hmap_params['ax_CBar_H']/3], frame_on=True, facecolor="white")
