@@ -22,7 +22,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from Bio import Phylo
 import matplotlib
-matplotlib.use('agg')
+matplotlib.use('PDF')
 
 
 class GRAViTyDendrogramAndHeatmapConstruction:

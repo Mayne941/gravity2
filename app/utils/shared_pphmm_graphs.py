@@ -7,7 +7,7 @@ import re
 from copy import copy
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('PDF')
 from app.utils.stdout_utils import progress_msg
 from app.utils.heatmap_params import get_hmap_params, construct_hmap_lines, construct_wide_hmap_lines
 from app.utils.make_heatmap_labels import make_labels, split_labels

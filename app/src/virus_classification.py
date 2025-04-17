@@ -15,9 +15,9 @@ import re
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.similarity_matrix_constructor import SimilarityMat_Constructor
 from app.utils.taxo_label_constructor import TaxoLabel_Constructor
-from app.utils.pphmm_signature_table_constructor import PPHMMSignatureTable_Constructor
+from app.utils.parallel_sig_generator import PPHMMSignatureTable_Constructor
 from app.utils.gomdb_constructor import GOMDB_Constructor
-from app.utils.gom_signature_table_constructor import GOMSignatureTable_Constructor
+from app.utils.parallel_gom_sig_generator import GOMSignatureTable_Constructor
 from app.utils.virus_grouping_estimator import VirusGrouping_Estimator
 from app.utils.console_messages import section_header
 from app.utils.retrieve_pickle import retrieve_genome_vars, retrieve_pickle
@@ -161,7 +161,7 @@ class VirusClassificationAndEvaluation:
 
         '''Generate dendrogram'''
         VirusDendrogram = DistMat2Tree(
-            DistMat, TaxoLabelList_AllVirus, self.payload['Dendrogram_LinkageMethod'])
+            DistMat, TaxoLabelList_AllVirus, self.payload['Dendrogram_LinkageMethod'], do_logscale=False)
 
         with open(self.fnames['VirusDendrogramFile'], "w") as VirusDendrogram_txt:
             VirusDendrogram_txt.write(VirusDendrogram)
@@ -314,7 +314,7 @@ class VirusClassificationAndEvaluation:
             BootstrappedDistMat = 1 - BootstrappedSimMat
             BootstrappedDistMat[BootstrappedDistMat < 0] = 0
             BootstrappedVirusDendrogram = DistMat2Tree(
-                BootstrappedDistMat, TaxoLabelList_AllVirus, self.payload['Dendrogram_LinkageMethod'])
+                BootstrappedDistMat, TaxoLabelList_AllVirus, self.payload['Dendrogram_LinkageMethod'], do_logscale=False)
 
             with open(self.fnames['VirusDendrogramDistFile'], "a") as VirusDendrogramDist_txt:
                 VirusDendrogramDist_txt.write(BootstrappedVirusDendrogram+"\n")
@@ -364,6 +364,7 @@ class VirusClassificationAndEvaluation:
 
     def heatmap_with_dendrogram(self, pl1_ref_annotations, TaxoLabelList_AllVirus, DistMat, N_RefViruses, TaxoLabelList_RefVirus, TaxoAssignmentList):
         '''Construct GRAViTy heat map with dendrogram'''
+        # RM < TODO Refactor, merge with PL1 equivalent
         progress_msg("Constructing GRAViTy Heatmap and Dendrogram")
         '''Load the tree'''
         if self.payload['Bootstrap']:
@@ -405,13 +406,12 @@ class VirusClassificationAndEvaluation:
 
         '''Colour terminal branches: reference virus's branch is blue, unclassified virus's branch is red'''
         N_Viruses = N_RefViruses + self.N_UcfViruses
-        # TODO < RM DISABLED FOR FLAVI PAPER
-        # for Virus_i in range(N_Viruses):
-        #     Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
-        #     if Taxolabel in TaxoLabelList_RefVirus:
-        #         VirusDendrogram.get_terminals()[Virus_i].color = "blue"
-        #     elif Taxolabel in self.TaxoLabelList_UcfVirus:
-        #         VirusDendrogram.get_terminals()[Virus_i].color = "red"
+        for Virus_i in range(N_Viruses):
+            Taxolabel = VirusDendrogram.get_terminals()[Virus_i].name
+            if Taxolabel in TaxoLabelList_RefVirus:
+                VirusDendrogram.get_terminals()[Virus_i].color = "blue"
+            elif Taxolabel in self.TaxoLabelList_UcfVirus:
+                VirusDendrogram.get_terminals()[Virus_i].color = "red"
 
         '''Labels, label positions, and ticks'''
         ClassDendrogram = copy(VirusDendrogram)
@@ -447,7 +447,7 @@ class VirusClassificationAndEvaluation:
             ~IndicatorMat_CrossGroup, OrderedDistMat)
 
         '''Colour map construction'''
-        # RM < TODO DISABLE FOR FLAVI PAPER
+        # RM < TODO Disabled on user preference
         # MyBlues = get_blue_cmap()
         # MyReds = get_red_cmap()
         # MyPurples = get_purple_cmap()
@@ -486,11 +486,11 @@ class VirusClassificationAndEvaluation:
 
         '''Selectively colour tick labels red if a UCF sample'''
         [i.set_color("red") for i in ax_Heatmap.get_xticklabels()
-         if bool(re.match(r"Query", i.get_text()))]
+         if bool(re.search(r"Query", i.get_text().replace(" ","")))]
         [i.set_color("red") for i in ax_Heatmap.get_yticklabels()
-         if bool(re.match(r"Query", i.get_text()))]
+         if bool(re.search(r"Query", i.get_text()))]
 
-        # RM < TODO DISABLE FOR FLAVI PAPER
+        # RM < TODO Disabled on user preference
         # '''Reference virus colour bar'''
         # ax_CBar_RefVirus = fig.add_axes(
         #     [hmap_params['ax_CBar_L'], hmap_params['ax_CBar_B'] + 2*hmap_params['ax_CBar_H']/3, hmap_params['ax_CBar_W'], hmap_params['ax_CBar_H']/3], frame_on=True, facecolor="white")

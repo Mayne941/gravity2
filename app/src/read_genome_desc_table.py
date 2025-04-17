@@ -1,6 +1,7 @@
 from app.utils.console_messages import section_header
 from app.utils.generate_fnames import generate_file_names
 from app.utils.error_handlers import raise_gravity_error, raise_gravity_warning
+from app.utils.parse_accession import get_accession_regex
 
 import pandas as pd
 import numpy as np
@@ -8,7 +9,6 @@ from collections import Counter
 import os
 import re
 import pickle
-import csv
 
 
 class ReadGenomeDescTable:
@@ -24,7 +24,7 @@ class ReadGenomeDescTable:
         self.payload = payload
         self.GenomeDescTableFile = GenomeDescTableFile
         self.fnames = generate_file_names(payload,ExpDir)
-        self.accessions_regex = re.compile(r"[A-Z]{1,2}[0-9]{5,6}|[A-Z]{2}_[0-9]{6}|SRR[0-9]{7,8}|[a-zA-Z]{4,6}[0-9]{6,9}")
+        self.accessions_regex = get_accession_regex()
         self.GenomeSeqFile = GenomeSeqFile
         if not os.path.exists(self.fnames["OutputDir"]):
             os.makedirs(self.fnames["OutputDir"])

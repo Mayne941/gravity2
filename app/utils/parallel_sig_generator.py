@@ -23,8 +23,13 @@ def PPHMMSignatureTable_Constructor(
         ):
     progress_msg("- Generating PPHMM signature table and PPHMM location table")
     '''All Hmmer dirs are temporary, so are generated dynamically then removed'''
-    PPHMMDB_Summary = f"{fnames['HMMER_PPHMMDb']}_Summary.txt"
-    HMMER_hmmscanDir = f"{fnames['HMMERDir']}/hmmscan_{''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))}"
+    if Pl2:
+        PPHMMDB_Summary = f"{HMMER_PPHMMDB}_Summary.txt"
+        HMMER_hmmscanDir = f"{fnames['HMMERDir_UcfVirus']}/hmmscan_{''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))}"
+    else:
+        PPHMMDB_Summary = f"{fnames['HMMER_PPHMMDb']}_Summary.txt"
+        HMMER_hmmscanDir = f"{fnames['HMMERDir']}/hmmscan_{''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))}"
+
     os.makedirs(HMMER_hmmscanDir)
 
     '''Load GenBank record'''
