@@ -18,7 +18,7 @@ class Data_vmr_filter_params(BaseModel):
                         description="Filename of output VMR file")
     filter_level: str = Query('Family',
                               description="Specify which taxo grouping to filter by. Used in combination with filter_name to generate a VMR of all viral genomes within a specific taxo grouping.")
-    filter_name: str = Query('Caudoviricetes',
+    filter_name: str = Query('Nyamiviridae',
                              description="Used to specify which taxo grouping name to filter by: used in combination with filter_level to generate a VMR of all viral genomes within a specific taxo grouping.")
 
 class Data_vmr_filter_threshold(BaseModel):
