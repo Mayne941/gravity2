@@ -2,6 +2,7 @@ from ete3 import Tree
 from Bio import SeqIO, AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from Bio.Data.CodonTable import TranslationError
 from collections import Counter
 from alive_progress import alive_it
 import numpy as np
@@ -17,7 +18,7 @@ from app.utils.line_count import LineCount
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.download_genbank_file import DownloadGenBankFile
 from app.utils.console_messages import section_header
-from app.utils.orf_identifier import get_orf_trasl_table, no_orf_match, find_orfs
+from app.utils.orf_identifier import get_orf_trasl_table, no_orf_match, find_orfs, find_orfs_translated
 from app.utils.stdout_utils import clean_stdout, progress_msg, warning_msg
 from app.utils.retrieve_pickle import retrieve_genome_vars
 from app.utils.shell_cmds import shell
@@ -70,6 +71,7 @@ class PPHMMDBConstruction:
                     gb_missing_seqs.append(vmr_seq.upper())
 
         if len(gb_missing_seqs) > 0:
+            breakpoint() #######################
             '''If missing seqs in gb file, attempt to get them from genbank'''
             progress_msg(f"GRAViTy detected a mismatch in sequence numbers between input genbank and VMR files. Attempting to fix with a genbank pull...")
             shell("rm data/temp.gb")
@@ -107,10 +109,9 @@ class PPHMMDBConstruction:
         for idx, sequence in enumerate(self.genomes["SeqIDLists"]):
             if len(self.genomes["SeqIDLists"][0]) == 1:
                 coords = [int(i) for i in self.genomes["ProvirusCoords"][idx].split(",")]
-            if coords != [0,0]:
-                print(f"Provirus  found in sequence {sequence}. Splitting on indices {coords[0]}-{coords[1]}")
-                sequences[sequence[0]].seq = sequences[sequence[0]].seq[coords[0]:coords[1]]
-
+                if coords != [0,0]:
+                    print(f"Provirus  found in sequence {sequence}. Splitting on indices {coords[0]}-{coords[1]}")
+                    sequences[sequence[0]].seq = sequences[sequence[0]].seq[coords[0]:coords[1]]
         return sequences
 
     def sequence_extraction(self, GenBankDict):
@@ -121,7 +122,10 @@ class PPHMMDBConstruction:
         ], []
         raw_seqs = {}
 
-        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]), total=self.genomes["TaxoGroupingList"].shape[0]):
+        if 1==2: breakpoint()
+        # for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]), total=self.genomes["TaxoGroupingList"].shape[0]):
+        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]):
+
             for SeqID in SeqIDList:
                 '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
                 try:
@@ -166,8 +170,16 @@ class PPHMMDBConstruction:
 
                 '''If the genome isn't annotated with any ORFs, find some'''
                 if not ContainProtAnnotation:
-                    prots, prot_ids, raw_nas = find_orfs(GenBankID, GenBankRecord.seq, TranslTable, self.payload['ProteinLength_Cutoff'],
-                                                    taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+                    try: 
+                        '''Standard nucleic acid sequences - find orfs'''
+                        GenBankRecord.seq.translate()
+                        prots, prot_ids, raw_nas = find_orfs(GenBankID, GenBankRecord.seq, TranslTable, self.payload['ProteinLength_Cutoff'],
+                                                        taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+                    except TranslationError:
+                        '''If an amino acid sequence is passed, use the alternate orf finder'''
+                        prots, prot_ids, raw_nas = find_orfs_translated(GenBankID, GenBankRecord.seq, TranslTable, self.payload['ProteinLength_Cutoff'],
+                                                        taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+
                     if len(prots) == 0:
                         raise_gravity_warning(f"Sequence {SeqID} doesn't code for any ORFs!")
                     ProtList += prots
@@ -303,7 +315,7 @@ class PPHMMDBConstruction:
                     HitList.append(
                         ProtList[np.where(ProtIDList == ProtID)[0][0]])
                     TaxoLists.append(HitList[-1].annotations['taxonomy'])
-                    DescList.append(HitList[-1].description.replace(", ", " ").replace(",", " ").replace(": ", "_").replace(
+                    DescList.append(HitList[-1].description.replace(", ", " ").replace(",", " ").replace(": ", "_").replace( # RM < TODO Break out into cleaning fn
                         ":", "_").replace("; ", " ").replace(";", " ").replace(" (", "/").replace("(", "/").replace(")", ""))
 
                 '''Cluster file; remove 'X's for bad sequences'''
@@ -325,6 +337,10 @@ class PPHMMDBConstruction:
                         ret_output=True)
                     error_handle_mafft(out, "mafft (PPHMMDB Construction: make_alignments)")
 
+                    # out = shell(f"muscle -threads {self.payload['N_CPUs']} -align {AlnClusterFile} -output {temp_aln_fname}",
+                    #     ret_output=True)
+                    
+
                 else:
                     '''If only 1 thing in cluster'''
                     shell(f"cp {AlnClusterFile} {temp_aln_fname}")
@@ -335,7 +351,6 @@ class PPHMMDBConstruction:
                                                 "TaxoLists": TaxoLists,
                                                 "AlignmentLength": AlignIO.read(temp_aln_fname, "fasta").get_alignment_length()
                                                 }
-
                 shell(f"rm {AlnClusterFile} && mv {temp_aln_fname} {AlnClusterFile}",
                       "PPHMMDB Construction: move temp mafft file")
                 Cluster_i += 1

@@ -6,9 +6,10 @@ class Log_Generator_Pl1:
         self.fpath = fpath
 
     def text_gen_start(self) -> list:
-        return ["GRAViTy V2 adaptation by Mayne, R., Aiewsakun, P., Simmonds., P. et al. (2022)",
-                "Based on original GRAViTy software https://github.com/PAiewsakun/GRAViTy",
-                "Aiewsakun, P., Simmonds, P. The genomic underpinnings of eukaryotic virus taxonomy: creating a sequence-based framework for family-level virus classification. Microbiome 6, 38 (2018). https://doi.org/10.1186/s40168-018-0422-7"]
+        return ["GRAViTy V2 adaptation by Mayne, R., Aiewsakun, P., Simmonds., P. et al. (2024.)",
+                "Please cite https://doi.org/10.1093/nargab/lqae183",
+                "Based on original GRAViTy software https://doi.org/10.1186/s40168-018-0422-7",
+                "Aiewsakun, P., Simmonds, P. The genomic underpinnings of eukaryotic virus taxonomy: creating a sequence-based framework for family-level virus classification. Microbiome 6, 38 (2018). "]
 
     def text_gen_pre_read(self) -> list:
         return ["Input for ReadGenomeDescTable:",
@@ -145,9 +146,10 @@ class Log_Generator_Pl2:
         self.fpath = fpath
 
     def text_gen_start(self) -> list:
-        return ["GRAViTy V2 adaptation by Mayne, R., Aiewsakun, P., Simmonds., P. et al. (2022)",
-                "Based on original GRAViTy software https://github.com/PAiewsakun/GRAViTy",
-                "Aiewsakun, P., Simmonds, P. The genomic underpinnings of eukaryotic virus taxonomy: creating a sequence-based framework for family-level virus classification. Microbiome 6, 38 (2018). https://doi.org/10.1186/s40168-018-0422-7"]
+        return ["GRAViTy V2 adaptation by Mayne, R., Aiewsakun, P., Simmonds., P. et al. (2024.)",
+                "Please cite https://doi.org/10.1093/nargab/lqae183",
+                "Based on original GRAViTy software https://doi.org/10.1186/s40168-018-0422-7",
+                "Aiewsakun, P., Simmonds, P. The genomic underpinnings of eukaryotic virus taxonomy: creating a sequence-based framework for family-level virus classification. Microbiome 6, 38 (2018). "]
 
     def text_gen_pre_read(self) -> list:
         return ["Input for ReadGenomeDescTable:",
