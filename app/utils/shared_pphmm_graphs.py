@@ -148,7 +148,7 @@ def get_dist_data(fnames, label_order):
         seq_lens, seq_seqs = assemble_fragments(f.readlines())
     '''If PL2, load in PL1 seq lens and mix with PL2'''
     if len(seq_lens) != loc_df.shape[0]:
-        with open(f'{fnames["Pl1OutputDir"].replace("/output", "/output/ref_seqs.fasta")}', "r") as f: ref_seq_lens, ref_seq_seqs = assemble_fragments(f.readlines())
+        with open(f'{fnames["Pl1OutputDir"]}/ref_seqs.fasta', "r") as f: ref_seq_lens, ref_seq_seqs = assemble_fragments(f.readlines())
         seq_lens = ref_seq_lens + seq_lens
         seq_seqs = ref_seq_seqs + seq_seqs
 

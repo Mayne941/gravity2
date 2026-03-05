@@ -2,6 +2,7 @@ from ete3 import Tree
 from Bio import SeqIO, AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from Bio.Data.CodonTable import TranslationError
 from collections import Counter
 from alive_progress import alive_it
 import numpy as np
@@ -17,7 +18,7 @@ from app.utils.line_count import LineCount
 from app.utils.dist_mat_to_tree import DistMat2Tree
 from app.utils.download_genbank_file import DownloadGenBankFile
 from app.utils.console_messages import section_header
-from app.utils.orf_identifier import get_orf_trasl_table, no_orf_match, find_orfs
+from app.utils.orf_identifier import get_orf_trasl_table, no_orf_match, find_orfs, find_orfs_translated
 from app.utils.stdout_utils import clean_stdout, progress_msg, warning_msg
 from app.utils.retrieve_pickle import retrieve_genome_vars
 from app.utils.shell_cmds import shell
@@ -107,10 +108,9 @@ class PPHMMDBConstruction:
         for idx, sequence in enumerate(self.genomes["SeqIDLists"]):
             if len(self.genomes["SeqIDLists"][0]) == 1:
                 coords = [int(i) for i in self.genomes["ProvirusCoords"][idx].split(",")]
-            if coords != [0,0]:
-                print(f"Provirus  found in sequence {sequence}. Splitting on indices {coords[0]}-{coords[1]}")
-                sequences[sequence[0]].seq = sequences[sequence[0]].seq[coords[0]:coords[1]]
-
+                if coords != [0,0]:
+                    print(f"Provirus  found in sequence {sequence}. Splitting on indices {coords[0]}-{coords[1]}")
+                    sequences[sequence[0]].seq = sequences[sequence[0]].seq[coords[0]:coords[1]]
         return sequences
 
     def sequence_extraction(self, GenBankDict):
@@ -122,6 +122,8 @@ class PPHMMDBConstruction:
         raw_seqs = {}
 
         for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]), total=self.genomes["TaxoGroupingList"].shape[0]):
+        # for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]):
+
             for SeqID in SeqIDList:
                 '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
                 try:
@@ -166,8 +168,16 @@ class PPHMMDBConstruction:
 
                 '''If the genome isn't annotated with any ORFs, find some'''
                 if not ContainProtAnnotation:
-                    prots, prot_ids, raw_nas = find_orfs(GenBankID, GenBankRecord.seq, TranslTable, self.payload['ProteinLength_Cutoff'],
-                                                    taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+                    try:
+                        '''Standard nucleic acid sequences - find orfs'''
+                        GenBankRecord.seq.translate()
+                        prots, prot_ids, raw_nas = find_orfs(GenBankID, GenBankRecord.seq, TranslTable, self.payload['ProteinLength_Cutoff'],
+                                                        taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+                    except TranslationError:
+                        '''If an amino acid sequence is passed, use the alternate orf finder'''
+                        prots, prot_ids, raw_nas = find_orfs_translated(GenBankID, GenBankRecord.seq, TranslTable, self.payload['ProteinLength_Cutoff'],
+                                                        taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+
                     if len(prots) == 0:
                         raise_gravity_warning(f"Sequence {SeqID} doesn't code for any ORFs!")
                     ProtList += prots
@@ -275,9 +285,25 @@ class PPHMMDBConstruction:
     def mcl_clustering(self, ProtIDList):
         '''7/10: Use Mcl to do clustering on Mash bit scores'''
         progress_msg("- Doing protein sequence clustering based on Mash bit scores, using the MCL algorithm")
-        out = shell(f"mcl {self.fnames['MashSimFile']} --abc -o {self.fnames['MashProtClusterFile']} -I {self.payload['ProtClustering_MCLInflation']}",
+        if self.payload['ProtClustering_MCLInflation'] == "auto":
+            progress_msg("\t - Automatically optimising MCL inflation parameters to find optimal clustering")
+            scores = {}
+            for inflation in range(0,6,1):
+                out = shell(f"mcl {self.fnames['MashSimFile']} --abc -o {self.fnames['MashProtClusterFile']} -I {inflation}",
+                            ret_output=True)
+                error_handler_mcl(out, "Mcl, PPHMMDB construction")
+                scores[inflation] = int(shell(f"wc -l {self.fnames['MashProtClusterFile']}", ret_output=True).decode().split(" ")[0])
+
+            best_inflation = max(scores.items(), key=operator.itemgetter(1))[0] # TODO < Really inefficient to do without memoizing, but whatever it's quick
+            progress_msg(f"\t - Best inflation parameter found: {best_inflation}, with {scores[best_inflation]} clusters")
+
+        else:
+            best_inflation = self.payload['ProtClustering_MCLInflation']
+
+        out = shell(f"mcl {self.fnames['MashSimFile']} --abc -o {self.fnames['MashProtClusterFile']} -I {best_inflation}",
                     ret_output=True)
         error_handler_mcl(out, "Mcl, PPHMMDB construction")
+
         '''For each cluster found, pull out seen proteins by ID'''
         SeenProtIDList = []
         with open(self.fnames['MashProtClusterFile'], 'r') as MashProtCluster_txt:
@@ -289,6 +315,7 @@ class PPHMMDBConstruction:
         with open(self.fnames['MashProtClusterFile'], 'a') as MashProtCluster_txt:
             MashProtCluster_txt.write(
                 "\n".join(list(set(ProtIDList)-set(SeenProtIDList))))
+
 
     def make_alignments(self, ProtList, ProtIDList):
         '''8/10: Do protein alignments with Mafft, make cluster alignment annotations'''
@@ -303,7 +330,7 @@ class PPHMMDBConstruction:
                     HitList.append(
                         ProtList[np.where(ProtIDList == ProtID)[0][0]])
                     TaxoLists.append(HitList[-1].annotations['taxonomy'])
-                    DescList.append(HitList[-1].description.replace(", ", " ").replace(",", " ").replace(": ", "_").replace(
+                    DescList.append(HitList[-1].description.replace(", ", " ").replace(",", " ").replace(": ", "_").replace( # RM < TODO Break out into cleaning fn
                         ":", "_").replace("; ", " ").replace(";", " ").replace(" (", "/").replace("(", "/").replace(")", ""))
 
                 '''Cluster file; remove 'X's for bad sequences'''
@@ -325,6 +352,10 @@ class PPHMMDBConstruction:
                         ret_output=True)
                     error_handle_mafft(out, "mafft (PPHMMDB Construction: make_alignments)")
 
+                    # out = shell(f"muscle -threads {self.payload['N_CPUs']} -align {AlnClusterFile} -output {temp_aln_fname}",
+                    #     ret_output=True)
+
+
                 else:
                     '''If only 1 thing in cluster'''
                     shell(f"cp {AlnClusterFile} {temp_aln_fname}")
@@ -335,7 +366,6 @@ class PPHMMDBConstruction:
                                                 "TaxoLists": TaxoLists,
                                                 "AlignmentLength": AlignIO.read(temp_aln_fname, "fasta").get_alignment_length()
                                                 }
-
                 shell(f"rm {AlnClusterFile} && mv {temp_aln_fname} {AlnClusterFile}",
                       "PPHMMDB Construction: move temp mafft file")
                 Cluster_i += 1

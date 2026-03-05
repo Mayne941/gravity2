@@ -1,5 +1,6 @@
 from Bio import SeqIO
 from Bio.Seq import Seq
+from Bio.Data.CodonTable import TranslationError
 import numpy as np
 import random, string, os
 from alive_progress import alive_it
@@ -10,7 +11,7 @@ from multiprocessing import Pool
 from app.utils.line_count import LineCount
 from app.utils.shell_cmds import shell
 from app.utils.stdout_utils import warning_msg, progress_msg
-from app.utils.orf_identifier import find_orfs
+from app.utils.orf_identifier import find_orfs, find_orfs_translated
 from app.utils.error_handlers import raise_gravity_error, error_handler_hmmscan
 
 def PPHMMSignatureTable_Constructor(
@@ -36,7 +37,6 @@ def PPHMMSignatureTable_Constructor(
     GenBankDict = SeqIO.index(GenomeSeqFile, "fasta" if os.path.splitext(GenomeSeqFile)[1] in [".fas", ".fst", ".fasta"] else "gb")
     Records_dict = {}
     for i in GenBankDict.items():
-        ### RM < TODO: EITHER HARMONISE FUNTION CALL WITH PPHMMDB OR LOAD GB FILE
         if "u" in str(i[1].seq).lower():
             i[1].seq = i[1].seq.back_transcribe()
         Records_dict[i[0].split(".")[0]] = i[1]
@@ -97,14 +97,20 @@ class Pphmm_Sig_Gen:
 
         '''Get each orf for a genome'''
         ProtList, ProtIDList = [], []
-        prot, prot_id, _ = find_orfs(GenBankIDList, GenBankSeqList, TranslTable, self.payload['ProteinLength_Cutoff'], call_locs=True)
+        try:
+            '''If nucleic acid sequences passed'''
+            GenBankSeqList.translate()
+            prot, prot_id, _ = find_orfs(GenBankIDList, GenBankSeqList, TranslTable, self.payload['ProteinLength_Cutoff'], call_locs=True)
+        except TranslationError:
+            '''If translated sequences passed'''
+            prot, prot_id, _ = find_orfs_translated(GenBankIDList, GenBankSeqList, TranslTable, self.payload['ProteinLength_Cutoff'], call_locs=True)
+
         ProtList += prot
         ProtIDList += prot_id
 
         if len(ProtList) < 1:
             raise_gravity_error(f"GRAViTy couldn't detect any reading frames in your input sequence(s) (Protein IDs {ProtIDList}; Accessions {SeqIDList}). Check that your sequences are labelled properly; some viroids can break this process if they have no detectable ORFs.")
 
-        # BEFORE TODO
         with open(PPHMMQueryFile, "w") as f:
             '''Write each translated ORF to the PPHMM Query File'''
             for i in range(len(ProtIDList)):
@@ -126,7 +132,7 @@ class Pphmm_Sig_Gen:
                 try:
                     Line[22] = " ".join(Line[22:])
                 except:
-                    break # TODO TEST - sometimes the line is only half formed. Not sure why, possibly if no matches?
+                    break # sometimes the line is only half formed. 
                 Line = Line[:23]
                 C_EValue = float(Line[11])
                 HitScore = float(Line[7])

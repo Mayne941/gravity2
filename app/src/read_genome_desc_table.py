@@ -4,6 +4,7 @@ from app.utils.error_handlers import raise_gravity_error, raise_gravity_warning
 from app.utils.parse_accession import get_accession_regex
 
 import pandas as pd
+from pandas.errors import ParserError
 import numpy as np
 from collections import Counter
 import os
@@ -43,8 +44,12 @@ class ReadGenomeDescTable:
         print("- Read the GenomeDesc table")
         try:
             df = pd.read_csv(self.GenomeDescTableFile, index_col=0)
-        except:
-            raise_gravity_error(f"Failed to read your input VMR-like document (GenomeDescTableFile). Check it's a valid CSV.")
+        except ParserError:
+            try:
+                df = pd.read_csv(self.GenomeDescTableFile, index_col=0, on_bad_lines='skip')
+                print(f"Warning: Some lines in your input VMR-like document (GenomeDescTableFile) could not be parsed and were skipped. Check your file for formatting issues.")
+            except:
+                raise_gravity_error(f"Failed to read your input VMR-like document (GenomeDescTableFile). Check it's a valid CSV.")
         df = df.fillna("")
         crap_pandas = [i for i in df.columns if "Unnamed" in i]
         for i in crap_pandas:
@@ -67,10 +72,24 @@ class ReadGenomeDescTable:
             self.OrderList = df["Order"].tolist()
         except KeyError:
             self.OrderList = ["" for i in df["Virus GENBANK accession"].tolist()]
-        self.FamilyList = df["Family"].tolist()
-        self.SubFamList = df["Subfamily"].tolist()
-        self.GenusList = df["Genus"].tolist()
-        self.VirusNameList = df["Virus name(s)"].tolist()
+        try:
+            self.FamilyList = df["Family"].tolist()
+        except KeyError:
+            raise_gravity_error("Your input VMR-like document must contain a 'Family' column, please check and try again.")
+        try:
+            self.SubFamList = df["Subfamily"].tolist()
+        except KeyError:
+            raise_gravity_warning("No 'Subfamily' column found in your input VMR-like document, so setting all subfamilies as blank.")
+            self.SubFamList = ["" for i in df["Virus GENBANK accession"].tolist()]
+        try:
+            self.GenusList = df["Genus"].tolist()
+        except KeyError:
+            self.GenusList = ["" for i in df["Virus GENBANK accession"].tolist()]
+            raise_gravity_warning("No 'Genus' column found in your input VMR-like document, so setting all genera as blank.")
+        try:
+            self.VirusNameList = df["Virus name(s)"].tolist()
+        except KeyError:
+            raise_gravity_error("Your input VMR-like document must contain a 'Virus name(s)' column, please check and try again.")
         try:
             self.TaxoGroupingList = df[self.payload['TaxoGrouping_Header']].tolist()
         except KeyError:
@@ -102,8 +121,8 @@ class ReadGenomeDescTable:
                     r"[^\w^ ^\.^\-]+", "/", re.sub(r"[ ]{2,}", " ", row["Virus name(s)"]))))
 
         except Exception as ex:
-
-            raise_gravity_error(f"At least one line in your input CSV (genome desc table) has empty fields (or fields causing another error): {ex}")
+            raise_gravity_error(f"At least one line in your input CSV (genome desc table) has empty fields (or fields causing another error): {ex}"
+                                f"This can happen if your input VMR has no index, or if you have unprintable characters in the 'Virus name(s)' column.")
 
     def transl_table_check(self, row):
         try:

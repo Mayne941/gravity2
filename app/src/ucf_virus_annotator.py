@@ -1,6 +1,3 @@
-import os
-import string
-import random
 import pickle
 from scipy.sparse import coo_matrix
 

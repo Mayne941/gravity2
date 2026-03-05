@@ -17,14 +17,14 @@ Please cite:
 
 <div class="csl-entry">Mayne, R., Aiewsakun, P., Turner, D., Adriaenssens, E. M., &#38; Simmonds, P. (2024). GRAViTy-V2: a grounded viral taxonomy application. <i>NAR Genomics and Bioinformatics</i>, <i>6</i>(4). <a href=https://doi.org/10.1093/nargab/lqae183>https://doi.org/10.1093/nargab/lqae183</a></div>
 
-# New with version 2.2
+# New with version 2.3.1
 * Features
-   * Genbank accessions now automatically extracted from fasta file headers on fasta > VMR/Genbank conversion functions.
-* Fixes
-   * Parallelisation now functions as per user instructions on "update classification" pipelines.
-   * Unnamed index columns are no longer created by VMR filtering functions.
-   * Matplotlib backend pinned
-   * First pass filter function now subsets to expected fraction
+   * Additional user guidance when non-compliant VMRs are used as input.
+   * Added option for automatic MCL clustering hyperparameter (inflation) tuning.
+* Fixes / QOL
+   * Updated ICTV VMR scrape function to work with latest VMR format.
+   * Removed some redundant paramters in main pipelines.
+   * Fixed edge case issue where accession ID nonnumerical version designations could cause crashing behaviours.
 
 # [Documentation](https://github.com/Mayne941/gravity2/wiki)
 GRAViTy-V2 documentation is hosted on our [GitHub Wiki Page](https://github.com/Mayne941/gravity2/wiki)
@@ -47,6 +47,15 @@ In spite of best efforts to simplify the user experience, GRAViTy-V2 is a comple
 ![GRAViTy-V2 Process Flow](docs/gravity_flow_v2.png "GRAViTy-V2 Process Flow")
 
 # Update History
+## V2.2
+* Features
+   * Genbank accessions now automatically extracted from fasta file headers on fasta > VMR/Genbank conversion functions.
+* Fixes
+   * Parallelisation now functions as per user instructions on "update classification" pipelines.
+   * Unnamed index columns are no longer created by VMR filtering functions.
+   * Matplotlib backend pinned
+   * First pass filter function now subsets to expected fraction
+
 ## V2.1
 * Features
    * Logscale dendrograms

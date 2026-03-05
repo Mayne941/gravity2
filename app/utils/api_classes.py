@@ -56,8 +56,8 @@ class Data_pl1_unique_params(BaseModel):
                                              description="When 'RemoveSingletonPPHMMs' == TRUE, singleton PPHMMs are removed from the PPHMM database only if they show similarity to viruses that belong to taxonomic groups with more than NUMBER members.")
     PPHMMSorting: bool = Query(False,
                                description="Sort PPHMMs if True.")
-    PPHMMClustering_MCLInflation_ForPPHMMSorting: int = Field(2, gt=0,
-                                                              description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
+    PPHMMClustering_MCLInflation_ForPPHMMSorting: Union[str, int] = Field(2, gt=0,
+                                                              description="Cluster granularity, integer or 'auto'. Increasing INFLATION will increase cluster granularity. 'Auto' will optimise inflation parameter to find lowest n clusters.")
     MutualInformationScorer: bool = Field(False,
                                           description="If true, calculate mutual information score to quantify feature importance for each PPHMM. Useful, but will increase run time.")
     N_Sampling: int = Field(10, gt=0,
@@ -98,7 +98,7 @@ class Data_common_pipeline_params(BaseModel):
                                         description="P value threshold below which results in Mash analysis will be ignored.")
     Mash_sim_score_cutoff: float = Field(0.95,
                                               description="Similarity score threshold below which results in Mash analysis will be ignored.")
-    ProtClustering_MCLInflation: int = Field(2, gt=0,
+    ProtClustering_MCLInflation: Union[Literal["auto"], int] = Field(2,
                                              description="Cluster granularity. Increasing INFLATION will increase cluster granularity.")
     N_AlignmentMerging: int = Query(0,    # RM < TODO Cull?
                                                description="Number of rounds of alignment merging. ROUND == 0 means no merging. ROUND == -1 means merging until exhausted, ROUND int = n rounds.")
