@@ -71,7 +71,6 @@ class PPHMMDBConstruction:
                     gb_missing_seqs.append(vmr_seq.upper())
 
         if len(gb_missing_seqs) > 0:
-            breakpoint() #######################
             '''If missing seqs in gb file, attempt to get them from genbank'''
             progress_msg(f"GRAViTy detected a mismatch in sequence numbers between input genbank and VMR files. Attempting to fix with a genbank pull...")
             shell("rm data/temp.gb")
@@ -122,9 +121,8 @@ class PPHMMDBConstruction:
         ], []
         raw_seqs = {}
 
-        if 1==2: breakpoint()
-        # for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]), total=self.genomes["TaxoGroupingList"].shape[0]):
-        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]):
+        for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in alive_it(zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]), total=self.genomes["TaxoGroupingList"].shape[0]):
+        # for SeqIDList, TranslTable, BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping in zip(self.genomes["SeqIDLists"], self.genomes["TranslTableList"], self.genomes["BaltimoreList"], self.genomes["OrderList"], self.genomes["FamilyList"], self.genomes["SubFamList"], self.genomes["GenusList"], self.genomes["VirusNameList"], self.genomes["TaxoGroupingList"]):
 
             for SeqID in SeqIDList:
                 '''Sometimes an Acc ID doesn't have a matching record (usually when multiple seqs for 1 virus)... - skip if true'''
@@ -170,7 +168,7 @@ class PPHMMDBConstruction:
 
                 '''If the genome isn't annotated with any ORFs, find some'''
                 if not ContainProtAnnotation:
-                    try: 
+                    try:
                         '''Standard nucleic acid sequences - find orfs'''
                         GenBankRecord.seq.translate()
                         prots, prot_ids, raw_nas = find_orfs(GenBankID, GenBankRecord.seq, TranslTable, self.payload['ProteinLength_Cutoff'],
@@ -287,9 +285,25 @@ class PPHMMDBConstruction:
     def mcl_clustering(self, ProtIDList):
         '''7/10: Use Mcl to do clustering on Mash bit scores'''
         progress_msg("- Doing protein sequence clustering based on Mash bit scores, using the MCL algorithm")
-        out = shell(f"mcl {self.fnames['MashSimFile']} --abc -o {self.fnames['MashProtClusterFile']} -I {self.payload['ProtClustering_MCLInflation']}",
+        if self.payload['ProtClustering_MCLInflation'] == "auto":
+            progress_msg("\t - Automatically optimising MCL inflation parameters to find optimal clustering")
+            scores = {}
+            for inflation in range(0,6,1):
+                out = shell(f"mcl {self.fnames['MashSimFile']} --abc -o {self.fnames['MashProtClusterFile']} -I {inflation}",
+                            ret_output=True)
+                error_handler_mcl(out, "Mcl, PPHMMDB construction")
+                scores[inflation] = int(shell(f"wc -l {self.fnames['MashProtClusterFile']}", ret_output=True).decode().split(" ")[0])
+
+            best_inflation = max(scores.items(), key=operator.itemgetter(1))[0] # TODO < Really inefficient to do without memoizing, but whatever it's quick
+            progress_msg(f"\t - Best inflation parameter found: {best_inflation}, with {scores[best_inflation]} clusters")
+
+        else:
+            best_inflation = self.payload['ProtClustering_MCLInflation']
+
+        out = shell(f"mcl {self.fnames['MashSimFile']} --abc -o {self.fnames['MashProtClusterFile']} -I {best_inflation}",
                     ret_output=True)
         error_handler_mcl(out, "Mcl, PPHMMDB construction")
+
         '''For each cluster found, pull out seen proteins by ID'''
         SeenProtIDList = []
         with open(self.fnames['MashProtClusterFile'], 'r') as MashProtCluster_txt:
@@ -301,6 +315,7 @@ class PPHMMDBConstruction:
         with open(self.fnames['MashProtClusterFile'], 'a') as MashProtCluster_txt:
             MashProtCluster_txt.write(
                 "\n".join(list(set(ProtIDList)-set(SeenProtIDList))))
+
 
     def make_alignments(self, ProtList, ProtIDList):
         '''8/10: Do protein alignments with Mafft, make cluster alignment annotations'''
@@ -339,7 +354,7 @@ class PPHMMDBConstruction:
 
                     # out = shell(f"muscle -threads {self.payload['N_CPUs']} -align {AlnClusterFile} -output {temp_aln_fname}",
                     #     ret_output=True)
-                    
+
 
                 else:
                     '''If only 1 thing in cluster'''

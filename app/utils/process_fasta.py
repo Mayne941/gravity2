@@ -38,7 +38,7 @@ def fasta_to_genbank(payload):
         sequences[i].annotations['molecule_type'] = 'DNA'
         if not sequences[i].id in seq_codes:
             '''Don't process duplicate Acc IDs - omit all but first'''
-            sequences[i].id = sequences[i].name = sequences[i].description = f"Query_{i+1}_{sequences[i].id.split('.')[0]}" # Get rid of ".x" in acc ids
+            sequences[i].id = sequences[i].name = sequences[i].description = f"{sequences[i].id.split('.')[0].replace('NC_','NC').split('_')[0]}" # Get rid of ".x" in acc ids
             output_seqs.append(sequences[i])
             seq_codes.append(sequences[i].id)
             seq_names.append(sequences[i].id)

@@ -4,6 +4,7 @@ from app.utils.error_handlers import raise_gravity_error, raise_gravity_warning
 from app.utils.parse_accession import get_accession_regex
 
 import pandas as pd
+from pandas.errors import ParserError
 import numpy as np
 from collections import Counter
 import os
@@ -43,8 +44,12 @@ class ReadGenomeDescTable:
         print("- Read the GenomeDesc table")
         try:
             df = pd.read_csv(self.GenomeDescTableFile, index_col=0)
-        except:
-            raise_gravity_error(f"Failed to read your input VMR-like document (GenomeDescTableFile). Check it's a valid CSV.")
+        except ParserError:
+            try:
+                df = pd.read_csv(self.GenomeDescTableFile, index_col=0, on_bad_lines='skip')
+                print(f"Warning: Some lines in your input VMR-like document (GenomeDescTableFile) could not be parsed and were skipped. Check your file for formatting issues.")
+            except:
+                raise_gravity_error(f"Failed to read your input VMR-like document (GenomeDescTableFile). Check it's a valid CSV.")
         df = df.fillna("")
         crap_pandas = [i for i in df.columns if "Unnamed" in i]
         for i in crap_pandas:
