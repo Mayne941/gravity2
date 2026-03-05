@@ -1,6 +1,7 @@
 from Bio import Phylo
 from copy import copy
 from scipy.cluster.hierarchy import linkage, fcluster
+from scipy.sparse import coo_matrix
 from collections import Counter
 import matplotlib
 import numpy as np
@@ -96,6 +97,7 @@ class VirusClassificationAndEvaluation:
                     HMMER_PPHMMDB=self.fnames['HMMER_PPHMMDB_UcfVirus'],
                     Pl2=True
                 )
+
             pl1_ref_annotations["PPHMMSignatureTable"] = np.hstack(
                 (pl1_ref_annotations["PPHMMSignatureTable"], PPHMMSignatureTable_UcfVirusVSUcfDB))
             pl1_ref_annotations["PPHMMLocationTable"] = np.hstack(
@@ -128,6 +130,24 @@ class VirusClassificationAndEvaluation:
         NaivePPHMMLocationTable_AllVirus = np.vstack(
             (pl1_ref_annotations["NaivePPHMMLocationTable"],  self.ucf_annots["NaivePPHMMLocationTable_Dict"]))
         TaxoLabelList_AllVirus = TaxoLabelList_RefVirus + self.TaxoLabelList_UcfVirus
+
+        # breakpoint()
+        # '''Construct new PL1 parameters dict, in case user wants to run PL2 again'''
+        # new_ref_parameters = {}
+        # new_ref_parameters["PPHMMSignatureTable"] = PPHMMSignatureTable_AllVirus
+        # new_ref_parameters["GOMSignatureTable"] = GOMSignatureTable_AllVirus
+        # new_ref_parameters["PPHMMLocationTable"] = PPHMMLocationTable_AllVirus
+        # new_ref_parameters["NaivePPHMMLocationTable"] = NaivePPHMMLocationTable_AllVirus
+        # new_ref_parameters["GOMIDList"] = pl1_ref_annotations["GOMIDList"]
+        # new_ref_parameters["PPHMMSignatureTable_coo"] = coo_matrix(
+        #     PPHMMSignatureTable_AllVirus)
+        # new_ref_parameters["PPHMMLocationTable_coo"] = coo_matrix(
+        #     PPHMMLocationTable_AllVirus)
+        # new_ref_parameters["GOMDB"] = UpdatedGOMDB_RefVirus
+        # new_ref_parameters["GOMDB_coo"] = {GOMID: coo_matrix(
+        #     GOM) for GOMID, GOM in UpdatedGOMDB_RefVirus.items()}
+        # pickle.dump(new_ref_parameters, open(f'{self.fnames["ExpDir"]}/output/RefVirusAnnotator.p', "wb"))
+        # breakpoint()
 
         '''Combine PPHMM/GOM sigs, save as CSV for shared PPHMM heatmaps'''
         sigs_data = np.column_stack((TaxoLabelList_AllVirus,

@@ -3,11 +3,12 @@ from Bio.Seq import Seq
 import numpy as np
 import random, string, os
 from alive_progress import alive_it
+from Bio.Data.CodonTable import TranslationError
 
 from .line_count import LineCount
 from app.utils.shell_cmds import shell
 from app.utils.stdout_utils import warning_msg, progress_msg
-from app.utils.orf_identifier import find_orfs
+from app.utils.orf_identifier import find_orfs, find_orfs_translated
 from app.utils.error_handlers import raise_gravity_error, error_handler_hmmscan
 
 def PPHMMSignatureTable_Constructor(
@@ -243,8 +244,13 @@ def PPHMMSignatureTable_Constructor_DEPRECATED(
 
         '''Get each orf for a genome'''
         ProtList, ProtIDList = [], []
-        prot, prot_id, _ = find_orfs(GenBankIDList, GenBankSeqList, TranslTable, payload['ProteinLength_Cutoff'], call_locs=True,
-                                        taxonomy_annots=[BaltimoreGroup, Order, Family, SubFam, Genus, VirusName, TaxoGrouping])
+        try:
+            '''If nucleic acid sequences passed'''
+            GenBankSeqList.translate()
+            prot, prot_id, _ = find_orfs(GenBankIDList, GenBankSeqList, TranslTable, 100, call_locs=True) # NB - NOT PARAMETERISED PROTEIN CUTOFF
+        except TranslationError:
+            '''If translated sequences passed'''
+            prot, prot_id, _ = find_orfs_translated(GenBankIDList, GenBankSeqList, TranslTable, 100, call_locs=True)
         ProtList += prot
         ProtIDList += prot_id
 

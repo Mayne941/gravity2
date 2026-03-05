@@ -38,10 +38,11 @@ class Scraper:
         url_rows = [re.search(r"<a\shref=.*\">", str(row))[0].replace('<a href=\"', '').replace(
             '">', '') for row in soup.findAll("tr") if re.search(r"<a\shref=.*</a>", str(row))]
         latest_url = f"{self.url_stem}{url_rows[0]}"
-        df = pd.read_excel(latest_url)
+        storage_options = {'User-Agent': 'python-requests/2.13.0'}
+        df = pd.read_excel(latest_url,storage_options=storage_options)
         if not "Genus" in df.columns:
             '''Some VMRs have additional sheets and inconsistent sheet names :('''
-            df = pd.read_excel(latest_url,sheet_name=1)
+            df = pd.read_excel(latest_url,sheet_name=1, storage_options=storage_options)
         df = df.rename(columns={"Genome": "Genome composition"}) # Renamed in VMR 2024 04
         return df
 
